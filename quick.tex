@@ -1,0 +1,387 @@
+\chapter{Egison早巡り}\label{quick}
+
+本章は，パターンマッチ指向プログラミングのためのEgisonの機能を一通り紹介する．
+
+\section{\lstinline{matchAll}式によるパターンマッチ}
+
+パターンマッチを記述するためのいくつかの構文をEgisonは提供している．
+そのうちもっとも基本的な構文は\lstinline{matchAll}\index{matchAll@\lstinline{matchAll}}式である．
+
+\begin{lstlisting}[language=egison]
+matchAll [1,2,3] as list something with
+| $x :: $ts -> (x, ts)
+-- [(1,[2,3])]
+\end{lstlisting}
+
+\lstinline{matchAll}式は，ターゲット（上記の場合， \lstinline{[1,2,3]} ），マッチャー（上記の場合，\lstinline{list something}），マッチ節（上記の場合，\lstinline{$x :: $xs -> (x,xs)}）から構成される．
+マッチ節は，パターン（上記の場合，\lstinline{$x :: $xs}）とボディ（上記の場合，\lstinline{(x,xs)}）からなる．
+\lstinline{matchAll}式は，既存のプログラミング言語のマッチ式と同様に，ターゲットとパターンのパターンマッチを試みて，もしマッチしたらそのマッチ節のボディを評価する．
+
+Egisonの\lstinline{matchAll}式の特徴は，（1）\lstinline{matchAll}という名前と結果としてリストを返すことと，（2）マッチャーという追加の引数をとることにある．
+（1）の特徴は，複数の結果をもつパターンマッチをサポートするための特徴である．
+\lstinline{matchAll}式は複数のパターンマッチの結果すべてについてボディを評価して，その結果を集めてリストとして返す．
+上記の例のパターンに使われている\lstinline{::}\index{::@\lstinline{::}}はコンスパターンと呼ばれるリストを先頭の要素と残りのリストに分解するパターンコンストラクタである．
+そのため，上記の例の場合は，パターンマッチの結果が一つであるので，長さが$1$のリストを返している．
+（2） の特徴は，パターンマッチアルゴリズムの拡張性とパターンの多相性を実現するための特徴である．
+マッチャー\index{まっちゃー@マッチャー}はEgison以外の言語ではみられない独自のオブジェクトで，パターンマッチアルゴリズムを保持するためのオブジェクトである．
+マッチャーによるパターンの多相性については，\ref{quick-matcher}節で扱う．
+
+\lstinline{--}\index{--@\lstinline{--}}はEgisonのインライン・コメント・デリミタである．
+本書を通して，プログラム直後のインライン・コメントを使って，プログラムの実行結果を記述する．
+
+\begin{lstlisting}[language=egison]
+matchAll [1,2,3] as list something with
+| $hs ++ $ts -> (hs, ts)
+-- [([], [1, 2, 3]), ([1], [2, 3]), ([1, 2], [3]), ([1, 2, 3], [])]
+\end{lstlisting}
+
+\begin{lstlisting}[language=egison]
+matchAll ターゲット as マッチャー with
+| パターン -> ボディ
+| パターン -> ボディ
+...
+\end{lstlisting}
+
+マッチ節が1つであるときは，下記のようにマッチ節の前の\lstinline{|}を省略することができる．
+
+\begin{lstlisting}[language=egison]
+matchAll ターゲット as マッチャー with パターン -> ボディ
+\end{lstlisting}
+
+\section{値パターンと述語パターンによる非線形パターンの表現}
+
+\lstinline{matchAll}式は，非線形パターンと組み合わせたときにその本領を発揮する．
+たとえば，以下の非線形パターンは，対象のコレクションが同値な要素のペアを含む場合にパターンマッチに成功する．
+
+\begin{lstlisting}[language=egison]
+matchAll [1,2,3,2,4,3] as list integer with
+| _ ++ $x :: _ ++ #x :: _ -> x
+-- [2,3]
+\end{lstlisting}
+
+\emph{値パターン}\index{あたいぱたーん@値パターン}は非線形パターンを表現するために重要な役割を果たす．
+値パターンは，値パターンの中身とターゲットが等しいかどうかチェックする．
+値パターンの先頭には，\lstinline{#}\index{#@\lstinline{#}}が付加される．
+\lstinline{#}の後ろには任意の式を書くことができる．
+\lstinline{#}に続く式は，その値パターンの左側に現れたパターン変数に束縛された値を参照しながら評価される．
+この動作を実現するため，Egisonのパターンは左から右に順番に処理されることが決まっている．
+その結果，\lstinline{$x :: #x :: _}のようなパターンは妥当であるが，\lstinline{#x :: $x :: _}は間違いである．
+
+よりおもしろい非線形パターンの例として，双子素数のパターンマッチを紹介する．
+双子素数とは，$(p, p+2)$という形の素数のペアのことをいう．
+\lstinline{primes}には素数の無限列が束縛されている．
+\lstinline{primes}はEgisonの組み込みライブラリで定義されている．
+この\lstinline{matchAll}式は，素数の無限列からすべての双子素数を順番に抜き出す．
+
+\begin{lstlisting}[language=egison]
+twinPrimes := matchAll primes as list integer with
+  | _ ++ $p :: #(p + 2) :: _ -> (p, p + 2)
+
+take 8 twinPrimes
+-- [(3, 5), (5, 7), (11, 13), (17, 19), (29, 31), (41, 43), (59, 61), (71, 73)]
+\end{lstlisting}
+
+パターンマッチのときに，同値性よりも一般的な述語を使いたいことがある．
+\emph{述語パターン}\index{じゅつごぱたーん@述語パターン}はそのために用意されている組み込みパターンである．
+述語パターンは，述語パターンの中身の述語にターゲットを適用したときに真が帰ってきた場合，パターンマッチに成功するパターンである．
+述語パターンの先頭は，\lstinline{?}からはじまり，\lstinline{?}のあとには1引数の述語が続く．
+
+\begin{lstlisting}[language=egison]
+twinPrimes = matchAll primes as list integer with
+  | _ ++ $p : ?(\q -> q == p + 2) : _ -> (p, p + 2)
+\end{lstlisting}
+
+\section{バックトラッキングによる効率的な非線形パターンマッチ}
+
+The pattern-matching algorithm inside Egison includes the backtracking mechanism for efficient non-linear pattern matching.\footnote{The Author's paper~\cite{egi2019macro} on Scheme macros that implement our pattern-matching system discusses the performance of a program in pattern-match-oriented style. A program in pattern-match-oriented style is currently two times slower when compared with the same program in functional programming style.}
+
+\begin{lstlisting}[language=egison]
+matchAll [1..n] as list integer with _ ++ $x :: _ ++ #x :: _ -> x
+-- O(n^2) で [] を返す
+matchAll [1..n] as list integer with _ ++ $x :: _ ++ #x :: _ ++ #x :: _ -> x
+-- O(n^2) で [] を返す
+\end{lstlisting}
+
+The above expressions match a collection that consists of integers from $1$ to $n$ as a list of integers for enumerating identical pairs and triples, respectively.
+This target collection contains neither identical pairs nor triples, therefore both expressions return an empty collection.
+
+When evaluating the second expression, Egison interpreter does not try pattern matching for the second \lstinline|#x| because pattern matching for the first \lstinline|#x| always fails.
+Therefore, the time complexities of the above expressions are identical.
+The pattern-matching algorithm inside Egison is discussed in~\cite{egi2018Aplas} in detail.
+
+\section{マッチャーによるパターンの拡張性と多相性}\label{quick-matcher}
+
+Another merit of matchers, in addition to the extensibility of pattern-matching algorithms, is the ad-hoc polymorphism of patterns.
+The ad-hoc polymorphism of patterns is important for non-free data types because some data are pattern-matched as various non-free data types at the different parts of a program.
+For example, a collection is pattern-matched as a list, a multiset, and a set.
+Polymorphic patterns reduce the number of names for pattern constructors.
+
+In the following sample, a list \lstinline{[1,2,3]} is pattern-matched using different matchers with the same cons pattern.
+In the case of sets, the rest elements are the same as the original collection because we ignore the redundant elements.
+If we regard a set as a collection that contains infinitely many copies of each element, this specification of the cons pattern for sets is natural.
+
+\begin{lstlisting}[language=egison]
+matchAll [1,2,3] as list something with $x :: $xs -> (x,xs)
+-- [(1,[2,3])]
+matchAll [1,2,3] as multiset something with $x :: $xs -> (x,xs)
+-- [(1,[2,3]),(2,[1,3]),(3,[1,2])]
+matchAll [1,2,3] as set something with $x :: $xs -> (x,xs)
+-- [(1,[1,2,3]),(2,[1,2,3]),(3,[1,2,3])]
+\end{lstlisting}
+
+Polymorphic patterns are useful especially for value patterns.
+As well as other patterns, the behavior of value patterns is dependent on matchers.
+For example, an equality \lstinline{[1,2,3] == [2,1,3]} between collections is false if we regard them as lists but true if we regard them as multisets.
+Still, thanks to ad-hoc polymorphism of patterns, we can use the same syntax for both types.
+This dramatically improves the readability of the program and makes programming with non-free data types easy.
+
+\begin{lstlisting}[language=egison]
+matchAll [1,2,3] as list integer with #[2,1,3] -> "Matched" -- []
+matchAll [1,2,3] as multiset integer with #[2,1,3] -> "Matched" -- ["Matched"]
+\end{lstlisting}
+
+\section{\lstinline{matchAllDFS}式によるパターンマッチ結果の順序の制御}
+
+The \lstinline{matchAll} expression is designed to enumerate all countably infinite pattern-matching results.
+For this purpose, users sometimes need to care about the order of pattern-matching results.
+
+Let us start by showing a representative sample.
+The \lstinline{matchAll} expression below enumerates all pairs of natural numbers.
+We extract the first $8$ elements with the \lstinline{take} function.
+\lstinline{matchAll} traverses the reduction tree of pattern matching in breadth-first search to traverse all the nodes~(Sect. 5.2 of~\cite{egi2018Aplas}).
+As a result, the order of the pattern-matching results is as follows.
+
+\begin{lstlisting}[language=egison]
+take 8 (matchAll [1..] as set something with $x : $y : _ -> (x,y))
+-- [(1,1),(1,2),(2,1),(1,3),(2,2),(3,1),(2,3),(3,2)]
+\end{lstlisting}
+
+The above order is preferable for traversing an infinitely large reduction tree.
+However, sometimes, this order is not preferable (see Sect.~\ref{nested-join-cons} and~\ref{trees}).
+\lstinline{matchAllDFS}\index{matchAllDFS@\lstinline{matchAllDFS}} that traverses a reduction tree in depth-first order is provided for this reason.
+
+\begin{lstlisting}[language=egison]
+take 8 (matchAllDFS [1..] as set something with $x : $y : _ -> (x,y))
+-- [(1,1),(1,2),(1,3),(1,4),(1,5),(1,6),(1,7),(1,8)]
+\end{lstlisting}
+
+\section{andパターン・orパターン・notパターン}
+
+The situations where and-patterns and or-patterns are useful are similar to those of the existing languages, whereas not-patterns become useful when they are combined with non-linear pattern matching with backtracking.
+
+We start by showing pattern matching for \emph{prime triples} as an example of and-patterns and or-patterns.
+A prime triple is a triple of primes whose form is $(p,p+2,p+6)$ or $(p,p+4,p+6)$.
+The and-pattern is used as an as-pattern.
+The or-pattern is used to match both of $p+2$ and $p+4$.
+
+\begin{lstlisting}[language=egison]
+primeTriples = matchAll primes as list integer with
+                  _ ++ $p : (and (or #(p + 2) #(p + 4)) $m) : #(p + 6) : _ -> (p, m, p + 6)
+
+take 8 primeTriples -- [(5,7,11),(7,11,13),(11,13,17),(13,17,19),(17,19,23),(37,41,43),(41,43,47),(67,71,73)]
+\end{lstlisting}
+
+
+A not-pattern matches a target if the pattern does not match the target, as its name implies.
+A not-pattern is prepended with \lstinline{!}, and a pattern follows after \lstinline{!}.
+The following \lstinline{matchAll} enumerates sequential pairs of prime numbers that are \emph{not} twin primes.
+
+\begin{lstlisting}[language=egison]
+take 10 (matchAll primes as list integer with _ ++ $p : (and !#(p + 2) $q) : _ -> (p, q))
+-- [(2,3),(7,11),(13,17),(19,23),(23,29),(31,37),(37,41),(43,47),(47,53),(53,59)]
+\end{lstlisting}
+
+\section{ループパターン}
+
+A loop pattern is a pattern construct for representing a pattern that repeats multiple times.
+It is an extension of Kleene star operator of regular expressions for general non-free data types~\cite{egi2018loop}.
+
+Let us start by considering pattern matching for enumerating all combinations of two elements from a target collection.
+It can be written using \lstinline{matchAll} as follows.
+
+\begin{lstlisting}[language=egison]
+comb2 xs = matchAll xs as list something with _ ++ $x_1 : _ ++ $x_2 : _ -> [x_1, x_2]
+
+comb2 [1,2,3,4] -- [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4]]
+\end{lstlisting}
+
+Egison allows users to append indices to a pattern variable as \lstinline|$x_1| and \lstinline|$x_2| in the above sample.
+They are called \emph{indexed variables} and represent $x_1$ and $x_2$ in mathematical expressions.
+The expression after \lstinline|_| must be evaluated to an integer and is called an \textit{index}.
+We can append as many indices as we want like \lstinline|x_i_j_k|.
+When a value is bound to an indexed pattern variable \lstinline|$x_i|, the system initiates an abstract map consisting of key-value pairs if \lstinline|x| is not bound to a map, and bind it to \lstinline{x}.
+If \lstinline|x| is already bound to a map, a new key-value pair is added to this map.
+
+Now, we generalize \lstinline{comb2}.
+The loop patterns can be used for that purpose.
+
+\begin{lstlisting}[language=egison]
+comb n xs = matchAll xs as list something with
+              loop $i (1,n)
+                (_ ++ $x_i : ...)
+                _ -> map (\i -> x_i) [1..n]
+
+comb 2 [1,2,3,4] -- [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4]]
+comb 3 [1,2,3,4] -- [[1,2,3],[1,2,4],[1,3,4],[2,3,4]]
+\end{lstlisting}
+
+The loop pattern takes an \emph{index variable}, \emph{index range}, \emph{repeat pattern}, and \emph{end pattern} as arguments.
+An index variable is a variable to hold the current repeat count.
+An index range specifies the range where the index variable moves.
+A repeat pattern is a pattern repeated when the index variable is in the index range.
+An end pattern is a pattern expanded when the index variable gets out of the index range.
+
+Inside loop patterns, we can use the \emph{ellipsis pattern} (\lstinline{...}).
+The repeat pattern or the end pattern is expanded at the location of the ellipsis pattern.
+The repeat pattern is expanded replacing the ellipsis pattern incrementing the value of the index variable.
+
+%The important difference between loop patterns and recursive patterns~\cite{queinnec1990compilation} is that loop patterns provide a simple method for changing the content of the pattern repeated depending on the repeat count.
+%Users can change the content of the repeat pattern by referring to the repeat count through the index variable.
+%Furthermore, indexed variables that often refer to the index variable in their index (such as \lstinline|$x_i| in the above samples) enable us to describe more expressive patterns by allowing us to refer to the values bound to the indexed pattern variable in the pattern previously repeated.
+
+\medskip
+
+The repeat counts of the loop patterns in the above samples are constants.
+However, we can also write a loop pattern whose repeat count varies depending on the target by specifying a pattern instead of an integer as the end number.
+When an end number is a pattern, the ellipsis pattern is replaced with both the repeat pattern and the end pattern, and the repeat count when the ellipsis pattern is replaced with the end pattern is pattern-matched with that pattern.
+The following loop pattern enumerates all initial prefixes of the target collection.
+
+{\footnotesize
+\begin{lstlisting}[language=egison]
+matchAll [1,2,3,4] as list something with loop $i (1, $n) ($x_i : ...) _ -> map (\i -> x_i) [1..n]
+-- [[],[1],[1,2],[1,2,3],[1,2,3,4]]
+\end{lstlisting}
+}
+
+Loop patterns are heavily used especially for trees and graphs.
+We work on pattern matching for trees in Sect.~\ref{trees}.
+%Pattern matching for graphs is demonstrated in Appendix~\ref{graphs}.
+More formal specification of syntax and semantics of loop patterns is shown in the author's previous paper~\cite{egi2018loop}.
+
+\section{シーケンシャルパターン}
+
+The pattern-matching system of Egison processes patterns from left to right in order.
+However, there are cases where we want to change this order, for example, to refer to the value bound to the right side of a pattern.
+Sequential patterns are provided for such a purpose.
+
+
+Sequential patterns allow users to control the order of the pattern-matching process.
+A sequential pattern is represented as a list of patterns.
+Pattern matching is executed for each pattern in order.
+In the following sample, the target list is pattern-matched from the third, first, and second element in order.
+
+\begin{lstlisting}[language=egison]
+matchAll [2,3,1,4,5] as list integer with
+  [ @ :       @       : $x : _,
+   (#(x + 1), @),
+   #(x + 2)] -> "Matched" -- ["Matched"]
+\end{lstlisting}
+
+\noindent
+\lstinline|@| that appears in a sequential pattern is called \emph{later pattern variable}.
+The target data bound to later pattern variables are pattern-matched in the next sequence.
+When multiple later pattern variables appear, they are pattern-matched as a tuple in the next sequence.
+It allows us to apply not-patterns for different parts of a pattern at the same time as we will see in Sect~\ref{tuple-of-collections}.
+
+Some readers might wonder that a sequential pattern can be transformed into a nested \lstinline{match-all} expression.
+There are at least two reasons why it is impossible.
+First, a nested \lstinline{match-all} expression breaks breadth-first search strategy: the inner \lstinline{match-all} for the second result of the outer \lstinline{match-all} is executed only after the inner \lstinline{match-all} for the first result of the outer \lstinline{match-all} is finished.
+Second, a later pattern variable retains the information of not only a target but also a matcher.
+There are cases that the matcher of \lstinline{match-all} is a parameter passed as an argument of a function, and a pattern is polymorphic.
+Therefore, it is impossible to determine the matchers of inner \lstinline{match-all} expressions syntactically.
+
+\section{forallパターン}
+
+述語パターンで奇数かどうかチェックしている．
+パターンマッチに成功した場合，すべてのパターンマッチ結果を返す．
+
+\begin{lstlisting}[language=egison]
+matchAll [1,5,3] as multiset integer with
+| forall ((@ & $x) :: _) ?odd? -> x
+-- [1,5,3]
+\end{lstlisting}
+
+1つでも第二引数のパターンのパターンマッチに失敗する第一引数のパターンマッチの結果がある場合，全体のパターンマッチに失敗する．
+
+\begin{lstlisting}[language=egison]
+matchAll [1,4,3] as multiset integer with
+| forall ((@ & $x) :: _) ?odd? -> x
+-- []
+\end{lstlisting}
+
+notパターンでもforallパターンに近い意味のパターンを表現できる．
+notパターンのforallパターンに対する利点は，以下の二点である．
+\begin{itemize}
+\item[(1)] forallパターン中のパターン変数に値を束縛し，複数のパターンマッチの結果すべてを返すことができる（notパターンの中身ではパターン変数に値を束縛することができない）．
+\item[(2)] forallパターンを使ったほうがより直接的に意味を表現できる場合がある．
+\end{itemize}
+
+\begin{lstlisting}[language=egison]
+matchAll [1,5,3] as multiset integer with
+| !(!?odd? :: _) -> ``match''
+-- [``match'']
+\end{lstlisting}
+
+\section{パターン関数によるパターンのモジュール化}
+
+
+\section{マッチャー合成による新しいマッチャーの生成}
+
+Matchers are composable, and we can define matchers for such as tuples of multisets and multisets of multisets.
+Using this feature, we can define matchers for various data types.
+
+First, we can define a matcher for tuples by a tuple of matchers.
+A tuple pattern is used for pattern matching using such a matcher.
+For example, we can define the \lstinline{intersect} function using a matcher for tuples of two multisets.
+We work on pattern matching for tuples of collections more in Sect.~\ref{tuple-of-collections}.
+
+\begin{lstlisting}[language=egison]
+intersect xs ys = matchAll (xs,ys) as (multiset eq, multiset eq) with ($x : _, #x : _) -> x
+\end{lstlisting}
+
+\noindent \lstinline{eq} is a user-defined matcher for data types for which equality is defined. 
+When the \lstinline{eq} matcher is used, equality is checked for a value pattern.\footnote{A definition of the \lstinline{eq} matcher is explained in Sect.~6.3 of~\cite{egi2018Aplas}.}
+%In fact, the \lstinline{integer} matcher used in the previous sections is an alias of the \lstinline{eq} matcher.
+
+By passing a tuple matcher to a function that takes and returns a matcher, we can define a matcher for various non-free data types.
+For example, we can define a matcher for a graph as a set of edges.
+In the following code, we assume a node id is represented by an integer.
+
+{\footnotesize
+\begin{lstlisting}[language=egison]
+graph = multiset (integer, integer)
+\end{lstlisting}
+}
+
+\noindent A matcher for adjacency graphs also can be defined.
+An adjacency graph is defined as a multiset of tuples of an integer and a multiset of integers.
+
+{\footnotesize
+\begin{lstlisting}[language=egison]
+adjacencyGraph = multiset (integer, multiset integer)
+\end{lstlisting}
+}
+
+%\noindent We demonstrate pattern matching for these graphs in Appendix~\ref{graphs}.
+
+\medskip
+
+Some readers might wonder about matchers for algebraic data types.
+Egison provides a special syntax construct for defining a matcher for an algebraic data type.
+For example, a matcher for binary trees can be defined using \lstinline{algebraicDataMatcher}.
+
+{\footnotesize
+\begin{lstlisting}[language=egison]
+algebraicDataMatcher binaryTree a = BLeaf a | BNode a (binaryTree a) (binaryTree a)
+\end{lstlisting}
+}
+
+Matchers for algebraic data types and matchers for non-free data types also can be combined.
+For example, we can define a matcher for trees whose nodes have an arbitrary number of children whose order is ignorable.
+We show pattern matching for these trees in Sect.~\ref{trees}.
+
+{\footnotesize
+\begin{lstlisting}[language=egison]
+algebraicDataMatcher tree a = Leaf a | Node a (multiset (tree a))
+\end{lstlisting}
+}

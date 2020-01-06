@@ -1,0 +1,197 @@
+\documentclass[b5paper,papersize,openany]{jsbook}
+%\documentclass[b5paper,papersize]{jsbook}
+\usepackage[size=b5paper]{bxpapersize}
+
+\usepackage{booktabs} % For formal tables
+\usepackage{hhline}
+\usepackage{ascmac} % for screen
+
+\usepackage{makeidx}
+\makeindex
+
+%\usepackage[bitstream-charter]{mathdesign}
+%\usepackage[T1]{fontenc}
+
+\RequirePackage[varqu]{zi4}
+%\RequirePackage[libertine]{newtxmath}
+
+% page
+\makeatletter
+\def\ps@plainfoot{%
+  \let\@mkboth\@gobbletwo
+  \let\@oddhead\@empty
+  \def\@oddfoot{\normalfont\hfil-- \thepage\ --\hfil}%
+  \let\@evenhead\@empty
+  \let\@evenfoot\@oddfoot}
+\let\ps@plain\ps@plainfoot
+\makeatother
+\pagestyle{plain}
+
+%\setlength{\textwidth}{\fullwidth}
+%\setlength{\evensidemargin}{\oddsidemargin}
+
+%\usepackage[sectionbib]{chapterbib}
+%\usepackage[numbib,notlof,notlot,nottoc]{tocbibind}
+
+\setlength\footskip{2\baselineskip}
+\addtolength{\textheight}{-2\baselineskip}
+
+% B5 176 x 250
+\setlength{\textwidth}{142mm}
+\setlength{\oddsidemargin}{-1in}
+\setlength{\evensidemargin}{-1in}
+\addtolength{\oddsidemargin}{25mm}
+\addtolength{\evensidemargin}{15mm}
+
+\setlength{\textheight}{250mm}
+\setlength{\topmargin}{0mm}
+\addtolength{\topmargin}{-\headheight}
+\addtolength{\topmargin}{-\headsep}
+\addtolength{\topmargin}{-\topskip}
+\addtolength{\textheight}{-45mm}
+
+\renewcommand*\thesection{\arabic{section}}
+
+\title{プログラミング言語Egison入門}
+%\author{Egison開発チーム}
+\author{江木 聡志}
+\date{2020年3月1日}
+
+\usepackage{bussproofs}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{url}
+\usepackage{syntax}
+\usepackage{graphicx}
+\usepackage{authblk}
+\usepackage{makecell,shortvrb}
+\usepackage{multicol}
+\usepackage{hhline}
+\usepackage{amsthm}
+\usepackage{framed}
+
+\usepackage{bcprules, proof}
+\usepackage{fancybox}
+\usepackage{mathtools}
+\usepackage{float}
+% \usepackage[truedimen,margin=15truemm]{geometry}
+\usepackage{color}
+\usepackage{xparse}
+% \usepackage{ebproof}
+\usepackage{lscape}
+
+\usepackage{spverbatim}
+
+\theoremstyle{definition}
+\newtheorem{theorem}{定理}
+\newtheorem{lemma}{補題}
+\newtheorem{definition}{定義}
+
+\allowdisplaybreaks
+
+\EnableBpAbbreviations
+\newcommand*{\ppm}[3]{#1 \approx^{#2} #3 \Downarrow}
+\newcommand*{\pdm}[2]{#1 \approx #2 \Downarrow}
+\newcommand*{\mfun}[4]{#1 \sim^{#2}_{#3} #4 \Downarrow}
+\newcommand*{\matom}[3]{#1 \sim_{#2} #3}
+\newcommand*{\ev}[2]{#1, #2 \Downarrow}
+\newcommand*{\set}[1]{\{#1\}}
+\newcommand*{\cons}{:}
+\newcommand*{\none}{\mathord{\texttt{none}}}
+\newcommand*{\some}{\mathop{\texttt{some}}}
+\newcommand*{\opt}{\mathop{\texttt{opt}}}
+
+\newcommand*{\abs}[1]{|#1|}
+
+\usepackage{xcolor}
+\usepackage{textcomp}
+\definecolor{P@Blue}{named}{blue}
+\definecolor{P@ColorOnBlue}{gray}{.95}
+\definecolor{P@GrayFG}{named}{darkgray}
+\definecolor{P@GrayBG}{gray}{.90}
+\definecolor{P@GrayComment}{gray}{.40}
+\RequirePackage{listings}
+\lstset{%
+  basicstyle=\small\ttfamily,%
+  escapechar=\`,
+  columns=fullflexible,
+  keepspaces=true,
+  extendedchars=true,
+  upquote=true,
+  captionpos=t,
+  backgroundcolor=\color{P@GrayBG},%
+  breaklines=true,
+  postbreak=\raisebox{0ex}[0ex][0ex]{\ensuremath{\hookrightarrow\space}},
+  numbers=left,
+%  numberstyle=\P@listingnumbersfont,
+  numbersep=.5em,
+  frame=single,
+  framerule=0pt}
+\lstdefinelanguage{egison}{%
+  sensitive = true,
+  alsoletter={-},
+  keywords = [1]{match-all, match-all-dfs, match, define, lambda},
+  comment=[l]{;},
+}%
+\lstdefinelanguage{haskell}{%
+  sensitive = true,
+  comment=[l]{--},
+}%
+\lstset{%
+  language={egison},%
+  keywordstyle=[1]\textbf,
+  stringstyle=\color{brown},%
+  commentstyle={\color{P@GrayComment}},%
+}
+\lstset{%
+  language={haskell},%
+  keywordstyle=[1]\textbf,
+  stringstyle=\color{brown},%
+  commentstyle={\color{P@GrayComment}},%
+}
+
+\newcommand{\todo}[1]{\textcolor{red}{(TODO: #1)}}
+
+\begin{document}
+\frontmatter
+
+\maketitle
+
+\setcounter{section}{0}
+\setcounter{footnote}{0}
+\include{preface}
+
+\tableofcontents
+
+\mainmatter
+
+\setcounter{section}{0}
+\include{intro}
+
+\include{quick}
+
+\include{pmo}
+
+\include{pmo-challenge}
+
+\include{matcher}
+
+\include{implementation}
+
+% 自分の記事を追加するときは以下の2行をコピペして編集してください． s/template/yourname/
+%\setcounter{section}{0}
+%\include{template/article}
+
+\setcounter{section}{0}
+\setcounter{footnote}{0}
+\include{post}
+
+\backmatter
+
+\bibliographystyle{abbrv}
+\bibliography{main}
+
+\printindex
+
+\end{document}

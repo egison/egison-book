@@ -1,0 +1,12 @@
+*.omc
+*.aux
+*.blg
+*.dvi
+*.log
+*.out
+*.xcp
+*.bbl
+*.ind
+*.idx
+*.ilg
+*.toc
