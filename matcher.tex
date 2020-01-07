@@ -2,8 +2,181 @@
 
 \section{Egison内部のパターンマッチアルゴリズム}
 
+This section explains and implements the pattern-matching algorithm of Egison, which is described in detail in Sect. 5 and Sect. 7 of the original paper of Egison~\cite{egi2018Aplas}.
+After the explanation of the pattern-matching algorithm, I introduce a simplified implementation of this algorithm in Scheme.
+This implementation is called by the proposed macros whose implementation is introduced in Sect.~\ref{method}.
+
+\medskip
+
+First, I start by explaining the pattern-matching algorithm of Egison briefly.
+In Egison, pattern matching is implemented as reductions of \emph{matching states}.
+A matching state consists of a stack of \emph{matching atoms} and an intermediate result of pattern matching.
+A matching atom is a triple of a pattern, target, and matcher.
+In each step of a pattern-matching process, the top matching atom of the stack of matching atoms is popped off.
+From this matching atom, a list of lists of next matching atoms is calculated.
+Each list of the next matching atoms is pushed on the stack of matching atoms of the matching state.
+As a result, a single matching state is reduced to multiple stacks of matching states in a single reduction step.
+Pattern matching is recursively executed for each matching state.
+When a stack becomes empty, it means pattern matching for this matching state succeeded.
+%\new{
+Fig.~\ref{fig:reductionPath} shows the reduction path when executing the \lstinline{match-all} expression below.
+The matching state that is not grayed-out in the $i$-th row is reduced to matching states in the $(i+1)$-th row.
+For example, the first matching state in the second row is reduced to the matching state in the third row.
+\texttt{MState} takes two arguments, a stack of matching atoms and an intermediate pattern-matching result.
+The value pattern \lstinline{,m} is transformed to \lstinline{(val ,(lambda (m) m))}.
+This transformation is explained in Sect.~\ref{method-val-pat}.
+%}%new
+
+\begin{lstlisting}[language=egison]
+(match-all '(2 8 2) (Multiset Integer) [(cons m (cons ,m _)) m]) ; (2 2)
+\end{lstlisting}
+
+\begin{figure}[t]
+\begin{center}
+  \footnotesize
+  \begin{tabular}{ll}
+    \toprule
+    1 &  \texttt{(MState \{[(cons m (cons (val ,(lambda (m) m)) \_)) (Multiset Integer) \{2 8 2\}]\} \{\})} \\ \hline
+    2 &  \thead[l]{\texttt{(MState \{[m Integer 2] [(cons (val ,(lambda (m) m)) \_) (Multiset Integer) \{8 2\}]\} \{\})} \\
+                   \textcolor{gray}{\texttt{(MState \{[m Integer 8] [(cons (val ,(lambda (m) m)) \_) (Multiset Integer) \{2 2\}]\} \{\})}} \\
+                   \textcolor{gray}{\texttt{(MState \{[m Integer 2] [(cons (val ,(lambda (m) m)) \_) (Multiset Integer) \{2 8\}]\} \{\})}}} \\ \hline
+    3 &  \texttt{(MState \{[m Something 2] [(cons (val ,(lambda (m) m)) \_) (Multiset Integer) \{8 2\}]\} \{\})} \\ \hline
+    4 &  \texttt{(MState \{[(cons (val ,(lambda (m) m)) \_) (Multiset Integer) \{8 2\}]\} \{2\})} \\ \hline
+    5 &  \thead[l]{\textcolor{gray}{\texttt{(MState \{[,m Integer 8] [\_ (Multiset Integer) \{2\}]\} \{2\})}} \\
+                   \texttt{(MState \{[,m Integer 2] [\_ (Multiset Integer) \{8\}]\} \{2\})}} \\ \hline
+    6 &  \texttt{(MState \{[\_ (Multiset Integer) \{8\}]\} \{2\})} \\ \hline
+    7 &  \texttt{(MState \{[\_ Something \{8\}]\} \{2\})} \\ \hline
+    8 &  \texttt{(MState \{\} \{2\})} \\
+    \bottomrule
+  \end{tabular}
+\end{center}
+  \caption{Reduction path of matching states}
+  \label{fig:reductionPath}
+\end{figure}
+
 \section{\lstinline{unorderedPair}マッチャーの定義}
 
 \section{\lstinline{multiset}マッチャーの定義}
 
+Matcher definition is the most technical part in pattern-match-oriented programming.
+This section explains the method for defining a matcher by showing a matcher definition for multisets.
+The program below shows a matcher definition for multisets.
+The multiset matcher is the most basic nontrivial matcher.
+This section explores the detail of this definition.
+
+\begin{lstlisting}[language=egison]
+multiset a = matcher
+               [] as () with
+                 \tgt -> case tgt of
+                           [] -> [()]
+                           _ -> []
+               $ : $ as (a, multiset a) with
+                 \tgt -> matchAll tgt as list a with
+                           $hs ++ $x : $ts -> (x, hs ++ ts)
+               #$val as () with
+                 \tgt -> match (val, tgt) as (list a, multiset a) with
+                           ([], []) -> [()]
+                           ($x : $xs, #x : #xs) -> [()]
+                           (_, _) -> []
+               $ as something with
+                 \tgt -> [tgt]
+\end{lstlisting}
+
+A matcher is defined using the \lstinline{matcher} expression.
+The \lstinline{matcher} expression is a built-in syntax of Egison.
+\lstinline{matcher} takes a collection of \emph{matcher clauses}.
+A matcher clause is a triple of a \emph{primitive-pattern pattern}, a \emph{next-matcher expression}, and a \emph{next-target expression}.
+
+A matcher is a kind of function that takes a pattern and target, and returns lists of the next \emph{matching atoms}.
+A matching atom is a triple of a pattern, target, and matcher.
+A primitive-pattern pattern matches a pattern.
+Patterns that match with \emph{pattern holes} (\lstinline|$| inside primitive-pattern patterns) are next patterns.
+A next-matcher expression returns next matchers.
+A next-target expression is a function that takes a target and returns a list of next targets.
+A matcher generates a list of the next matching atoms by combining next patterns, next matchers, and a list of next targets.\footnote{In Egison, pattern matching is implemented as reductions of stacks of matching atoms.
+Each list of the next matching atoms returned by a matcher is pushed to the stack of matching atoms.
+As a result, a single stack of matching atom is reduced to multiple stacks of matching atoms in a single reduction step.
+Pattern matching is recursively executed for each stack of matching atoms.
+When a stack becomes empty, it means pattern matching for this stack succeeded.}
+p
+The \lstinline{multiset} matcher has four matcher clauses.
+The first matcher clause handles a nil pattern, and it checks whether the target is an empty collection or not.
+The second matcher clause handles a cons pattern.
+The third matcher clause handles a value pattern.
+This matcher clause defines the equality of multisets.
+The fourth matcher clause handles the other patterns for multiset: a pattern variable and wildcard.
+
+\medskip
+
+First, we focus on the second matcher clause.
+The primitive-pattern pattern of the second matcher clause is \lstinline|$ : $|, and the next matcher expression is \lstinline|(a, multiset a)|.
+It means two arguments of the cons pattern are next patterns and they are pattern-matched using the \lstinline|a| and \lstinline|multiset a| matchers, respectively.
+\lstinline|a| is an argument of \lstinline{multiset} and the matcher for inner elements of a multiset.
+In the next target expression, a simple join-cons pattern is used to decompose a target collection into an element and the rest collection.
+For example, when the target is a collection \lstinline{[1,2,3]}, this next-target expression returns \lstinline{[(1,[2,3]),(2,[1,3]),(3,[1,2])]}.
+Each tuple of the next targets is pattern-matched using the next patterns and the next matchers recursively.
+For example, \lstinline{1} and \lstinline{[2,3]} are pattern-matched using the \lstinline{a} and \lstinline{multiset a} matcher with the first and the second argument of the cons pattern, respectively.
+
+\medskip
+
+Next, we focus on the third matcher clause.
+This matcher clause is as technical as the second matcher clause.
+The primitive-pattern pattern of this matcher clause is \lstinline|#$val|.
+It is called a \emph{value-pattern pattern}.
+A value-pattern pattern matches a value pattern.
+This matcher clause compares the content of a value pattern (\lstinline{val}) and a target (\lstinline{tgt}) as multisets.
+The \lstinline{match} expression is used for this comparison.
+Interestingly, \lstinline|tgt| is recursively pattern-matched as \lstinline{multiset a}.
+
+The first and the third match clauses of this \lstinline{match} expression are simple.
+The first match clause states that it returns \lstinline|[()]| when both \lstinline{val} and \lstinline{tgt} are empty.
+This return value means pattern matching for the value pattern succeeded.
+The third match clause states that it returns \lstinline|[]| if pattern matching for the patterns of both the first and the second match clause failed.
+This return value means pattern matching for the value pattern failed.
+
+The second match clause is the most technical part of this \lstinline{match} expression.
+The value pattern \lstinline|#xs| is recursively pattern-matched using this matcher clause itself.
+The collection \lstinline{xs} is one element shorter than \lstinline{tgt}.
+Therefore, this recursion finally reaches the first or the third match clause if \lstinline{val} and \lstinline{tgt} are finite.
+
+\medskip
+
+Finally, let us also explain the fourth matcher clause.
+This matcher clause creates the next matching atom by just changing the matcher from \lstinline{multiset a} to \lstinline{something}.
+
 \section{\lstinline{soretedList}マッチャーの定義}
+
+Modularization of pattern-matching algorithms by matchers not by patterns enables polymorphic patterns.
+However, its merit extends beyond polymorphic patterns; matchers enable descriptions of more efficient pattern matching keeping patterns concise.
+The reason is that pattern matching against patterns inside matcher definitions allows us to describe more detailed pattern-matching algorithms.
+This section shows such an example, a matcher for sorted lists.
+
+The program that used a doubly-nested join-cons pattern for enumerating pairs of prime numbers whose forms are $(p,p+6)$ gets slower when the number of the enumerating prime pairs gets larger.
+The reason is that the program enumerates all the combinations of prime numbers.
+For example, the program tries to match all the pairs such as $(3,5), (3,7), (3,11), (3,13), (3, 17), (3,19)$, and so on.
+However, we should avoid enumerating the pairs after $(3,11)$, the first pair whose difference is more than $6$.
+This is because it is obvious that the difference between all the pairs after $(3,11)$ are more than $6$.
+
+\begin{lstlisting}[language=egison]
+take 10 (matchAll primes as sortedList integer with
+           _ ++ $p : (_ ++  #(p + 6) : _) -> (p, p + 6))
+-- [(5,11),(7,13),(11,17),(13,19),(17,23),(23,29),(31,37),(37,43),(41,47),(47,53)]
+\end{lstlisting}
+
+We can avoid this unnecessary search by creating a new matcher that is specialized for sorted lists.
+We can define such a matcher by adding a matcher clause with the primitive-pattern pattern \lstinline|$ ++ #$px : $| to the \lstinline{list} matcher as shown below.
+This matcher clause improves the theoretical time complexity of the above pattern from $O(n^2)$ to $O(n)$.
+
+\begin{lstlisting}[language=egison]
+sortedList a =
+  matcher
+    $ ++ #$px : $ as (sortedList a, sortedList a)
+      \tgt -> matchAll tgt as list a with
+                loop $i (1, $n) ((and ?(\x -> x < px) $h_i) : ...) (#px : $ts) ->
+                  (map (\i -> h_i) [1..n], ts)
+    ...
+\end{lstlisting}
+
+Note that this method is only applicable to Egison that modularizes pattern-matching methods for each matcher, not for each pattern.
+The reason is that we need to match patterns whose form is \lstinline|_ ++ #x : _| as mentioned above.
+If pattern-matching methods are modularized for each pattern, we need to introduce a new pattern constructor \lstinline|joinCons ... ...| that is equivalent to \lstinline|_ ++ ... : ...| for this purpose.

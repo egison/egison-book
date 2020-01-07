@@ -2,7 +2,7 @@
 
 \section{リストプログラミング}
 
-\section{ポーカーの役判定}
+\section{ポーカーの役判定}\label{practice-poker}
 
 多重集合に対する非線形パターンを記述できるEgisonを使うとポーカーの役判定が簡潔に記述できる．
 それぞれのポーカーの役は直接1つのパターンとして記述できる．
@@ -31,6 +31,28 @@ poker cs :=
 \end{lstlisting}
 
 \begin{lstlisting}[language=egison]
+poker [Card Spade 5, Card Spade 6, Card Spade 7, Card Spade 8, Card Spade 9]
+-- "Straight flush"
+poker [Card Spade 5, Card Diamond 5, Card Spade 7, Card Club 5, Card Heart 5]
+-- "Four of a kind"
+poker [Card Spade 5, Card Diamond 5, Card Spade 7, Card Club 5, Card Heart 7]
+-- "Full house"
+poker [Card Spade 5, Card Spade 6, Card Spade 7, Card Spade 13, Card Spade 9]
+-- "Flush"
+poker [Card Spade 5, Card Club 6, Card Spade 7, Card Spade 8, Card Spade 9]
+-- "Straight"
+poker [Card Spade 5, Card Diamond 5, Card Spade 7, Card Club 5, Card Heart 8]
+-- "Three of a kind"
+poker [Card Spade 5, Card Diamond 10, Card Spade 7, Card Club 5, Card Heart 10]
+-- "Two pair"
+poker [Card Spade 5, Card Diamond 10, Card Spade 7, Card Club 5, Card Heart 8]
+-- "One pair"
+poker [Card Spade 5, Card Spade 6, Card Spade 7, Card Spade 8, Card Diamond 11]
+-- "Nothing"
+\end{lstlisting}
+
+
+\begin{lstlisting}[language=egison]
 suit := algebraicDataMatcher
   | spade
   | heart
@@ -42,6 +64,88 @@ card := algebraicDataMatcher
 \end{lstlisting}
 
 \section{SATソルバー}
+
+To see the effect of pattern-match-oriented programming for implementing practical algorithms, we implement a SAT solver.
+A SAT solver determines whether a given propositional logic formula has an assignment for which the formula evaluates to true.
+Input formulae for SAT solvers are often in \emph{conjunctive normal form}.
+A formula in conjunctive normal form is a conjunction of clauses, which are disjunctions of \emph{literals}.
+A literal is a formula whose form is $p$ or $\neg p$.
+For example, $(p \lor q) \wedge (\neg p \lor r) \wedge (\neg p \lor \neg r)$ is a formula in conjunctive normal form that has a solution; $p = \texttt{False}$, $q = \texttt{True}$, and $r = \texttt{True}$.
+
+\subsection{The Davis-Putnam Algorithm}
+
+In our implementation, propositional logic formulae in conjunctive normal form are represented as a collection of collections of literals.
+We can pattern-match them as a multiset of multisets of literals because both $\wedge$ and $\lor$ are commutative operators.
+Furthermore, we represent a literal as an integer.
+We represent positive and negative literals as positive and negative integers respectively: for example, $p$ and $\neg p$ are represented as $1$ and $-1$, respectively.
+Therefore, the matcher for these formulae can be defined by simply composing matchers as \lstinline{multiset (multiset integer)}.
+
+The program below shows the main part of our implementation of the Davis-Putnam algorithm\cite{harrison2009handbook}.
+The \lstinline{sat} function takes a list of propositional variables and a logical formula, and returns \lstinline{True} if there is a solution, otherwise returns \lstinline{False}.
+
+\begin{lstlisting}[language=egison]
+sat vars cnf = match (vars, cnf) as (multiset integer, multiset (multiset integer)) with
+  (_       , []) -> True
+  (_       , [] : _) -> False
+  (_       , ($x : []) : _) -> -- 1-literal rule
+    sat (delete (abs x) vars) (assignTrue x cnf)
+  ($v : $vs, !((#(negate v): _) : _)) -> -- pure literal rule (positive)
+    sat vs (assignTrue v cnf)
+  ($v : $vs, !((#v: _) : _)) -> -- pure literal rule (negative)
+    sat vs (assignTrue (negate v) cnf)
+  ($v : $vs, _) -> -- otherwise
+    sat vs (deleteClausesWith [v, negate v] cnf ++ resolveOn v cnf)
+\end{lstlisting}
+
+The first match clause states that the input formula has a solution when it is empty.
+The second match clause states that that there is no solution when clauses include an empty clause.
+The third match clause represents \emph{1-literal rule}.
+When the input formula includes a clause with a single literal, we can assign that literal \lstinline{True} at once.
+The fourth match clause states that that if there is a propositional variable that appears only positively, we can set the value of this literal \lstinline{True} and remove the propositional variable of \lstinline{x} from the variable list and the clauses that include this literal from the formula.
+For example, $(p \lor q) \wedge (\neg p \lor r) \wedge (\neg p \lor \neg r)$ contains a propositional variable $q$ only positively, so we can assign $q$ \lstinline{True} and remove the first clause from the next recursion.
+The fifth match clause states that the opposite of the fourth match clause.
+It removes the clauses that include this literal if there is a propositional variable that appears only negatively ($p$ in the above sample is such propositional variable).
+The final match clause applies the resolution principle.
+This match clause lists all pairs of clauses $p \lor C$ and $\neg p \lor D$ (let $C$ and $D$ be a disjunction of literals), and obtains new clauses $C \lor D$.
+
+The above definition of \lstinline{sat} describes all rules for simplifying an input formula by fully utilizing pattern matching for multisets.
+In traditional functional languages, we need to call several library functions and define several helper functions to describe these conditional branches.
+We can compare this implementation with the same algorithm implemented in OCaml in~\cite{harrison2009handbook}.
+
+\subsection{Pattern Matching for Resolution}
+
+We can elegantly define the \lstinline{resolveOn} function using a sequential not-pattern.
+
+First, let us show a naive implementation of \lstinline{resolveOn}.
+The \lstinline{resolveOn} function is defined with a single \lstinline{matchAll} expression as follows.
+
+\begin{lstlisting}[language=egison]
+resolveOn v cnf = matchAll cnf as multiset (multiset integer) with
+  (#v : $xs) : (#(negate v) : $ys) : _ -> unique (filter (\c -> not (tautology c)) (xs ++ ys))
+\end{lstlisting}
+
+\noindent
+The pattern for enumerating the pair of clauses $p \lor C$ and $\neg p \lor D$ is described simply utilizing pattern-matching for a multiset of multisets.
+Note that the above \lstinline{resolveOn} removes tautological clauses by using the \lstinline{tautology} predicate in the body of the match clause.
+
+We can remove this use of the \lstinline{tautology} predicate by using a sequential not-pattern discussed in Sect.~\ref{tuple-of-collections}.
+The sequential pattern is effectively used to describe that the literal \lstinline{x} appeared in \lstinline{xs} does not appear negatively in \lstinline{ys}.
+
+\begin{lstlisting}[language=egison]
+resolveOn v cnf = matchAll cnf as multiset (multiset integer) with
+  [(#v : (and @ $xs)) : (#(negate v) : (and @ $ys)) : _,
+   !($x : _, #(negate x) : _)] -> unique (xs ++ ys)
+\end{lstlisting}
+
+\subsection{Separating Two Kinds of Loops}
+
+The SAT solver presented in this section is an important sample in the sense that it is the only sample that contains a loop that we cannot remove by pattern-match-oriented programming.
+This unremovable loop is the recursion of the \lstinline{sat} function.
+This recursion is essential for narrowing the search tree.
+This narrowing is impossible by simple backtracking.
+On the other hand, all the other loops that can be implemented in backtracking algorithms are pushed into the patterns.
+In the traditional style, we describe the 1-literal rule and pure literal rules by using recursive functions such as \lstinline{find}, \lstinline{partition}, \lstinline{subtract} and \lstinline{intersect}~\cite{harrison2009handbook}.
+Thus, the separation of two kinds of loops increases the readability of practical algorithms.
 
 \section{ゲーム木のパターンマッチ}
 
