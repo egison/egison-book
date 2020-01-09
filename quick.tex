@@ -230,7 +230,7 @@ comb2 [1,2,3,4] -- [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4]]
 \end{lstlisting}
 
 Egisonはこの例の中の\lstinline|$x_1|と\lstinline|$x_2|のように，パターン変数に添字を付加することを許す．
-これらは\emph{添字付き変数}と呼ばれ，$x_1$や$x_2$のような数式に対応する．
+これらは\emph{添字付き変数}\index{そえじつきへんすう@添字付き変数}と呼ばれ，$x_1$や$x_2$のような数式に対応する．
 \lstinline|_|のあとに続く式は，添字と呼ばれ，整数に評価される必要がある．
 \lstinline|x_i_j_k|のように任意個の添字を変数に付加することができる．
 添字付き変数\lstinline|$x_i|に値が束縛されたとき，もし変数\lstinline|x|にまだ何も束縛されていなかった場合に，Egison処理系は，連想配列を生成し，\lstinline|x|に束縛する．
@@ -325,7 +325,15 @@ singleCommonElem = match (xs, ys) as (multiset eq, multiset eq) with
 
 \section{forallパターン}
 
-述語パターンで奇数かどうかチェックしている．
+\emph{forallパターン}\index{forallぱたーん@forallパターン}は，\emph{すべての場合}にパターンマッチに成功するとき，パターンマッチに成功するパターンを表現する．
+forallパターンは引数を2つとる．
+第一引数のパターンでまずパターンマッチし，そのすべての結果について第二引数がパターンマッチに成功するとき，成功結果を返す．
+第一引数と第二引数のパターンの関係は，シーケンシャルパターンの要素同士の関係と似ている．
+第一引数で \lstinline{@} の部分にマッチしたターゲットとマッチャーは，第二引数のパターンとのパターンマッチが試みられる．
+
+以下のforallパターンは，ターゲットのコレクションの要素がすべて奇数である場合にパターンマッチに成功するパターンを表現している．
+第一引数のパターン中に現れる\lstinline{@}はターゲットのコレクションの要素にマッチする．
+第二引数の述語パターンで奇数かどうかチェックしている．
 パターンマッチに成功した場合，すべてのパターンマッチ結果を返す．
 
 \begin{lstlisting}[language=egison]
@@ -379,25 +387,27 @@ match [1, 1, 2, 3] as list integer with
 
 \section{マッチャー合成による新しいマッチャーの生成}
 
-Matchers are composable, and we can define matchers for such as tuples of multisets and multisets of multisets.
-Using this feature, we can define matchers for various data types.
+マッチャーは合成可能で，マッチャーを組み合わせて，たとえば，多重集合のタプルのマッチャーや多重集合の多重集合のマッチャーを定義することができる．
+これにより，さまざまなデータ型に対するマッチャーを定義することができる．
 
-First, we can define a matcher for tuples by a tuple of matchers.
-A tuple pattern is used for pattern matching using such a matcher.
-For example, we can define the \lstinline{intersect} function using a matcher for tuples of two multisets.
-We work on pattern matching for tuples of collections more in Sect.~\ref{tuple-of-collections}.
+タプルに対するマッチャーは，マッチャーのタプルにより表現される．
+\emph{タプル・パターン}\index{たぷるぱたーん@タプル・パターン}はそのようなマッチャーを使ったパターンマッチのときに使われる．
+たとえば，以下は，第\ref{intro}章\ref{intro-pmo}節でも登場した\lstinline{intersect}関数の定義である．
+2つの多重集合のタプルに対するマッチャーを使って，コレクションの共通要素をパターンマッチで取り出している．
 
 \begin{lstlisting}[language=egison]
-intersect xs ys = matchAll (xs,ys) as (multiset eq, multiset eq) with ($x : _, #x : _) -> x
+intersect xs ys =
+  matchAll (xs,ys) as (multiset eq, multiset eq) with
+  | ($x :: _, #x :: _) -> x
 \end{lstlisting}
 
-\noindent \lstinline{eq} is a user-defined matcher for data types for which equality is defined. 
-When the \lstinline{eq} matcher is used, equality is checked for a value pattern.\footnote{A definition of the \lstinline{eq} matcher is explained in Sect.~6.3 of~\cite{egi2018Aplas}.}
-%In fact, the \lstinline{integer} matcher used in the previous sections is an alias of the \lstinline{eq} matcher.
+\noindent
+上記で使われている\lstinline{eq}マッチャーは，同値性が定義されたデータ型\footnote{現在のEgisonには静的な型はないが，Haskellでいうと\lstinline{Eq}型クラスに属するデータ型}のパターンマッチに使えるユーザー定義マッチャーである．
+\lstinline{eq}マッチャーに対して，値パターンが使われた場合，同値性のチェックによりパターンマッチがおこなわれる．
 
-By passing a tuple matcher to a function that takes and returns a matcher, we can define a matcher for various non-free data types.
-For example, we can define a matcher for a graph as a set of edges.
-In the following code, we assume a node id is represented by an integer.
+また，タプル・マッチャーと，マッチャーを引数にとってマッチャーを返す関数を組み合わせると，さまざまな非自由データ型に対するマッチャーが定義できる．
+たとえば，辺の集合として表現したグラフのマッチャーが定義できる．
+以下の定義は，グラフのノードのIDが整数として表現されていることを仮定している．
 
 {\footnotesize
 \begin{lstlisting}[language=egison]
@@ -405,8 +415,9 @@ graph = multiset (integer, integer)
 \end{lstlisting}
 }
 
-\noindent A matcher for adjacency graphs also can be defined.
-An adjacency graph is defined as a multiset of tuples of an integer and a multiset of integers.
+隣接リストにより表現したグラフのマッチャーも定義できる．
+隣接リストによるグラフは，整数と整数の多重集合のタプルの多重集合として定義される．
+ここでも整数によりノードのIDを表現している．
 
 {\footnotesize
 \begin{lstlisting}[language=egison]
@@ -414,13 +425,11 @@ adjacencyGraph = multiset (integer, multiset integer)
 \end{lstlisting}
 }
 
-%\noindent We demonstrate pattern matching for these graphs in Appendix~\ref{graphs}.
-
 \medskip
 
-Some readers might wonder about matchers for algebraic data types.
-Egison provides a special syntax construct for defining a matcher for an algebraic data type.
-For example, a matcher for binary trees can be defined using \lstinline{algebraicDataMatcher}.
+代数的データ型に対するマッチャーも定義できる．
+代数的データ型に対するマッチャーを定義するための特別な構文がEgisonには用意されている．
+たとえば，二分木に対するマッチャーは\lstinline{algebraicDataMatcher}式を使って以下のように定義できる．
 
 {\footnotesize
 \begin{lstlisting}[language=egison]
@@ -428,9 +437,9 @@ algebraicDataMatcher binaryTree a = BLeaf a | BNode a (binaryTree a) (binaryTree
 \end{lstlisting}
 }
 
-Matchers for algebraic data types and matchers for non-free data types also can be combined.
-For example, we can define a matcher for trees whose nodes have an arbitrary number of children whose order is ignorable.
-We show pattern matching for these trees in Sect.~\ref{trees}.
+代数的データ型に対するマッチャーと非自由データ型に対するマッチャーを組み合わせることができる．
+たとえば，任意の数の子供をもつツリーで子供の順番を無視するマッチャーは以下のように定義できる．
+第\ref{practice}章\ref{practice-tree}節でこのツリーに対するパターンマッチを紹介する．
 
 {\footnotesize
 \begin{lstlisting}[language=egison]
