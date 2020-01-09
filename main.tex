@@ -122,7 +122,7 @@
   captionpos=t,
   backgroundcolor=\color{P@GrayBG},%
   breaklines=true,
-  postbreak=\raisebox{0ex}[0ex][0ex]{\ensuremath{\hookrightarrow\space}},
+%  postbreak=\raisebox{0ex}[0ex][0ex]{\ensuremath{\hookrightarrow\space}},
   numbers=left,
 %  numberstyle=\P@listingnumbersfont,
   numbersep=.5em,
@@ -130,9 +130,8 @@
   framerule=0pt}
 \lstdefinelanguage{egison}{%
   sensitive = true,
-  alsoletter={-},
-  keywords = [1]{match-all, match-all-dfs, match, define, lambda},
-  comment=[l]{;},
+  comment=[l]{--},
+  commentstyle={\color{P@GrayComment}},%
 }%
 \lstdefinelanguage{haskell}{%
   sensitive = true,
@@ -140,13 +139,11 @@
 }%
 \lstset{%
   language={egison},%
-  keywordstyle=[1]\textbf,
   stringstyle=\color{brown},%
   commentstyle={\color{P@GrayComment}},%
 }
 \lstset{%
   language={haskell},%
-  keywordstyle=[1]\textbf,
   stringstyle=\color{brown},%
   commentstyle={\color{P@GrayComment}},%
 }

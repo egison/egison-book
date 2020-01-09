@@ -139,7 +139,7 @@ equalMultiset xs ys :=
 
 \section*{ジョーカーの存在を考慮するポーカーの役判定}
 
-\ref{practice}章\ref{practice-poker}節のポーカーの役判定のためのパターンマッチ（\lstinline{poker}関数）の実装を一切変更せずに，\lstinline{card}マッチャーの定義だけを変更して，ジョーカーの存在を考慮するポーカーの役判定をできるようにせよ．
+\ref{pmo}章\ref{pmo-poker}節のポーカーの役判定のためのパターンマッチ（\lstinline{poker}関数）の実装を一切変更せずに，\lstinline{card}マッチャーの定義だけを変更して，ジョーカーの存在を考慮するポーカーの役判定をできるようにせよ．
 
 \begin{lstlisting}[language=egison]
 card := matcher
@@ -152,5 +152,5 @@ card := matcher
 poker [Card Spade 5, Card Spade 6, Joker, Card Spade 8, Card Spade 9]
 -- "Straight flush"
 poker [Card Spade 5, Card Diamond 5, Joker, Card Club 5, Card Heart 7]
--- "Full house"
+-- "Four of a kind"
 \end{lstlisting}
