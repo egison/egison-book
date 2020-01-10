@@ -238,7 +238,7 @@ card := algebraicDataMatcher
 \end{lstlisting}
 
 
-\section{ネストしたループ・パターン}
+\section{ループ・パターンによる再帰的パターン --- ツリー・グラフのパターンマッチ}
 
 Loop patterns are used for describing repetitions in a pattern.
 It is useful when we construct a complicated pattern by combining simple pattern constructors (Sect.~\ref{trees}) and when the number of pattern variables that appear in a pattern changes by parameters (Sect.~\ref{n-queen}).
@@ -473,20 +473,23 @@ Egison does not focus on pattern matching for graphs, instead Egison allows user
 
 \section{タプル・パターンによるデータの比較}
 
-When describing algorithms, we often meet a situation to compare multiple data.
-A tuple pattern combined with not-patterns is especially useful for this purpose.
-For example, we can define \lstinline{difference} by inserting a not-pattern into the definition of \lstinline{intersect} in Sect.~\ref{matcher-compositions}.
+複数のデータをくらべたいという場面は，プログラミングにおいて頻出する．
+このような場面で，とくにnotパターンと一緒に使われるタプル・パターンが役に立つことがおおい．
+たとえば， \lstinline{difference}関数は，第\ref{quick}章\ref{quick-matcher-composition}節に登場した\lstinline{intersect}関数の実装にnotパターンを挿入することにより定義できる．
 
 \begin{lstlisting}[language=egison]
-difference xs ys = matchAll (xs, ys) as (multiset eq, multiset eq) with ($x : _, !(#x : _)) -> x
+difference xs ys := matchAll (xs, ys) as (multiset eq, multiset eq) with
+  | ($x :: _, !(#x :: _)) -> x
 \end{lstlisting}
 
-\noindent By changing the position of the not-pattern as \lstinline|!($x : _, #x : _)|, we can also describe a pattern that matches when no common element exists between the remainders of the two collections.
+\noindent
+\lstinline|!($x : _, #x : _)|のように，notパターンの挿入位置をを変えることにより，2つのコレクションに共通要素が1つもない場合にパターンマッチに成功するパターンも記述できる．
 
-We can write more complicated patterns by combining these patterns with a sequential pattern that allows us to apply a not-pattern to separate parts of the pattern simultaneously.
-For example, a pattern that matches when only one common element exists between the two collections is described below.
-A sequential pattern enables us to describe the pattern-matching process that first extracts one common element from the two collections, and after that checks that no common element exists between the rest two collections.
-Sequential not-patterns often appear in mathematical algorithms, and we show an example again in Sect.~\ref{sat-solver}.
+これらのパターンをシーケンシャル・パターンと組み合わせることにより，さらに複雑なパターンを記述することができる．
+シーケンシャル・パターンは，notパターンを，パターンの複数の離れた部分にまとめて適用することを可能にするからである．
+たとえば，第\ref{quick}章\ref{quick-seq-pattern}節では，2つのコレクションに共通要素が1つしかないことをチェックする\lstinline{singleCommonElem}関数をパターンマッチにより定義した．
+シーケンシャル・notパターンは，数学のアルゴリズムを記述するときに必要となることがある．
+たとえば，第\ref{practice}章\ref{practice-sat}節でで紹介するSATソルバーの実装でもシーケンシャル・notパターンは現れる．
 
 \begin{lstlisting}[language=egison]
 singleCommonElem = match (xs, ys) as (multiset eq, multiset eq) with
@@ -495,8 +498,8 @@ singleCommonElem = match (xs, ys) as (multiset eq, multiset eq) with
                       _ -> False
 \end{lstlisting}
 
-We can combine a sequential pattern also with a loop pattern.
-For example, we can write a pattern that matches the common prefix of two lists with a sequential loop pattern.
+シーケンシャル・パターンをループ・パターンと組み合わせることも可能である．
+たとえば，2つのリストの共通の先頭部分にマッチするパターンを，シーケンシャル・ループ・パターンにより記述できる．
 
 \begin{lstlisting}[language=egison]
 match (xs, ys) as (list eq, list eq) with
@@ -505,14 +508,6 @@ match (xs, ys) as (list eq, list eq) with
      !($y : _, #y : _)] -> map (\i -> x_i) [1..n]
 \end{lstlisting}
 
-% TODO: これはlater patternでは表現できない．sequential patternでないとできない．
-% TODO: なぜなら，パターンの複数の部分をまとめたものにnot patternを適用しないとならないから．
-% TODO: パターンマッチの順番とデータ表現の順番が異なることがある．tupleのパターンマッチは，そのようなときに，sequential patternが役に立つというわかりやすい例．
-% TODO: この例のようなパターンマッチは，SAT solverの実装でも多用される．
-
-% パターンマッチの順番を制御したい(sequential patternを使いたい)のはどういう場面か．
-% 左から右へのパターンマッチが適していない場合．
-% データの表現とパターンの表現の順番に乖離がある場合．
-% sequential patternとlater patternの差は，not patternやloop patternと組み合わせられるかどうかにある．
-
 \section{複数のマッチ節をとる\texttt{matchAll}}
+
+服部さんの多項式の足し算
