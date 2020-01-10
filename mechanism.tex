@@ -1,0 +1,132 @@
+\chapter{Egisonパターンマッチの仕組み}\label{mechanism}
+
+本章は，Egison内部のパターンマッチの仕組みを解説する．
+Egison内部でどのような処理がなされてパターンマッチが実行されるのか知っておくことは，第\ref{matcher}章で解説されるマッチャー定義の方法を理解するために重要である．
+
+This section explains and implements the pattern-matching algorithm of Egison, which is described in detail in Sect. 5 and Sect. 7 of the original paper of Egison~\cite{egi2018Aplas}.
+After the explanation of the pattern-matching algorithm, I introduce a simplified implementation of this algorithm in Scheme.
+This implementation is called by the proposed macros whose implementation is introduced in Sect.~\ref{method}.
+
+\section{パターンマッチ・アルゴリズムの概略}\label{mechanism-overview}
+
+以下の\lstinline{matchAll}式を実行したときにどのような処理がなされるのかみていくことにより，Egison内部のパターンマッチ・アルゴリズムの概略をつかむ．
+
+\begin{lstlisting}[language=egison]
+matchAll [2,8,2] as multiset integer with
+| $m :: #m :: _ -> m
+-- [2,2]
+\end{lstlisting}
+
+\begin{verbatim}
+MState [($m :: #m :: _, multiset integer, [2,8,2])]
+       []
+\end{verbatim}
+
+
+\begin{verbatim}
+MState [($m, integer, 2)
+       ,(#m :: _, multiset integer, [8,2])]
+       []
+
+MState [($m, integer, 8)
+       ,(#m :: _, multiset integer, [2,2])]
+       []
+
+MState [($m, integer, 2)
+       ,(#m :: _, multiset integer, [2,8])]
+       []
+\end{verbatim}
+
+\begin{verbatim}
+MState [($m, integer, 2)
+       ,(#m :: _, multiset integer, [8,2])]
+       []
+\end{verbatim}
+
+\begin{verbatim}
+MState [($m, something, 2)
+       ,(#m :: _, multiset integer, [8,2])]
+       []
+\end{verbatim}
+
+\begin{verbatim}
+MState [(#m :: _, multiset integer, [8,2])]
+       [(m, 2)]
+\end{verbatim}
+
+\begin{verbatim}
+MState [(#m, integer, 8)
+       ,(_, multiset integer, [2])]
+       [(m, 2)]
+
+MState [(#m, integer, 2)
+       ,(_, multiset integer, [8])]
+       [(m, 2)]
+\end{verbatim}
+
+\begin{verbatim}
+MState [(_, multiset integer, [8])]
+       [(m, 2)]
+\end{verbatim}
+
+\begin{verbatim}
+MState []
+       [(m, 2)]
+\end{verbatim}
+
+
+First, I start by explaining the pattern-matching algorithm of Egison briefly.
+In Egison, pattern matching is implemented as reductions of \emph{matching states}.
+A matching state consists of a stack of \emph{matching atoms} and an intermediate result of pattern matching.
+A matching atom is a triple of a pattern, target, and matcher.
+In each step of a pattern-matching process, the top matching atom of the stack of matching atoms is popped off.
+From this matching atom, a list of lists of next matching atoms is calculated.
+Each list of the next matching atoms is pushed on the stack of matching atoms of the matching state.
+As a result, a single matching state is reduced to multiple stacks of matching states in a single reduction step.
+Pattern matching is recursively executed for each matching state.
+When a stack becomes empty, it means pattern matching for this matching state succeeded.
+%\new{
+Fig.~\ref{fig:reductionPath} shows the reduction path when executing the \lstinline{match-all} expression below.
+The matching state that is not grayed-out in the $i$-th row is reduced to matching states in the $(i+1)$-th row.
+For example, the first matching state in the second row is reduced to the matching state in the third row.
+\texttt{MState} takes two arguments, a stack of matching atoms and an intermediate pattern-matching result.
+The value pattern \lstinline{,m} is transformed to \lstinline{(val ,(lambda (m) m))}.
+This transformation is explained in Sect.~\ref{method-val-pat}.
+%}%new
+
+\begin{lstlisting}[language=egison]
+(match-all '(2 8 2) (Multiset Integer) [(cons m (cons ,m _)) m]) ; (2 2)
+\end{lstlisting}
+
+\begin{figure}[t]
+\begin{center}
+  \footnotesize
+  \begin{tabular}{ll}
+    \toprule
+    1 &  \texttt{(MState \{[(cons m (cons (val ,(lambda (m) m)) \_)) (Multiset Integer) \{2 8 2\}]\} \{\})} \\ \hline
+    2 &  \thead[l]{\texttt{(MState \{[m Integer 2] [(cons (val ,(lambda (m) m)) \_) (Multiset Integer) \{8 2\}]\} \{\})} \\
+                   \textcolor{gray}{\texttt{(MState \{[m Integer 8] [(cons (val ,(lambda (m) m)) \_) (Multiset Integer) \{2 2\}]\} \{\})}} \\
+                   \textcolor{gray}{\texttt{(MState \{[m Integer 2] [(cons (val ,(lambda (m) m)) \_) (Multiset Integer) \{2 8\}]\} \{\})}}} \\ \hline
+    3 &  \texttt{(MState \{[m Something 2] [(cons (val ,(lambda (m) m)) \_) (Multiset Integer) \{8 2\}]\} \{\})} \\ \hline
+    4 &  \texttt{(MState \{[(cons (val ,(lambda (m) m)) \_) (Multiset Integer) \{8 2\}]\} \{2\})} \\ \hline
+    5 &  \thead[l]{\textcolor{gray}{\texttt{(MState \{[,m Integer 8] [\_ (Multiset Integer) \{2\}]\} \{2\})}} \\
+                   \texttt{(MState \{[,m Integer 2] [\_ (Multiset Integer) \{8\}]\} \{2\})}} \\ \hline
+    6 &  \texttt{(MState \{[\_ (Multiset Integer) \{8\}]\} \{2\})} \\ \hline
+    7 &  \texttt{(MState \{[\_ Something \{8\}]\} \{2\})} \\ \hline
+    8 &  \texttt{(MState \{\} \{2\})} \\
+    \bottomrule
+  \end{tabular}
+\end{center}
+  \caption{Reduction path of matching states}
+  \label{fig:reductionPath}
+\end{figure}
+
+\section{\texttt{matchAll}・\texttt{matchAllDFS}による探索木のトラバース}\label{mechanism-traversal}
+
+\section{andパターンとorパターンの実装}\label{mechanism-and-pat-or-pat}
+
+\section{notパターンの実装}\label{mechanism-not-pat}
+
+\section{パターン関数の実装}\label{mechanism-pat-func}
+
+\section{ループ・パターンの実装}\label{mechanism-loop-pattern}
