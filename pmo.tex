@@ -1,6 +1,8 @@
 \chapter{パターンマッチ指向プログラミング入門}\label{pmo}
 
-Egisonパターンマッチを活用したプログラミングにおいて，頻出するパターンを紹介する．
+本章は，第\ref{quick}章でみてきたパターンマッチのための構文やさまざまな組み込みパターンを使って，どのようにプログラミングできるのか，みていく．
+Egisonパターンマッチを活用したプログラミングにおいて，頻出するパターンを紹介していくことにより進める．
+本章で，Egisonのパターンマッチを使ったプログラミングの具体的なイメージをつかんでいってもらいたい．
 
 \section{パターンマッチによるリストプログラミング}
 
@@ -237,51 +239,93 @@ card := algebraicDataMatcher
   | card suit (mod 13)
 \end{lstlisting}
 
+\section{タプル・パターンによるデータの比較}
+
+複数のデータをくらべたいという場面は，プログラミングにおいて頻出する．
+このような場面で，とくにnotパターンと一緒に使われるタプル・パターンが役に立つことがおおい．
+たとえば， \lstinline{difference}関数は，第\ref{quick}章\ref{quick-matcher-composition}節に登場した\lstinline{intersect}関数の実装にnotパターンを挿入することにより定義できる．
+
+\begin{lstlisting}[language=egison]
+difference xs ys := matchAll (xs, ys) as (multiset eq, multiset eq) with
+  | ($x :: _, !(#x :: _)) -> x
+\end{lstlisting}
+
+\noindent
+\lstinline|!($x : _, #x : _)|のように，notパターンの挿入位置をを変えることにより，2つのコレクションに共通要素が1つもない場合にパターンマッチに成功するパターンも記述できる．
+
+これらのパターンをシーケンシャル・パターンと組み合わせることにより，さらに複雑なパターンを記述することができる．
+シーケンシャル・パターンは，notパターンを，パターンの複数の離れた部分にまとめて適用することを可能にするからである．
+たとえば，第\ref{quick}章\ref{quick-seq-pattern}節では，2つのコレクションに共通要素が1つしかないことをチェックする\lstinline{singleCommonElem}関数をパターンマッチにより定義した．
+シーケンシャル・notパターンは，数学のアルゴリズムを記述するときに必要となることがある．
+たとえば，第\ref{practice}章\ref{practice-sat}節でで紹介するSATソルバーの実装でもシーケンシャル・notパターンは現れる．
+
+\begin{lstlisting}[language=egison]
+singleCommonElem = match (xs, ys) as (multiset eq, multiset eq) with
+                      [($x : @, #x : @),
+                       !($y : _, #y : _)] -> True
+                      _ -> False
+\end{lstlisting}
+
+シーケンシャル・パターンをループ・パターンと組み合わせることも可能である．
+たとえば，2つのリストの共通の先頭部分にマッチするパターンを，シーケンシャル・ループ・パターンにより記述できる．
+
+\begin{lstlisting}[language=egison]
+match (xs, ys) as (list eq, list eq) with
+  loop $i (1,$n)
+    [($x_i : @, #x_i : @), [...]]
+     !($y : _, #y : _)] -> map (\i -> x_i) [1..n]
+\end{lstlisting}
+
+\section{複数のマッチ節をとる\texttt{matchAll}}
+
+服部さんの多項式の足し算
 
 \section{ループ・パターンによる再帰的パターン --- ツリー・グラフのパターンマッチ}
 
-Loop patterns are used for describing repetitions in a pattern.
-It is useful when we construct a complicated pattern by combining simple pattern constructors (Sect.~\ref{trees}) and when the number of pattern variables that appear in a pattern changes by parameters (Sect.~\ref{n-queen}).
-In such situations, very complicated recursion is necessary for describing algorithms.
-Loop patterns make the descriptions of these algorithms intuitive by confining recursion in a pattern.
-This section introduces such examples.
+ループ・パターンは，パターンの繰り返しを表現するために使われる．
+ループ・パターンは，シンプルなパターンコンストラクタを組み合わせて複雑なパターンを構築したり，パターン変数の数がパラメーターによって変わるパターンを記述するときに役に立つ．
+そのような状況では，複雑な再帰を記述する必要がてでくる．
+ループ・パターンを使うと，それらの再帰をパターンに押し込め，直感的な記述ができる．
+本節では，そのような例を紹介していく．
 
 \subsection{Nクイーン問題}
 
-This section introduces a more tricky example of nested loop patterns by introducing an $n$-queen solver in Egison.
-The $n$-queen problem is the problem of placing $n$ chess queens on an $n \times n$ board such that no queen can attack any of the other queens.
-In chess, a queen can attack other chess pieces on the same row, column, and diagonal.
+本節は，Nクイーン問題を解くプログラムをみせることにより，技巧的であるがトリッキーなループ・パターンの例を紹介する．
+Nクイーン問題とは，$n \times n$のチェス盤に$n$個のチェスのクイーンの駒をお互いが攻撃しあえないように配置する問題である．
+チェスのクイーンは，縦横斜め何マス離れている駒でも攻撃することができる．
+将棋でいうと，飛車と角行を合わせた動きをチェスのクイーンはできる．
 
-Let us start by showing a program for solving the four queen problem.
-In this program, we represent the positions of the four queens with a list.
-The number of the $n$-th element represents the row number of the queen of the $n$-th line.
-The solution must be a rearrangement of the list \lstinline|[1,2,3,4]| because no two queens can be in the same line or row.
-Therefore, we pattern-match a collection \lstinline|[1,2,3,4]| as a multiset of integers.
-The requirement that all two queens must not share the same diagonal is represented with conditions $a_1 \pm 1 \neq a_2$, $a_1 \pm 2 \neq a_3$, $a_2 \pm 1 \neq a_3$, $a_1 \pm 3 \neq a_4$, $a_2 \pm 2 \neq a_4$, and $a_3 \pm 1 \neq a_4$.
+$4$クイーン問題をとくプログラムからはじめよう．
+このプログラムでは，$4$つのクイーンの配置をリストで表現する．
+リストの$n$番目の要素は，$n$行目のクイーンが何列目の位置にあるかを表現する．
+このとき，解は，コレクション\lstinline|[1,2,3,4]|の要素の順番が並び替わったコレクションである必要がある．
+$2$つのクイーンを同じ行や列に配置できないためである．
+それゆえ，コレクション\lstinline|[1,2,3,4]|を整数の多重集合としてパターンマッチする．
+クイーン同士が斜めのラインを共有できないという条件は，$a_1 \pm 1 \neq a_2$，$a_1 \pm 2 \neq a_3$，$a_2 \pm 1 \neq a_3$，$a_1 \pm 3 \neq a_4$，$a_2 \pm 2 \neq a_4$，$a_3 \pm 1 \neq a_4$という条件により表現する．
 
 \begin{lstlisting}[language=egison]
 matchAll [1,2,3,4] as multiset integer with
-  $a_1 :
-   (and !#(a_1 - 1) !#(a_1 + 1) $a_2) :
-    (and !#(a_1 - 2) !#(a_1 + 2) !#(a_2 - 1) !#(a_2 + 1) $a_3) :
-     (and !#(a_1 - 3) !#(a_1 + 3) !#(a_2 - 2) !#(a_2 + 2) !#(a_3 - 1) !#(a_3 + 1) $a_4) :
+  $a_1 ::
+   (!#(a_1 - 1) & !#(a_1 + 1) & $a_2) ::
+    (!#(a_1 - 2) & !#(a_1 + 2) & !#(a_2 - 1) & !#(a_2 + 1) & $a_3) ::
+     (!#(a_1 - 3) & !#(a_1 + 3) & !#(a_2 - 2) & !#(a_2 + 2) & !#(a_3 - 1) & !#(a_3 + 1) & $a_4) ::
       [] -> [a_1,a_2,a_3,a_4]
 -- [[2,4,1,3],[3,1,4,2]]
 \end{lstlisting}
 
-We can use a doubly-nested loop pattern for generalizing this pattern for the $n$-queen solver.
-The index pattern variable \lstinline|i| of the outer loop is referred to in the index range of the inner loop pattern for describing the difference of the repeat count of inner loop patterns.
-Also note that the values bound in the previously repeated pattern are referred as \lstinline|a_j| in \lstinline|#(a_j - (i - j))| and  \lstinline|!#(a_j + (i - j))|.
-Non-linearity of indexed pattern variables are effectively used for representing this pattern.
+上記のプログラムを$n$クイーン問題のために一般化するには，二重にネストしたループ・パターンを使うことができる．
+外側のループ・パターンの添字変数\lstinline|i|が，内側のループ・パターン添字範囲にて，内側のループの繰り返し回数の違いを表現するために使われている．
+また，前の繰り返しパターンで束縛された値，たとえば，\lstinline|$a_j|に束縛された値が，\lstinline|#(a_j - (i - j))|や\lstinline|#(a_j + (i - j))|のように参照されていることにも注意してほしい．
+このように，添字付きパターン変数の非線形性（パターンの左側で添字付きパターン変数に束縛した値が参照できること）がうまく機能している．
 
 \begin{lstlisting}[language=egison]
-nQueens n =
+nQueens n :=
   matchAll [1..n] as multiset integer with
-    $a_1 :
+  | $a_1 ::
      (loop $i (2,n)
            ((loop $j (1, i - 1)
-                  (and !#(a_j - (i - j)) !#(a_j + (i - j)) ...)
-                  $a_i) : ...)
+                  (!#(a_j - (i - j)) & !#(a_j + (i - j)) & ...)
+                  $a_i) :: ...)
            [] -> map (\i -> a_i) [1..n]
 
 nQueens 4 -- [[2,4,1,3],[3,1,4,2]]
@@ -289,17 +333,19 @@ nQueens 4 -- [[2,4,1,3],[3,1,4,2]]
 
 \subsection{ツリーのパターンマッチ}\label{pmo-tree}
 
-This section demonstrates loop patterns by showing pattern matching for trees.
-The nodes of the trees in this section have an arbitrary number of children as XML, and they are handled as a multiset.
-A matcher for such a tree is defined as \lstinline{tree} in Sect.~\ref{matcher-compositions}.
-We use this matcher in this section.
+本節は，ツリーのパターンマッチをみせることにより，ループ・パターンの実例を紹介する．
+本節のツリーのノードは，XMLのように任意の個数の部分ツリーを子供としてもつ．
+また，これらのサブツリーは多重集合として扱われる．
+このようなツリーに対するマッチャーは第\ref{quick}章\ref{quick-matcher-composition}節にて定義した．
+このマッチャーを本節では使う．
 
 We describe patterns for a category tree of programming languages.
-\lstinline{treeData} defines the category tree.
-For example, \lstinline{"Egison"} belongs to the \lstinline{"pattern-match-oriented"} category, and the \lstinline{"Dynamically typed"} sub-category of the \lstinline{"Functional programming"} category.
+プログラミング言語をカテゴリー分けしたツリーに対してパターンを書いていく．
+\lstinline{treeData}がそのカテゴリーツリーを定義している．
+たとえば，\lstinline{"Egison"}は，\lstinline{"pattern-match-oriented"}（パターンマッチ指向）カテゴリーと，\lstinline{"Functional programming"}（関数型プログラミング）カテゴリーの\lstinline{"Dynamically typed"}（動的型付け）サブカテゴリーに属している．
 
 \begin{lstlisting}[language=egison]
-treeData =
+treeData :=
   Node "Programming language"
     [Node "pattern-match-oriented" [Leaf "Egison"],
      Node "Functional language"
@@ -309,40 +355,41 @@ treeData =
      Node "Object oriented" [Leaf "C++",Leaf "Java",Leaf "Ruby",Leaf "Python",Leaf "OCaml"]]
 \end{lstlisting}
 
-The \lstinline{matchAll} expression below enumerates all categories to which a specified language belongs.
-A loop pattern is used to describe a pattern for this purpose because leaves can appear at an arbitrary depth.
-This pattern is interesting because the ellipsis pattern is not placed in the tail of the repeat pattern.
-The ability to choose the position of expansion of a repeat pattern allows us to apply the loop patterns to trees.
+下記の\lstinline{matchAll}式は，ある言語が属するカテゴリーを列挙する．
+ツリーの末端は任意の深さでありうるため，添字範囲の終了値がパターン（下記の場合\lstinline{$n}）であるループ・パターンが使われている．
+このループ・パターンの三点リーダーパターンは，繰り返しパターンの末尾でない場所に位置している．
+繰り返しの場所をユーザーが指定できることも，正規表現のクリーネスター演算子にはないループ・パターンの強みのひとつである．
 
 \begin{lstlisting}[language=egison]
-ancestors x t = matchAll t as tree string with
-  loop $i (1,$n)
-       (Node $c_i (... :  _))
-       (Leaf #x) -> map (\i -> c_i) [1..n]
+ancestors x t := matchAll t as tree string with
+  | loop $i (1,$n)
+      (Node $c_i (... ::  _))
+      (Leaf #x) -> map (\i -> c_i) [1..n]
 
 ancestors "Egison" treeData  
 -- [["Programming language","pattern-match-oriented"],"Programming language","Functional language","Dynamically typed"]]
 \end{lstlisting}
 
-It is also possible to enumerate all languages that belong to a specific sub-category.
-We can use a doubly-nested loop pattern for this purpose because it allows the sub-category to appear at an arbitrary depth.
-The following pattern matches all the languages that belong to a specified category.
-We used \lstinline{matchAllDFS} for this enumeration to make the order of the languages in the result the same as the order with which they appear in the tree.
+あるサブカテゴリーに属する言語をすべて列挙するようなパターンを記述することも可能である．
+二重にネストしたループ・パターンを使えば，そのサブカテゴリーが任意の深さにあってもよいようにできる．
+以下のパターンは，特定のカテゴリーに属するすべての言語を列挙する．
+ツリーのなかで現れる順番と同じ順番で言語を列挙するために，\lstinline{matchAllDFS}が使われている．
 
 \begin{lstlisting}[language=egison]
 descendants x t = matchAllDFS t as tree string with
-  loop _ (1,_)
-       (Node _ (... :  _))
-       (Node #x ((loop _ (1,_)
-                      (Node _ (... : _))
-                      (Leaf $y)) : _)) -> y
+  | loop _ (1,_)
+      (Node _ (... ::  _))
+      (Node #x ((loop _ (1,_)
+                   (Node _ (... :: _))
+                   (Leaf $y)) :: _)) -> y
 
 descendants "Functional language" treeData  
 -- ["OCaml","Haskell","Curry","Coq","Egison","Lisp","Scheme","Racket"]
 \end{lstlisting}
 
-Egison is more elegant than XML path language~\cite{berglund2003xml} for handling trees because we can describe the wide range of patterns by just combining a few simple pattern constructors and the loop patterns.
-In XML path, we would instead have to use the built-in \lstinline{ancestor} command to enumerates all ancestors of a node, for example.
+ツリーのパターンマッチができるDSL（domain-specific language）としては，XML path~\cite{berglund2003xml}がある．
+Egisonは，ユーザー定義可能な数少ないパターンコンストラクタとループ・パターンを組み合わせて幅広いパターンを記述できる点で優れている．
+XML pathは，たとえば\lstinline{ancestor}コマンドなど，多くの組み込みコマンドを使ってパターンを記述する．
 
 \subsection{グラフのパターンマッチ}\label{pmo-graph}
 
@@ -364,7 +411,7 @@ graphData = [Edge 1 2,Edge 2 1,Edge 2 3,Edge 2 4,Edge 3 4,Edge 4 5,Edge 4 6,Edge
 
 \begin{figure}[t]
   \centering
-%  \includegraphics[height=5.0cm]{graph.png}
+  \includegraphics[width=12cm,bb=0 0 852 400]{graph.png}
   \caption{Visualization of \lstinline{graphData}.}
   \label{fig:graphVis}
 \end{figure}
@@ -470,44 +517,3 @@ A non-linear loop pattern is used to represent the pattern.
 There are several graph database query languages~\cite{perez2006semantics,rodriguez2015gremlin,neo4jManual}.
 The advantage of Egison over these query languages is its generality.
 Egison does not focus on pattern matching for graphs, instead Egison allows users to describe various patterns by just combining non-linear loop patterns and a small number of simple pattern constructors.
-
-\section{タプル・パターンによるデータの比較}
-
-複数のデータをくらべたいという場面は，プログラミングにおいて頻出する．
-このような場面で，とくにnotパターンと一緒に使われるタプル・パターンが役に立つことがおおい．
-たとえば， \lstinline{difference}関数は，第\ref{quick}章\ref{quick-matcher-composition}節に登場した\lstinline{intersect}関数の実装にnotパターンを挿入することにより定義できる．
-
-\begin{lstlisting}[language=egison]
-difference xs ys := matchAll (xs, ys) as (multiset eq, multiset eq) with
-  | ($x :: _, !(#x :: _)) -> x
-\end{lstlisting}
-
-\noindent
-\lstinline|!($x : _, #x : _)|のように，notパターンの挿入位置をを変えることにより，2つのコレクションに共通要素が1つもない場合にパターンマッチに成功するパターンも記述できる．
-
-これらのパターンをシーケンシャル・パターンと組み合わせることにより，さらに複雑なパターンを記述することができる．
-シーケンシャル・パターンは，notパターンを，パターンの複数の離れた部分にまとめて適用することを可能にするからである．
-たとえば，第\ref{quick}章\ref{quick-seq-pattern}節では，2つのコレクションに共通要素が1つしかないことをチェックする\lstinline{singleCommonElem}関数をパターンマッチにより定義した．
-シーケンシャル・notパターンは，数学のアルゴリズムを記述するときに必要となることがある．
-たとえば，第\ref{practice}章\ref{practice-sat}節でで紹介するSATソルバーの実装でもシーケンシャル・notパターンは現れる．
-
-\begin{lstlisting}[language=egison]
-singleCommonElem = match (xs, ys) as (multiset eq, multiset eq) with
-                      [($x : @, #x : @),
-                       !($y : _, #y : _)] -> True
-                      _ -> False
-\end{lstlisting}
-
-シーケンシャル・パターンをループ・パターンと組み合わせることも可能である．
-たとえば，2つのリストの共通の先頭部分にマッチするパターンを，シーケンシャル・ループ・パターンにより記述できる．
-
-\begin{lstlisting}[language=egison]
-match (xs, ys) as (list eq, list eq) with
-  loop $i (1,$n)
-    [($x_i : @, #x_i : @), [...]]
-     !($y : _, #y : _)] -> map (\i -> x_i) [1..n]
-\end{lstlisting}
-
-\section{複数のマッチ節をとる\texttt{matchAll}}
-
-服部さんの多項式の足し算

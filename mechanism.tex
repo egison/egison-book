@@ -1,125 +1,84 @@
 \chapter{Egisonパターンマッチの仕組み}\label{mechanism}
 
 本章は，Egison内部のパターンマッチの仕組みを解説する．
-Egison内部でどのような処理がなされてパターンマッチが実行されるのか知っておくことは，第\ref{matcher}章で解説されるマッチャー定義の方法を理解するために重要である．
-
-This section explains and implements the pattern-matching algorithm of Egison, which is described in detail in Sect. 5 and Sect. 7 of the original paper of Egison~\cite{egi2018Aplas}.
-After the explanation of the pattern-matching algorithm, I introduce a simplified implementation of this algorithm in Scheme.
-This implementation is called by the proposed macros whose implementation is introduced in Sect.~\ref{method}.
+まず，\ref{mechanism-overview}節で概略を説明する．
+Egisonの使い方に興味ある読者はこの節を読めば，第\ref{matcher}章に進むことができる．
+\ref{mechanism-traversal}節以降では，Egisonパターンマッチを自身で実装するためには必要な事項を解説する．
 
 \section{パターンマッチ・アルゴリズムの概略}\label{mechanism-overview}
 
 以下の\lstinline{matchAll}式を実行したときにどのような処理がなされるのかみていくことにより，Egison内部のパターンマッチ・アルゴリズムの概略をつかむ．
-
-\begin{lstlisting}[language=egison]
-matchAll [2,8,2] as multiset integer with
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll [2,8,2] as multiset eq with
 | $m :: #m :: _ -> m
 -- [2,2]
 \end{lstlisting}
 
-\begin{verbatim}
-MState [($m :: #m :: _, multiset integer, [2,8,2])]
+上記の\lstinline{matchAll}式を受け取るとEgison処理系は，以下のようなマッチング・ステート（\emph{matching state}）と呼ばれるオブジェクトを処理系内部で生成する．
+マッチング・ステートは，マッチング・アトム（emph{matching atom}）のスタックと，パターンマッチの途中結果からなる．
+マッチング・アトムは，パターン，マッチャー，ターゲットからなる3つ組である．
+初期マッチング・ステートは，\lstinline{matchAll}式のパターン，マッチャー，ターゲットから構成されるマッチング・アトム1つからなるスタックから構成される．
+Egison内部のパターンマッチ・アルゴリズムは，マッチング・ステートの還元プロセスとして定義されている．
+還元の結果，マッチング・アトムのスタックが空になるとパターンマッチに成功する．
+\begin{lstlisting}[language=egison,numbers=none]
+MState [($m :: #m :: _, multiset eq, [2,8,2])]
        []
-\end{verbatim}
-
-
-\begin{verbatim}
-MState [($m, integer, 2)
-       ,(#m :: _, multiset integer, [8,2])]
+\end{lstlisting}
+このマッチング・ステートは，次のステップで以下の3つのマッチング・ステートに還元される．
+この還元は，\lstinline{multiset}マッチャーのコンス・パターンの定義（第\ref{matcher}章\ref{matcher-multiset}節にて解説する）にもとづいて，実行される．
+\begin{lstlisting}[language=egison,numbers=none]
+MState [($m, eq, 2)
+       ,(#m :: _, multiset eq, [8,2])]
        []
 
-MState [($m, integer, 8)
-       ,(#m :: _, multiset integer, [2,2])]
+MState [($m, eq, 8)
+       ,(#m :: _, multiset eq, [2,2])]
        []
 
-MState [($m, integer, 2)
-       ,(#m :: _, multiset integer, [2,8])]
+MState [($m, eq, 2)
+       ,(#m :: _, multiset eq, [2,8])]
        []
-\end{verbatim}
-
-\begin{verbatim}
-MState [($m, integer, 2)
-       ,(#m :: _, multiset integer, [8,2])]
-       []
-\end{verbatim}
-
-\begin{verbatim}
+\end{lstlisting}
+このように1つのマッチング・ステートを1ステップ還元すると複数のマッチング・ステートが生成される．
+生成されるマッチング・ステートの数が0個であることも，無限個ある場合もある．
+これらのマッチング・ステートがどのような順番で還元されるのかは，\ref{mechanism-traversal}節で論じる．
+ここでは，1つ目のマッチング・ステートの還元をみる．
+1つ目のマッチング・ステートは，次のステップで以下のように還元される．
+スタックの先頭のマッチング・アトムのマッチャーが\lstinline{eq}から\lstinline{something}に変わる．
+この還元は，\lstinline{eq}マッチャーに定義されている．（第\ref{matcher}章\ref{matcher-eq}節でその定義をみる．）
+\begin{lstlisting}[language=egison,numbers=none]
 MState [($m, something, 2)
-       ,(#m :: _, multiset integer, [8,2])]
+       ,(#m :: _, multiset eq, [8,2])]
        []
-\end{verbatim}
-
-\begin{verbatim}
-MState [(#m :: _, multiset integer, [8,2])]
+\end{lstlisting}
+\lstinline{something}はEgison唯一の組み込みマッチャーであり，パターンマッチの途中結果に新しい束縛を追加する．
+ここでは，変数\lstinline{m}に\lstinline{2}を束縛している．
+\begin{lstlisting}[language=egison,numbers=none]
+MState [(#m :: _, multiset eq, [8,2])]
        [(m, 2)]
-\end{verbatim}
-
-\begin{verbatim}
-MState [(#m, integer, 8)
-       ,(_, multiset integer, [2])]
+\end{lstlisting}
+再び，\lstinline{multiset}のコンス・パターンの定義にもとづき，マッチング・ステートが還元される．
+\begin{lstlisting}[language=egison,numbers=none]
+MState [(#m, eq, 8)
+       ,(_, multiset eq, [2])]
        [(m, 2)]
 
-MState [(#m, integer, 2)
-       ,(_, multiset integer, [8])]
+MState [(#m, eq, 2)
+       ,(_, multiset eq, [8])]
        [(m, 2)]
-\end{verbatim}
-
-\begin{verbatim}
-MState [(_, multiset integer, [8])]
+\end{lstlisting}
+上記，1つ目のマッチング・ステートは値パターン\lstinline{#m}のパターンマッチに失敗して消える．（還元された結果0個のマッチング・ステートを生成するともいうことができる．）
+2つ目のマッチング・ステートは，先頭のマッチング・アトムがポップアウトし，以下のように還元される．
+\begin{lstlisting}[language=egison,numbers=none]
+MState [(_, multiset eq, [8])]
        [(m, 2)]
-\end{verbatim}
-
-\begin{verbatim}
+\end{lstlisting}
+このマッチング・ステートも，先頭のマッチング・アトムがポップアウトし，以下のように還元される．
+\begin{lstlisting}[language=egison,numbers=none]
 MState []
        [(m, 2)]
-\end{verbatim}
-
-
-First, I start by explaining the pattern-matching algorithm of Egison briefly.
-In Egison, pattern matching is implemented as reductions of \emph{matching states}.
-A matching state consists of a stack of \emph{matching atoms} and an intermediate result of pattern matching.
-A matching atom is a triple of a pattern, target, and matcher.
-In each step of a pattern-matching process, the top matching atom of the stack of matching atoms is popped off.
-From this matching atom, a list of lists of next matching atoms is calculated.
-Each list of the next matching atoms is pushed on the stack of matching atoms of the matching state.
-As a result, a single matching state is reduced to multiple stacks of matching states in a single reduction step.
-Pattern matching is recursively executed for each matching state.
-When a stack becomes empty, it means pattern matching for this matching state succeeded.
-%\new{
-Fig.~\ref{fig:reductionPath} shows the reduction path when executing the \lstinline{match-all} expression below.
-The matching state that is not grayed-out in the $i$-th row is reduced to matching states in the $(i+1)$-th row.
-For example, the first matching state in the second row is reduced to the matching state in the third row.
-\texttt{MState} takes two arguments, a stack of matching atoms and an intermediate pattern-matching result.
-The value pattern \lstinline{,m} is transformed to \lstinline{(val ,(lambda (m) m))}.
-This transformation is explained in Sect.~\ref{method-val-pat}.
-%}%new
-
-\begin{lstlisting}[language=egison]
-(match-all '(2 8 2) (Multiset Integer) [(cons m (cons ,m _)) m]) ; (2 2)
 \end{lstlisting}
-
-\begin{figure}[t]
-\begin{center}
-  \footnotesize
-  \begin{tabular}{ll}
-    \toprule
-    1 &  \texttt{(MState \{[(cons m (cons (val ,(lambda (m) m)) \_)) (Multiset Integer) \{2 8 2\}]\} \{\})} \\ \hline
-    2 &  \thead[l]{\texttt{(MState \{[m Integer 2] [(cons (val ,(lambda (m) m)) \_) (Multiset Integer) \{8 2\}]\} \{\})} \\
-                   \textcolor{gray}{\texttt{(MState \{[m Integer 8] [(cons (val ,(lambda (m) m)) \_) (Multiset Integer) \{2 2\}]\} \{\})}} \\
-                   \textcolor{gray}{\texttt{(MState \{[m Integer 2] [(cons (val ,(lambda (m) m)) \_) (Multiset Integer) \{2 8\}]\} \{\})}}} \\ \hline
-    3 &  \texttt{(MState \{[m Something 2] [(cons (val ,(lambda (m) m)) \_) (Multiset Integer) \{8 2\}]\} \{\})} \\ \hline
-    4 &  \texttt{(MState \{[(cons (val ,(lambda (m) m)) \_) (Multiset Integer) \{8 2\}]\} \{2\})} \\ \hline
-    5 &  \thead[l]{\textcolor{gray}{\texttt{(MState \{[,m Integer 8] [\_ (Multiset Integer) \{2\}]\} \{2\})}} \\
-                   \texttt{(MState \{[,m Integer 2] [\_ (Multiset Integer) \{8\}]\} \{2\})}} \\ \hline
-    6 &  \texttt{(MState \{[\_ (Multiset Integer) \{8\}]\} \{2\})} \\ \hline
-    7 &  \texttt{(MState \{[\_ Something \{8\}]\} \{2\})} \\ \hline
-    8 &  \texttt{(MState \{\} \{2\})} \\
-    \bottomrule
-  \end{tabular}
-\end{center}
-  \caption{Reduction path of matching states}
-  \label{fig:reductionPath}
-\end{figure}
+最終的にマッチング・アトムのスタックが上記のように空になると，このパターンマッチの途中結果が最終結果としてボディの評価に使われる．
 
 \section{\texttt{matchAll}・\texttt{matchAllDFS}による探索木のトラバース}\label{mechanism-traversal}
 

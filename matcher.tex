@@ -2,99 +2,154 @@
 
 本章は，ユーザーが自身でマッチャーを定義する方法を解説する．　
 
-\section{\texttt{unorderedPair}マッチャーの定義}
+\section{マッチャーの定義の基礎}
 
-\section{\texttt{eq}マッチャーの定義}
+本節は，非自由データ型のなかでもっとも単純なunordered pair（要素の順番を無視するペア）のマッチャー定義をみていくことにより，マッチャー定義の方法の概略を解説する．
 
-\section{\texttt{multiset}マッチャーの定義}
-
-Matcher definition is the most technical part in pattern-match-oriented programming.
-This section explains the method for defining a matcher by showing a matcher definition for multisets.
-The program below shows a matcher definition for multisets.
-The multiset matcher is the most basic nontrivial matcher.
-This section explores the detail of this definition.
-
-\begin{lstlisting}[language=egison]
-multiset a = matcher
-               [] as () with
-                 \tgt -> case tgt of
-                           [] -> [()]
-                           _ -> []
-               $ : $ as (a, multiset a) with
-                 \tgt -> matchAll tgt as list a with
-                           $hs ++ $x : $ts -> (x, hs ++ ts)
-               #$val as () with
-                 \tgt -> match (val, tgt) as (list a, multiset a) with
-                           ([], []) -> [()]
-                           ($x : $xs, #x : #xs) -> [()]
-                           (_, _) -> []
-               $ as something with
-                 \tgt -> [tgt]
+まずは，整数のunordred pairに対するマッチャー\lstinline{unorderedIntegerPair}マッチャーの挙動を確認しよう．
+\lstinline{unorderedIntegerPair}に対して，\lstinline{pair}パターンを使うと以下のように2通りの要素の順番を両方パターンマッチする．
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll (1, 2) as unorderedIntegerPair with
+| pair $x $y -> (x, y)
+-- [(1,2),(2,1)]
+\end{lstlisting}
+そのおかげで，\lstinline{pair}の第一引数がターゲットの2番目の要素である場合にも，パターンマッチに成功する．
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll (1, 2) as unorderedIntegerPair with
+| pair #2 $y -> y
+-- [1]
+\end{lstlisting}
+パターンがパターン変数であった場合には，ターゲットをそのまま束縛する．
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll (1, 2) as unorderedIntegerPair with
+| $p -> p
+-- [(1,2)]
 \end{lstlisting}
 
-A matcher is defined using the \lstinline{matcher} expression.
-The \lstinline{matcher} expression is a built-in syntax of Egison.
-\lstinline{matcher} takes a collection of \emph{matcher clauses}.
-A matcher clause is a triple of a \emph{primitive-pattern pattern}, a \emph{next-matcher expression}, and a \emph{next-target expression}.
+上記のような動作をする\lstinline{unorderedIntegerPair}マッチャーは以下のように定義できる．
+\begin{lstlisting}[language=egison]
+unorderedIntegerPair = matcher
+  | pair $ $ as (integer, integer) with
+    | ($x, $y) -> [(x, y), (y, x)]
+  | $ as something with
+    | $tgt -> [tgt]
+\end{lstlisting}
+\lstinline{matcher}は，マッチャーを生成するための組み込み構文である．
+\begin{lstlisting}[language=egison,numbers=none]
+matcher
+| 原始パターンパターン as ネクスト・マッチャー式 with
+  | 原始データパターン -> ボディ
+  ...
+...
+\end{lstlisting}
+\lstinline{matcher}式は，複数のマッチャー節（\emph{matcher clause}）をとる．
+マッチャー節は，原始パターンパターン（\emph{primitive pattern-pattern}），ネクストマッチャー式（\emph{next matcher expression}），複数の原始マッチ節（\emph{primitive match clause}）からなる．
+原始マッチ節は，原始データパターン（\emph{primitive data pattern}）とボディからなる．
 
-A matcher is a kind of function that takes a pattern and target, and returns lists of the next \emph{matching atoms}.
-A matching atom is a triple of a pattern, target, and matcher.
-A primitive-pattern pattern matches a pattern.
-Patterns that match with \emph{pattern holes} (\lstinline|$| inside primitive-pattern patterns) are next patterns.
-A next-matcher expression returns next matchers.
-A next-target expression is a function that takes a target and returns a list of next targets.
-A matcher generates a list of the next matching atoms by combining next patterns, next matchers, and a list of next targets.\footnote{In Egison, pattern matching is implemented as reductions of stacks of matching atoms.
-Each list of the next matching atoms returned by a matcher is pushed to the stack of matching atoms.
-As a result, a single stack of matching atom is reduced to multiple stacks of matching atoms in a single reduction step.
-Pattern matching is recursively executed for each stack of matching atoms.
-When a stack becomes empty, it means pattern matching for this stack succeeded.}
-p
-The \lstinline{multiset} matcher has four matcher clauses.
-The first matcher clause handles a nil pattern, and it checks whether the target is an empty collection or not.
-The second matcher clause handles a cons pattern.
-The third matcher clause handles a value pattern.
-This matcher clause defines the equality of multisets.
-The fourth matcher clause handles the other patterns for multiset: a pattern variable and wildcard.
+\lstinline{unorderedIntegerPair}の1つ目のマッチャー節（2-3行目）をみていく．
+まず，このマッチャー節の原始パターンパターンは，\lstinline{pair $ $}である．
+原始パターンパターンは，パターンに対するパターンである．
+この原始パターンパターンは\lstinline{pair}パターンにマッチし，このマッチャー節は\lstinline{pair}パターンに対するパターンマッチの方法を定義している．
+\lstinline{pair}のように，原始パターンパターン中にあらわれるパターンコンストラクタは，原始パターンパターンコンストラクタ（\emph{primitive pattern-pattern constructor}）と呼ばれる．
+\lstinline{pair}パターンの引数としてあらわれている\lstinline{$}は，パターン・ホール（\emph{pattern hole}）と呼ばれる原始パターンパターンの構成要素である．
+パターン・ホールは無名パターン変数のようなもので，任意のパターンがパターン・ホールにマッチする．
+パターン・ホールにマッチしたパターンは，ネクスト・パターン（\emph{next patterns}）と呼ばれる．
+原始パターンパターンのパターンマッチは，代数的データ型に対する他の関数型プログラミング言語のパターンマッチとほぼ同じようにおこなわれる．
+次に，このマッチャー節のネクスト・マッチャー式は，\lstinline{(integer, integer)}である．
+これは，上記のパターン・ホールに束縛された2つのパターン（\lstinline{pair}パターンの引数）がそれぞれ\lstinline{integer}マッチャーを使って再帰的にパターンマッチされることを表現している．
+このマッチャー節は，1つの原始マッチ節（3行目）をとる．
+原始データパターンは，ターゲットとパターンマッチされる．
+原始データパターンのパターンマッチも，代数的データ型に対する他の関数型プログラミング言語のパターンマッチとほぼ同じようにおこなわれる．
+原始マッチ節のボディは，ターゲットの分解結果を返す．
+\lstinline{(x, y)}と\lstinline{(y, x)}はそれぞれネクスト・ターゲット（\emph{next target}）と呼ばれる．
+それぞれネクスト・パターンとネクスト・マッチャーを使って再帰的にパターンマッチされる．
 
-\medskip
+2つ目のマッチャー節（4-5行目）の原始パターンパターンは，パターン・ホールである．
+パターン・ホールは任意のパターンにマッチするため，1つ目のマッチャー節でマッチしなかったパターンはすべて2つ目のマッチ節で処理される．
+1つ目のマッチャー節でマッチしない\lstinline{unorderedIntegerPair}に対するパターンは，ワイルドカードかパターン変数のみであるので，このマッチャー節はこれらのパターンを処理する．
+このマッチャー節は，パターンとターゲットを変えず，ただマッチャーを\lstinline{something}に変換するだけである．
+パターンとターゲットは\lstinline{something}を使ってパターンマッチされる．
+第\ref{mechanism}章\todo{}節でみたように\lstinline{something}は，パターン変数に値を束縛することができる組み込みマッチャーである．
 
-First, we focus on the second matcher clause.
-The primitive-pattern pattern of the second matcher clause is \lstinline|$ : $|, and the next matcher expression is \lstinline|(a, multiset a)|.
-It means two arguments of the cons pattern are next patterns and they are pattern-matched using the \lstinline|a| and \lstinline|multiset a| matchers, respectively.
-\lstinline|a| is an argument of \lstinline{multiset} and the matcher for inner elements of a multiset.
-In the next target expression, a simple join-cons pattern is used to decompose a target collection into an element and the rest collection.
-For example, when the target is a collection \lstinline{[1,2,3]}, this next-target expression returns \lstinline{[(1,[2,3]),(2,[1,3]),(3,[1,2])]}.
-Each tuple of the next targets is pattern-matched using the next patterns and the next matchers recursively.
-For example, \lstinline{1} and \lstinline{[2,3]} are pattern-matched using the \lstinline{a} and \lstinline{multiset a} matcher with the first and the second argument of the cons pattern, respectively.
+以下の\lstinline{unorderedPair}のように，ペアの要素のデータ型に対するマッチャーを受け取るunordered pairに対するマッチャーを定義することができる．
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll (1, 2) as unorderedPair integer with
+| pair $x $y -> (x, y)
+-- [(1,2),(2,1)]
+\end{lstlisting}
+そのためには，\lstinline{unorderedPair}をマッチャーを引数にとってマッチャーを返す関数として定義すればよい．
+\lstinline{pair}パターンに対するマッチャー節のネクスト・マッチャー式で\lstinline{unorderedPair}の引数である\lstinline{a}を指定している．
+\begin{lstlisting}[language=egison]
+unorderedPair a = matcher
+  | pair $ $ as (a, a) with
+    | ($x, $y) -> [(x, y), (y, x)]
+  | $ as something with
+    | $tgt -> [tgt]
+\end{lstlisting}
 
-\medskip
+\section{\texttt{eq}マッチャーの定義}\label{matcher-eq}
 
-Next, we focus on the third matcher clause.
-This matcher clause is as technical as the second matcher clause.
-The primitive-pattern pattern of this matcher clause is \lstinline|#$val|.
-It is called a \emph{value-pattern pattern}.
-A value-pattern pattern matches a value pattern.
-This matcher clause compares the content of a value pattern (\lstinline{val}) and a target (\lstinline{tgt}) as multisets.
-The \lstinline{match} expression is used for this comparison.
-Interestingly, \lstinline|tgt| is recursively pattern-matched as \lstinline{multiset a}.
+\lstinline{eq}マッチャーも\lstinline{matcher}式でユーザーが定義することができる．
+\begin{lstlisting}[language=egison]
+eq = matcher
+  | #$val as () with
+    | $tgt -> if val == tgt then [()] else []
+  | $ as something with
+    | $tgt -> [tgt]
+\end{lstlisting}
+\lstinline{eq}マッチャーの1つ目のマッチャー節（2-3行目）は値パターンに対するマッチャー節である．
+\lstinline{#$val}は値パターンにマッチする原始パターンパターンである．
+このような原始パターンパターンは原始値パターン（\emph{primitive value pattern}）と呼ばれる．
+変数\lstinline{val}には値パターンの中身が束縛される．
+このマッチャー節の原始パターンパターンは，パターン・ホールを含んでいないため，ネクスト・マッチャー式は空タプルである．
+原始マッチ節で，値パターンの中身とターゲットの値が等しいかどうかチェックしている．
+\todo{\lstinline{[()]}の説明}
 
-The first and the third match clauses of this \lstinline{match} expression are simple.
-The first match clause states that it returns \lstinline|[()]| when both \lstinline{val} and \lstinline{tgt} are empty.
-This return value means pattern matching for the value pattern succeeded.
-The third match clause states that it returns \lstinline|[]| if pattern matching for the patterns of both the first and the second match clause failed.
-This return value means pattern matching for the value pattern failed.
+原始パターンパターンは，ここまでにでてきた3つの構成要素であるパターン・ホール，原始パターンパターンコンストラクタ，原始値パターンからなる．
+\begin{lstlisting}[language=egison,numbers=none]
+primitive-pp := $ | C primitive-pp* | #$identifier
+\end{lstlisting}
 
-The second match clause is the most technical part of this \lstinline{match} expression.
-The value pattern \lstinline|#xs| is recursively pattern-matched using this matcher clause itself.
-The collection \lstinline{xs} is one element shorter than \lstinline{tgt}.
-Therefore, this recursion finally reaches the first or the third match clause if \lstinline{val} and \lstinline{tgt} are finite.
+\section{\texttt{multiset}マッチャーの定義}\label{matcher-multiset}
 
-\medskip
+本節は，\lstinline{multiset}マッチャー定義を解説する．
+\begin{lstlisting}[language=egison]
+multiset a := matcher
+  | [] as () with
+    | $tgt -> match tgt as (mutiset a) with
+                | [] -> [()]
+                | _ -> []
+  | $ :: $ as (a, multiset a) with
+    | $tgt -> matchAll tgt as list a with
+                | $hs ++ $x :: $ts -> (x, hs ++ ts)
+  | #$val as () with
+    | $tgt -> match (val, tgt) as (list a, multiset a) with
+                | ([], []) -> [()]
+                | ($x :: $xs, #x :: #xs) -> [()]
+                | (_, _) -> []
+  | $ as something with
+    | $tgt -> [tgt]
+\end{lstlisting}
+1つ目の4つ目のマッチャー節はほぼ自明であるので，2つ目の3つ目のマッチャー節をみていく．
 
-Finally, let us also explain the fourth matcher clause.
-This matcher clause creates the next matching atom by just changing the matcher from \lstinline{multiset a} to \lstinline{something}.
+2つ目のマッチャー節（6-8行目）をみていこう．
+原始プリミティブパターンは\lstinline{$ :: $}で，ネクスト・マッチャー式は\lstinline{(a, multiset a)}である．
+\lstinline{a}は\lstinline{multiset}の引数のマッチャーである．
+ネクスト・ターゲットは，\lstinline{matchAll}式を使って定義されている．
+この\lstinline{matchAll}式は，ターゲットが\lstinline{[1,2,3]}である場合，\lstinline{[(1,[2,3]),(2,[1,3]),(3,[1,2])]}を返す．
+このリストに含まれるそれぞれのネクスト・ターゲットは，ネクスト・パターンとネクスト・マッチャーを使って再帰的にパターンマッチされる．
+たとえば，ネクスト・ターゲット\lstinline{1}と\lstinline{[2,3]}は，ネクスト・マッチャー\lstinline{a}と\lstinline{multiset a}を使って，コンス・パターンの第1引数と第2引数のパターンとパターンマッチされる．
 
-\section{\texttt{soretedList}マッチャーの定義}
+3つ目のマッチ節をみていこう．
+このマッチャー節の原始パターンパターンは，原始値パターン\lstinline|#$val|である．
+このマッチャー節は，値パターンを処理する．
+このマッチャー節は，値パターンの中身（\lstinline{val}）とターゲット（\lstinline{tgt}）が等しいかどうかくらべる．
+この\lstinline{match}式の1つ目と3つ目のマッチ節は自明であるので説明を省略する．
+2つ目のマッチ節のパターンは，\lstinline{val}の先頭の要素を\lstinline{tgt}から取り出す．
+そして，\lstinline{val}と\lstinline{tgt}から同じ要素を1つ抜いたコレクションを\lstinline{$xs}と\lstinline{#xs}というパターンを使って再帰的にパターンマッチしている．
+\lstinline{#xs}のパターンマッチに，このマッチャー節自身が再帰的に呼び出されるが，コレクションの長さが1つずつ短くなっていくため，最終的に1つ目か3つ目のマッチ節どちらかにいきつく．
+
+\section{\texttt{soretedList}マッチャーの定義}\label{matcher-sorted-list}
 
 Modularization of pattern-matching algorithms by matchers not by patterns enables polymorphic patterns.
 However, its merit extends beyond polymorphic patterns; matchers enable descriptions of more efficient pattern matching keeping patterns concise.
