@@ -82,6 +82,30 @@ MState []
 
 \section{\texttt{matchAll}・\texttt{matchAllDFS}による探索木のトラバース}\label{mechanism-traversal}
 
+\begin{lstlisting}[language=egison,numbers=none]
+take 8 (matchAll [1..] as set integer with
+        | $m :: $n :: _ -> (m, n))
+-- [(1, 1), (1, 2), (2, 1), (1, 3), (2, 2), (3, 1), (1, 4), (2, 3)]
+\end{lstlisting}
+
+\begin{figure}[t]
+  \begin{tabular}{cc}
+    \begin{minipage}[t]{0.45\hsize}
+      \centering
+      \includegraphics[width=4.2cm,bb=0 0 529 582]{reduction-tree-1.png}
+      \caption{探索木}
+      \label{fig:reduction-tree-1}
+    \end{minipage} &
+    \begin{minipage}[t]{0.45\hsize}
+      \centering
+      \includegraphics[width=6.5cm,bb=0 0 929 669]{reduction-tree-2.png}
+      \caption{還元木}
+      \label{fig:reduction-tree-2}
+    \end{minipage}
+  \end{tabular}
+\end{figure}
+
+
 \section{andパターンとorパターンの実装}\label{mechanism-and-pat-or-pat}
 
 \section{notパターンの実装}\label{mechanism-not-pat}
