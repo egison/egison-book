@@ -82,29 +82,53 @@ MState []
 
 \section{\texttt{matchAll}・\texttt{matchAllDFS}による探索木のトラバース}\label{mechanism-traversal}
 
+本節では，\lstinline{matchAll}式と\lstinline{matchAllDFS}式を実行したときに内部でどのような探索木がトラバースされるのかを解説する．
+ある1つのマッチング・ステートを還元すると0個から無限個までを含む複数のマッチング・ステートが生成される．
+そのため，Egisonの内部のパターンマッチ・アルゴリズムは，初期マッチング・ステートをルートとするツリーの探索と考えることができる．
+
+まずは，以下のような\lstinline{matchAllDFS}式の探索木をみる．
+\begin{lstlisting}[language=egison,numbers=none]
+take 8 (matchAllDFS [1..] as set integer with
+        | $m :: $n :: _ -> (m, n))
+-- [(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7), (1, 8)]
+\end{lstlisting}
+この\lstinline{matchAllDFS}式の探索木は図\ref{fig:reduction-tree-1}のようになる．
+図中の四角は，1つのマッチング・ステートを表現している．
+図中の丸は，マッチング・アトムのスタックが空になったマッチング・ステート，パターンマッチの最終結果を表現している．
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=6.0cm,bb=0 0 529 582]{reduction-tree-1.png}
+  \caption{\lstinline{matchAllDFS}式の探索木}
+  \label{fig:reduction-tree-1}
+\end{figure}
+\lstinline{matchAllDFS}式はこの探索木を深さ優先探索する．
+そのため，マッチング・ステートは，a1，b2，e3，f4，h5，j6，m7，o8，k7，p8，r9，...という順番で還元されていく．
+マッチング・ステートh5は無限個のマッチング・ステート（j6，k7，...）に還元される．
+そのため，深さ優先探索では，マッチング・ステートc3の還元に行き着くことがない．
+このように\lstinline{matchAllDFS}では，可算無限のパターンマッチ結果をすべて列挙できない場合がある．
+
+\lstinline{matchAll}式は，可算無限のパターンマッチ結果をすべて列挙するために，この探索木に変形を加えて幅優先探索をおこなう．
+図\ref{fig:reduction-tree-2}は，下記の\lstinline{matchAll}式を実行したときの探索木である．
 \begin{lstlisting}[language=egison,numbers=none]
 take 8 (matchAll [1..] as set integer with
         | $m :: $n :: _ -> (m, n))
 -- [(1, 1), (1, 2), (2, 1), (1, 3), (2, 2), (3, 1), (1, 4), (2, 3)]
 \end{lstlisting}
-
 \begin{figure}[t]
-  \begin{tabular}{cc}
-    \begin{minipage}[t]{0.45\hsize}
-      \centering
-      \includegraphics[width=4.2cm,bb=0 0 529 582]{reduction-tree-1.png}
-      \caption{探索木}
-      \label{fig:reduction-tree-1}
-    \end{minipage} &
-    \begin{minipage}[t]{0.45\hsize}
-      \centering
-      \includegraphics[width=6.5cm,bb=0 0 929 669]{reduction-tree-2.png}
-      \caption{還元木}
-      \label{fig:reduction-tree-2}
-    \end{minipage}
-  \end{tabular}
+  \centering
+  \includegraphics[width=10.5cm,bb=0 0 929 669]{reduction-tree-2.png}
+  \caption{\lstinline{matchAll}式の探索木}
+  \label{fig:reduction-tree-2}
 \end{figure}
+図\ref{fig:reduction-tree-1}の探索木のについては，1つのマッチング・ステートが1つのノードをあらわしていたが，図\ref{fig:reduction-tree-2}の探索木のについては，一連なりのマッチング・ステートのリストを1つのノードとする．
+たとえば，a1は1つのマッチング・ステートからなるノード，b2，c3，d4，...は無限個のマッチング・ステートからなる1つのノードである．
+このように探索木をとらえると，この探索木は二分木になっている．
+探索木が二分木であるため，すべてのノードの子が有限であるため，幅優先探索をすれば，すべてのノードをたどることができる．
 
+図\ref{fig:reduction-tree-1}の探索木を斜めにとらえることによって，図\ref{fig:reduction-tree-2}の二分木への変形はできる．
+b2，c3，d4，...からなるノードに注目しよう．
+このノードの子は，e3単独からなるノードと，c3，d4，...からなるノードである．
+一般に，あるノードの子は，そのノードの先頭のマッチング・ステートを還元した結果と，そのノードの先頭の要素を取り除いたマッチング・ステートのリストとなる．
 
 \section{andパターンとorパターンの実装}\label{mechanism-and-pat-or-pat}
 
