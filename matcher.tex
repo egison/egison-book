@@ -105,9 +105,14 @@ eq = matcher
 原始マッチ節で，値パターンの中身とターゲットの値が等しいかどうかチェックしている．
 \todo{\lstinline{[()]}の説明}
 
-原始パターンパターンは，ここまでにでてきた3つの構成要素であるパターン・ホール，原始パターンパターンコンストラクタ，原始値パターンからなる．
+原始パターンパターンは，ここまでにでてきた3つの構成要素であるパターン・ホール，原始パターンパターンコンストラクタの適用，原始値パターンからなる．
 \begin{lstlisting}[language=egison,numbers=none]
-primitive-pp := $ | C primitive-pp* | #$identifier
+primitive-pp := $ | c primitive-pp* | #$identifier
+\end{lstlisting}
+
+原始データパターンは，ワイルドカード，パターン変数，原始データパターンコンストラクタの適用からなる．
+\begin{lstlisting}[language=egison,numbers=none]
+primitive-dpp := _ | $identifier | C primitive-pp*
 \end{lstlisting}
 
 \section{\texttt{multiset}マッチャーの定義}\label{matcher-multiset}
@@ -151,37 +156,26 @@ multiset a := matcher
 
 \section{\texttt{soretedList}マッチャーの定義}\label{matcher-sorted-list}
 
-Modularization of pattern-matching algorithms by matchers not by patterns enables polymorphic patterns.
-However, its merit extends beyond polymorphic patterns; matchers enable descriptions of more efficient pattern matching keeping patterns concise.
-The reason is that pattern matching against patterns inside matcher definitions allows us to describe more detailed pattern-matching algorithms.
-This section shows such an example, a matcher for sorted lists.
-
-The program that used a doubly-nested join-cons pattern for enumerating pairs of prime numbers whose forms are $(p,p+6)$ gets slower when the number of the enumerating prime pairs gets larger.
-The reason is that the program enumerates all the combinations of prime numbers.
-For example, the program tries to match all the pairs such as $(3,5), (3,7), (3,11), (3,13), (3, 17), (3,19)$, and so on.
-However, we should avoid enumerating the pairs after $(3,11)$, the first pair whose difference is more than $6$.
-This is because it is obvious that the difference between all the pairs after $(3,11)$ are more than $6$.
-
+二重にネストしたジョイン・コンス・パターンを使って$(p,p+6)$という形の素数のペアを列挙するプログラムは，後方の素数のペアになるほど列挙に時間がかかるようになる．
+その理由は，二重にネストしたジョイン・コンス・パターンは，すべての素数の組み合わせを検査するためである．
+たとえば，このパターンは，$(3,5)$，$(3,7)$，$(3,11)$，$(3,13)$，$(3, 17)$，$(3,19)$のような素数のペアすべてを検査する．
+しかし，$(3,11)$以降の素数のペア，差が$6$より大きくなる最初の素数のペア，以降のペアについては，$(p,p+6)$であるか検査する必要はない．
 \begin{lstlisting}[language=egison]
 take 10 (matchAll primes as sortedList integer with
-           _ ++ $p : (_ ++  #(p + 6) : _) -> (p, p + 6))
+         | _ ++ $p :: (_ ++  #(p + 6) :: _) -> (p, p + 6))
 -- [(5,11),(7,13),(11,17),(13,19),(17,23),(23,29),(31,37),(37,43),(41,47),(47,53)]
 \end{lstlisting}
 
-We can avoid this unnecessary search by creating a new matcher that is specialized for sorted lists.
-We can define such a matcher by adding a matcher clause with the primitive-pattern pattern \lstinline|$ ++ #$px : $| to the \lstinline{list} matcher as shown below.
-This matcher clause improves the theoretical time complexity of the above pattern from $O(n^2)$ to $O(n)$.
-
+ソート済みリストに特化したマッチャーを使うことにより，この不必要な探索は避けることができる．
+通常の\lstinline{list}マッチャーに，\lstinline|$ ++ #$px : $|を原始パターンパターンにもつマッチャー節を追加すれば，ソート済みリストに特化したマッチャーをつくることができる．
+このマッチャー節が，$(p,p+6)$という形の素数のペアにマッチする二重にネストしたジョイン・コンス・パターンの計算量を$O(n^2)$から$O(n)$に減らす．
 \begin{lstlisting}[language=egison]
-sortedList a =
-  matcher
-    $ ++ #$px : $ as (sortedList a, sortedList a)
-      \tgt -> matchAll tgt as list a with
-                loop $i (1, $n) ((and ?(\x -> x < px) $h_i) : ...) (#px : $ts) ->
-                  (map (\i -> h_i) [1..n], ts)
-    ...
+sortedList a = matcher
+  | $ ++ #$px :: $ as (sortedList a, sortedList a)
+    | \tgt -> matchAll tgt as list a with
+              | loop $i (1, $n)
+                  ((?(\x -> x < px) & $h_i) :: ...)
+                  (#px :: $ts)
+                -> (map (\i -> h_i) [1..n], ts)
+  ...
 \end{lstlisting}
-
-Note that this method is only applicable to Egison that modularizes pattern-matching methods for each matcher, not for each pattern.
-The reason is that we need to match patterns whose form is \lstinline|_ ++ #x : _| as mentioned above.
-If pattern-matching methods are modularized for each pattern, we need to introduce a new pattern constructor \lstinline|joinCons ... ...| that is equivalent to \lstinline|_ ++ ... : ...| for this purpose.
