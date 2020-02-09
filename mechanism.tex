@@ -132,6 +132,50 @@ b2，c3，d4，...からなるノードに注目しよう．
 
 \section{andパターンとorパターンの実装}\label{mechanism-and-pat-or-pat}
 
+本節では，組み込みパターンの実装の例として，andパターンとorパターン（第\ref{quick}章\ref{quick-logical-pat}節）の実装を説明する．
+
+andパターンの実装からみていく．
+以下のようなandパターンを含むパターンマッチを考える．
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll [1, 2, 3] as list integer with
+| $n :: (_ :: _ & $rs) -> (n, rs)
+-- [(1, [2, 3])]
+\end{lstlisting}
+このパターンマッチを処理する過程で，以下のようなマッチング・ステートの還元にいきつく．
+\begin{lstlisting}[language=egison,numbers=none]
+MState [(_ :: _ & $rs, [2, 3], list integer)]
+       [(n, 1)]
+\end{lstlisting}
+スタックの先頭のマッチング・アトムのパターンがandパターンであった場合，Egison処理系は以下のように還元する．
+\begin{lstlisting}[language=egison,numbers=none]
+MState [(_ :: _, [2, 3], list integer)
+       ,($rs, [2, 3], list integer)]
+       [(n, 1)]
+\end{lstlisting}
+andパターンのそれぞれの引数について，同じターゲットとマッチャーからつくったマッチング・アトムがスタックに追加される．
+
+次にorパターンの実装をみる．
+以下のようなorパターンを含むパターンマッチを考える．
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll [1, 1, 2] as list integer with
+| $m :: ([] | #m :: _) -> m
+;=>{1}
+\end{lstlisting}
+このパターンマッチを処理する過程で，以下のようなマッチング・ステートの還元にいきつく．
+\begin{lstlisting}[language=egison,numbers=none]
+MState [(([] | #m :: _), [1, 2], list integer)]
+       [(m, 1)]
+\end{lstlisting}
+スタックの先頭のマッチング・アトムのパターンがorパターンであった場合，Egison処理系は以下のように還元する．
+\begin{lstlisting}[language=egison,numbers=none]
+MState [([], [1, 2], list integer)]
+       [(m, 1)]
+
+MState [(#m :: _, [1, 2], list integer)]
+       [(m, 1)]
+\end{lstlisting}
+orパターンのそれぞれの引数について，同じターゲットとマッチャーからつくったマッチング・アトムをスタックの先頭にもつマッチング・ステートを生成する．
+
 \section{notパターンの実装}\label{mechanism-not-pat}
 
 \section{パターン関数の実装}\label{mechanism-pat-func}
