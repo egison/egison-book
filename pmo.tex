@@ -179,7 +179,7 @@ matchAll [1,2,3] as multiset integer with
 
 多重集合に対する非線形パターンを記述できるEgisonを使うとポーカーの役判定が簡潔に記述できる．
 それぞれのポーカーの役は直接1つのパターンとして記述できる．
-著者がEgisonのマッチ式を設計をしたとき，ポーカーの約判定をするプログラムを簡潔に記述できることを必要条件として設計した．
+著者がEgisonのマッチ式を設計をしたとき，ポーカーの役判定をするプログラムを簡潔に記述できることを必要条件として設計した．
 
 \begin{lstlisting}[language=egison]
 poker cs :=
@@ -339,8 +339,7 @@ nQueens 4 -- [[2,4,1,3],[3,1,4,2]]
 このようなツリーに対するマッチャーは第\ref{quick}章\ref{quick-matcher-composition}節にて定義した．
 このマッチャーを本節では使う．
 
-We describe patterns for a category tree of programming languages.
-プログラミング言語をカテゴリー分けしたツリーに対してパターンを書いていく．
+プログラミング言語をカテゴリー分けしたツリーにたいしてパターンを書く．
 \lstinline{treeData}がそのカテゴリーツリーを定義している．
 たとえば，\lstinline{"Egison"}は，\lstinline{"pattern-match-oriented"}（パターンマッチ指向）カテゴリーと，\lstinline{"Functional programming"}（関数型プログラミング）カテゴリーの\lstinline{"Dynamically typed"}（動的型付け）サブカテゴリーに属している．
 
@@ -387,7 +386,7 @@ descendants "Functional language" treeData
 -- ["OCaml","Haskell","Curry","Coq","Egison","Lisp","Scheme","Racket"]
 \end{lstlisting}
 
-ツリーのパターンマッチができるDSL（domain-specific language）としては，XML path~\cite{berglund2003xml}がある．
+ツリーのパターンマッチができるDSL（domain-specific language）としては，XML pathがある．
 Egisonは，ユーザー定義可能な数少ないパターンコンストラクタとループ・パターンを組み合わせて幅広いパターンを記述できる点で優れている．
 XML pathは，たとえば\lstinline{ancestor}コマンドなど，多くの組み込みコマンドを使ってパターンを記述する．
 
@@ -514,6 +513,6 @@ A non-linear loop pattern is used to represent the pattern.
 
 % TODO: why multiset matcher used?
 
-There are several graph database query languages~\cite{perez2006semantics,rodriguez2015gremlin,neo4jManual}.
+There are several graph database query languages.
 The advantage of Egison over these query languages is its generality.
 Egison does not focus on pattern matching for graphs, instead Egison allows users to describe various patterns by just combining non-linear loop patterns and a small number of simple pattern constructors.
