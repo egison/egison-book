@@ -1,2 +1,115 @@
 \chapter{Egison開発年表}
 
+\section*{2010年3月}
+
+卒業研究で，整数論の定理を自動で予想するプログラムを書いている最中に，Egisonのパターンマッチのアイデアを得る．
+\lstinline{mapWithBothSides}関数を実装している最中に，もっと強力なパターンマッチがあれば，同じ関数がもっと簡潔にかけることを発想した．
+\begin{lstlisting}[language=egison,numbers=none]
+mapWithBothSides f xs := helper f [] xs
+ where
+  helper f xs [] := []
+  helper f xs (y :: ys) := f xs y ys :: helper f (xs ++ [y]) ys
+\end{lstlisting}
+\begin{lstlisting}[language=egison,numbers=none]
+mapWithBothSides f xs := matchAll xs as list something with
+  | $hs ++ $x :: $ts -> f hs x ts
+\end{lstlisting}
+
+\section*{2011年5月}
+
+最初のEgisonインタプリタの実装が完成し，Hackageからリリースする．
+
+\section*{2011年12月}
+
+Egison が2011年度未踏IT人材発掘・育成事業のプロジェクトの1つとしてに採択される．
+
+\section*{2012年3月}
+
+Egisonのパターンマッチの設計について修士論文を提出する．
+ループパターン（第\ref{quick}章\ref{quick-loop-pat}節）やnotパターン（第\ref{quick}章\ref{quick-logical-pat}節）は，その直後に実装された．
+
+\section*{2012年7月}
+
+第1回Egison Workshopを秋葉原で開催する．
+未踏期間中，PMとしてお世話になった原田康徳さんのアイデアで，「パターンマッチ指向」という宣伝文句が生まれた．
+同時にEgison Version 2.0をリリースする．
+このとき，matcher構文（第\ref{matcher}章）が現在のかたちに落ち着いた．
+また，matcherという名前を使いだしたのもこのときである．
+それまでは，typeと呼ばれていた．
+
+\section*{2012年12月}
+
+江木が就職していた会社でEgison開発を業務として認めてもらう．
+
+\section*{2013年3月}
+
+Egison Version 3.0.0をリリースする．
+このころに，無限の結果をもつパターンマッチ（第\ref{mechanism}章\ref{mechanism-traversal}節）とパターン関数によるパターンのレキシカルスコープ（第\ref{quick}章\ref{quick-pat-fun}節）が実現された．
+
+\section*{2013年11月}
+
+江木が楽天技術研究所で働きはじめる．
+
+\section*{2016年3月}
+
+Egison Version 3.6.0 をリリースする．
+このバージョンから数式処理システムがEgisonの上に実装された．
+
+\section*{2016年6月}
+
+テンソルの添字記法をプログラミングに導入する簡潔な手法の実装に成功する．
+
+\section*{2017年9月}
+
+オクスフォード大学で開催されたScheme Workshop 2017にてテンソルの添字記法のプログラミング言語への導入について江木が論文を発表した．
+国際会議でのはじめてEgisonについての講演がなされた．
+
+\section*{2017年11月}
+
+Egison Version 3.7.0をリリース．
+テンソルの添字記法に加えて，微分形式に対する演算子を簡潔に定義できる仕組みまで実装した．
+
+楽天技術研究所にてEgison開発のアルバイトを募集開始する．
+
+\section*{2018年4月}
+
+楽天技術研究所にインターンに来た河田さんが静的型システムをもつEgisonを試験的に実装する．
+
+\section*{2018年5月}
+
+楽天技術研究所でアルバイトしていた郡さんがfunction symbolの機能をEgisonに実装する．
+
+\section*{2018年8月}
+
+Egisonパターンマッチの設計についての論文（西脇さんとの共著）がAPLAS 2018に採択される．
+6年以上書き続けた論文が，ついに採択された．
+
+\section*{2018年9月}
+
+アメリカのセントルイスで開催されたScheme Workshop 2018にてループ・パターン（第\ref{quick}章\ref{quick-loop-pat}節）について論文発表する．
+
+\section*{2018年12月}
+
+ニュージランドのウェリントンにて開催されたAPLAS 2018にて，Egisonパターンマッチの設計について論文発表する．
+
+Egisonのパターンマッチを実装したSchemeマクロの実装に成功する．
+
+\section*{2019年4月}
+
+Egison Journal Vol. 1を刊行する．
+
+\section*{2019年8月}
+
+ベルリンで開催されたScheme Workshop 2019にて，Egisonパターンマッチを実装したSchemeマクロについて論文発表する．
+
+\section*{2019年9月}
+
+Egison Journal Vol. 2を刊行する．
+
+\section*{2019年10月}
+
+楽天技術研究所でアルバイトしていた郡さんの協力でEgisonパターンマッチのHaskellメタプログラミングによる実装が完成する．
+
+\section*{2019年12月}
+
+Egisonのパターンマッチを活用した新しいプログラミング・パラダイムであるパターンマッチ指向プログラミングを提唱する論文（西脇さんとの共著）が<programming> 2020に採択される
