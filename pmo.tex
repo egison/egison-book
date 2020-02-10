@@ -255,9 +255,9 @@ difference xs ys := matchAll (xs, ys) as (multiset eq, multiset eq) with
 
 これらのパターンをシーケンシャル・パターンと組み合わせることにより，さらに複雑なパターンを記述することができる．
 シーケンシャル・パターンは，notパターンを，パターンの複数の離れた部分にまとめて適用することを可能にするからである．
-たとえば，第\ref{quick}章\ref{quick-seq-pattern}節では，2つのコレクションに共通要素が1つしかないことをチェックする\lstinline{singleCommonElem}関数をパターンマッチにより定義した．
+たとえば，第\ref{quick}章\ref{quick-seq-pat}節では，2つのコレクションに共通要素が1つしかないことをチェックする\lstinline{singleCommonElem}関数をパターンマッチにより定義した．
 シーケンシャル・notパターンは，数学のアルゴリズムを記述するときに必要となることがある．
-たとえば，第\ref{practice}章\ref{practice-sat}節でで紹介するSATソルバーの実装でもシーケンシャル・notパターンは現れる．
+たとえば，第\ref{essence}章\ref{essence-sat}節でで紹介するSATソルバーの実装でもシーケンシャル・notパターンは現れる．
 
 \begin{lstlisting}[language=egison]
 singleCommonElem = match (xs, ys) as (multiset eq, multiset eq) with
@@ -276,11 +276,7 @@ match (xs, ys) as (list eq, list eq) with
      !($y : _, #y : _)] -> map (\i -> x_i) [1..n]
 \end{lstlisting}
 
-\section{複数のマッチ節をとる\texttt{matchAll}}
-
-服部さんの多項式の足し算
-
-\section{ループ・パターンによる再帰的パターン --- ツリー・グラフのパターンマッチ}
+\section{ループ・パターンによる再帰的パターン}\label{pmo-loop}
 
 ループ・パターンは，パターンの繰り返しを表現するために使われる．
 ループ・パターンは，シンプルなパターンコンストラクタを組み合わせて複雑なパターンを構築したり，パターン変数の数がパラメーターによって変わるパターンを記述するときに役に立つ．
