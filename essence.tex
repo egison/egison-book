@@ -3,7 +3,7 @@
 パターンマッチ指向プログラミングがどのような場面で役に立つか現在わかっている範囲で明確にする．
 前章までの例は，すべて単一の\lstinline{matchAll}や\lstinline{match}で記述した例ばかりを紹介してきたが，本章ではより大きなプログラムの記述の中でEgisonのパターンマッチがどのように役に立つのか調べる．
 
-\section{SATソルバー}\label{essence-sat}
+\section{SATソルバーの実装}\label{essence-sat}
 
 To see the effect of pattern-match-oriented programming for implementing practical algorithms, we implement a SAT solver.
 A SAT solver determines whether a given propositional logic formula has an assignment for which the formula evaluates to true.
@@ -87,4 +87,4 @@ On the other hand, all the other loops that can be implemented in backtracking a
 In the traditional style, we describe the 1-literal rule and pure literal rules by using recursive functions such as \lstinline{find}, \lstinline{partition}, \lstinline{subtract} and \lstinline{intersect}~\cite{harrison2009handbook}.
 Thus, the separation of two kinds of loops increases the readability of practical algorithms.
 
-\section{パターンマッチ指向プログラミングとは}\label{essence-pmo}
+\section{2種類のループの分離}\label{essence-pmo}
