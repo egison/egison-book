@@ -1,90 +1,88 @@
 \chapter{パターンマッチ指向プログラミングとは}\label{essence}
 
-パターンマッチ指向プログラミングがどのような場面で役に立つか現在わかっている範囲で明確にする．
+本章の目的は，パターンマッチ指向プログラミングがどのような場面でどのように役に立つか明確にすることである．
 前章までの例は，すべて単一の\lstinline{matchAll}や\lstinline{match}で記述した例ばかりを紹介してきたが，本章ではより大きなプログラムの記述の中でEgisonのパターンマッチがどのように役に立つのか調べる．
 
 \section{SATソルバーの実装}\label{essence-sat}
 
-To see the effect of pattern-match-oriented programming for implementing practical algorithms, we implement a SAT solver.
-A SAT solver determines whether a given propositional logic formula has an assignment for which the formula evaluates to true.
-Input formulae for SAT solvers are often in \emph{conjunctive normal form}.
-A formula in conjunctive normal form is a conjunction of clauses, which are disjunctions of \emph{literals}.
-A literal is a formula whose form is $p$ or $\neg p$.
-For example, $(p \lor q) \wedge (\neg p \lor r) \wedge (\neg p \lor \neg r)$ is a formula in conjunctive normal form that has a solution; $p = \texttt{False}$, $q = \texttt{True}$, and $r = \texttt{True}$.
+ある程度大きなプログラムを書く中で，パターンマッチ指向プログラミングの効果をみるために，SATソルバーを実装する．
+SATソルバーは，与えられた命題論理式が真になる論理変数の割り当てが存在するかどうか判定するプログラムである．
+SATソルバーが入力にとる論理式は，連言標準形（\emph{conjunctive normal form}）であることが多い．
+論理式が連言標準形であるとは，論理式がリテラル（\emph{literal}）の選言からなる節の連言になっていることをいう．
+リテラルとは，$p$または$\neg p$という形をした論理式のことをいう．
+たとえば，$(p \lor q) \wedge (\neg p \lor r) \wedge (\neg p \lor \neg r)$は，$p = \texttt{False}$，$q = \texttt{True}$，$r = \texttt{True}$という割り当てをすれば，真になる連言標準形の論理式である．
 
-\subsection{The Davis-Putnam Algorithm}
+\subsection{Davis-Putnamアルゴリズム}
 
-In our implementation, propositional logic formulae in conjunctive normal form are represented as a collection of collections of literals.
-We can pattern-match them as a multiset of multisets of literals because both $\wedge$ and $\lor$ are commutative operators.
-Furthermore, we represent a literal as an integer.
-We represent positive and negative literals as positive and negative integers respectively: for example, $p$ and $\neg p$ are represented as $1$ and $-1$, respectively.
-Therefore, the matcher for these formulae can be defined by simply composing matchers as \lstinline{multiset (multiset integer)}.
-
-The program below shows the main part of our implementation of the Davis-Putnam algorithm\cite{harrison2009handbook}.
-The \lstinline{sat} function takes a list of propositional variables and a logical formula, and returns \lstinline{True} if there is a solution, otherwise returns \lstinline{False}.
-
+Davis-Putnumアルゴリズム\cite{harrison2009handbook}というSAT問題を解くアルゴリズムのなかでもシンプルなアルゴリズムをここでは実装する．
+本節の実装は，連言標準形の命題論理式をリテラルのコレクションのコレクションとして表現する．
+$\wedge$と$\lor$は可換な演算子であるため，このコレクションのコレクションは，リテラルの多重集合の多重集合としてパターンマッチできる．
+さらに，リテラルを整数として表現する．
+整数の正負によって，リテラルが論理変数がその否定を表現する．
+たとえば，$p$と$\neg p$は，それぞれ$1$と$-1$のように表現される．
+そうすると，これらの論理式に対するマッチャーは\lstinline{multiset (multiset integer)}と定義できる．
+以下のプログラムは，Davis-Putnumアルゴリズムの核の実装である．
+\lstinline{dp}関数は，論理変数のリストと論理式を引数にとり，解がある場合は\lstinline{True}を，そうでない場合は\lstinline{False}を返す．
 \begin{lstlisting}[language=egison]
-sat vars cnf = match (vars, cnf) as (multiset integer, multiset (multiset integer)) with
-  (_       , []) -> True
-  (_       , [] : _) -> False
-  (_       , ($x : []) : _) -> -- 1-literal rule
-    sat (delete (abs x) vars) (assignTrue x cnf)
-  ($v : $vs, !((#(negate v): _) : _)) -> -- pure literal rule (positive)
-    sat vs (assignTrue v cnf)
-  ($v : $vs, !((#v: _) : _)) -> -- pure literal rule (negative)
-    sat vs (assignTrue (negate v) cnf)
-p  ($v : $vs, _) -> -- otherwise
-    sat vs (deleteClausesWith [v, negate v] cnf ++ resolveOn v cnf)
+dp vars cnf :=
+  match (vars, cnf) as (multiset integer, multiset (multiset integer)) with
+  | (_, []) -> True
+  | (_, [] :: _) -> False
+  -- 1-literal rule
+  | (_, ($l :: []) :: _) -> dp (delete (abs l) vars) (assignTrue l cnf)
+  -- pure literal rule (positive)
+  | ($v :: $vs, !((#(neg v) :: _) :: _)) -> dp vs (assignTrue v cnf)
+  -- pure literal rule (negative)
+  | ($v :: $vs, !((#v :: _) :: _)) -> dp vs (assignTrue (neg v) cnf)
+  -- otherwise
+  | ($v :: $vs, _) ->
+    dp vs
+       ((resolveOn v cnf) ++ (deleteClausesWith v (deleteClausesWith (neg v) cnf)))
 \end{lstlisting}
+1つ目のマッチ節（3行目）は，入力された論理式が空だった場合，解を持つことを表現している．
+2つ目のマッチ節（4行目）は，入力された論理式が空節を含んでいた場合，解が存在しないことを表現している．
+3つ目のマッチ節（6行目）は，1-リテラル・ルール（\emph{1-literal rule}）というルールを表現している．
+入力の論理式が1つのリテラルからなる節を持つとき，そのリテラルが\lstinline{True}になる割り当てを即座にできる．
+4つ目のマッチ節（8行目）は，ある論理変数の否定がリテラルとして全く現れない場合，その論理変数に即座に\lstinline{True}を割り当てることができることを表現している．
+たとえば，$(p \lor q) \wedge (\neg p \lor r) \wedge (\neg p \lor \neg r)$は論理変数$q$の否定を含まないため，$q$に\lstinline{True}を割り当てることができる．
+5つ目のマッチ節（10行目）は，4つ目のマッチ節と逆のことを表現している．
+このマッチ節は，ある論理変数の否定のみが入力の論理式に含まれる場合，その論理変数に\lstinline{False}を割り当てることができることを表現している．
+最後のマッチ節（12-14行目）は導出原理（\emph{resolution principle}）を適用している．
+このマッチ節は，$p \lor C$と$\neg p \lor D$という形のすべての節のペアを列挙し（$C$と$D$はリテラルの選言とする），$C \lor D$という形の節を生成する．
 
-The first match clause states that the input formula has a solution when it is empty.
-The second match clause states that that there is no solution when clauses include an empty clause.
-The third match clause represents \emph{1-literal rule}.
-When the input formula includes a clause with a single literal, we can assign that literal \lstinline{True} at once.
-The fourth match clause states that that if there is a propositional variable that appears only positively, we can set the value of this literal \lstinline{True} and remove the propositional variable of \lstinline{x} from the variable list and the clauses that include this literal from the formula.
-For example, $(p \lor q) \wedge (\neg p \lor r) \wedge (\neg p \lor \neg r)$ contains a propositional variable $q$ only positively, so we can assign $q$ \lstinline{True} and remove the first clause from the next recursion.
-The fifth match clause states that the opposite of the fourth match clause.
-It removes the clauses that include this literal if there is a propositional variable that appears only negatively ($p$ in the above sample is such propositional variable).
-The final match clause applies the resolution principle.
-This match clause lists all pairs of clauses $p \lor C$ and $\neg p \lor D$ (let $C$ and $D$ be a disjunction of literals), and obtains new clauses $C \lor D$.
+上記の\lstinline{dp}の定義は，入力の論理式を簡約するためのすべてのルールを多重集合に対するパターンマッチをいかして記述している．
+同様のことをするために，伝統的な関数型プログラミングでは，複数のライブラリ関数を組み合わせたり，補助関数を定義する必要がある．
+Davis-PutnamアルゴリズムのOCamlによる実装は\cite{harrison2009handbook}でみることができる．
 
-The above definition of \lstinline{sat} describes all rules for simplifying an input formula by fully utilizing pattern matching for multisets.
-In traditional functional languages, we need to call several library functions and define several helper functions to describe these conditional branches.
-We can compare this implementation with the same algorithm implemented in OCaml in~\cite{harrison2009handbook}.
+\subsection{導出原理}
 
-\subsection{Pattern Matching for Resolution}
-
-We can elegantly define the \lstinline{resolveOn} function using a sequential not-pattern.
-
-First, let us show a naive implementation of \lstinline{resolveOn}.
-The \lstinline{resolveOn} function is defined with a single \lstinline{matchAll} expression as follows.
-
+本節は，\lstinline{resolveOn}関数の実装を紹介する．
+まずは，ナイーブな実装を紹介するところからはじめる．
+\lstinline{resolveOn}関数は，\lstinline{matchAll}式を使って以下のように定義できる．
 \begin{lstlisting}[language=egison]
-resolveOn v cnf = matchAll cnf as multiset (multiset integer) with
-  (#v : $xs) : (#(negate v) : $ys) : _ -> unique (filter (\c -> not (tautology c)) (xs ++ ys))
+resolveOn v cnf := matchAll cnf as multiset (multiset integer) with
+| (#v :: $xs) :: (#(negate v) :: $ys) :: _ -> unique (filter (\c -> not (tautology c)) (xs ++ ys))
 \end{lstlisting}
-
-\noindent
-The pattern for enumerating the pair of clauses $p \lor C$ and $\neg p \lor D$ is described simply utilizing pattern-matching for a multiset of multisets.
-Note that the above \lstinline{resolveOn} removes tautological clauses by using the \lstinline{tautology} predicate in the body of the match clause.
-
-We can remove this use of the \lstinline{tautology} predicate by using a sequential not-pattern discussed in Sect.~\ref{tuple-of-collections}.
-The sequential pattern is effectively used to describe that the literal \lstinline{x} appeared in \lstinline{xs} does not appear negatively in \lstinline{ys}.
-
+$p \lor C$と$\neg p \lor D$の形の節のペアを列挙するパターンは，多重集合の多重集合に対するパターンマッチにより記述できる．
+ただし，これだけでは，$C \lor D$がトートロジーな節である場合（$C$がリテラル$q$を含みかつ$D$がリテラル$\neg q$を含む場合そうなる）にもマッチしてしまう．
+そのために，\lstinline{filter}関数と\lstinline{tautology}関数を使って，そのような節を取り除いている．
+シーケンシャル・notパターン（第\ref{pmo}章\ref{pmo-tuple}節）を使って\lstinline{resolveOn}関数を定義すると，パターンにそのような操作を取り込める．
 \begin{lstlisting}[language=egison]
-resolveOn v cnf = matchAll cnf as multiset (multiset integer) with
-  [(#v : (and @ $xs)) : (#(negate v) : (and @ $ys)) : _,
-   !($x : _, #(negate x) : _)] -> unique (xs ++ ys)
+resolveOn v cnf :=
+  matchAll cnf as multiset (multiset integer) with
+  | {(#v :: (@ & $xs)) :: (#(neg v) :: (@ & $ys)) :: _,
+     !($l :: _, #(neg l) :: _)}
+    ->  unique (xs ++ ys)
 \end{lstlisting}
-
-\subsection{Separating Two Kinds of Loops}
-
-The SAT solver presented in this section is an important sample in the sense that it is the only sample that contains a loop that we cannot remove by pattern-match-oriented programming.
-This unremovable loop is the recursion of the \lstinline{sat} function.
-This recursion is essential for narrowing the search tree.
-This narrowing is impossible by simple backtracking.
-On the other hand, all the other loops that can be implemented in backtracking algorithms are pushed into the patterns.
-In the traditional style, we describe the 1-literal rule and pure literal rules by using recursive functions such as \lstinline{find}, \lstinline{partition}, \lstinline{subtract} and \lstinline{intersect}~\cite{harrison2009handbook}.
-Thus, the separation of two kinds of loops increases the readability of practical algorithms.
 
 \section{2種類のループの分離}\label{essence-pmo}
+
+\ref{essence-sat}節で実装したSATソルバーは，パターンマッチ指向プログラミングによって取りのぞけないループを含んでいた．
+そのループとは，\lstinline{dp}関数の再帰である．
+この再帰は，SAT問題を解くための探索空間を狭めるために本質的なループである．
+この探索空間の縮小は，単純なバックトラッキング・アルゴリズムでは不可能なものである．
+たいして，その他のバックトラッキングにより実装できるループはすべてパターンの中に押し込められている．
+伝統的な関数型プログラミングでは，これら2種類のループのどちらも再帰を使って記述する必要があった．
+パターンマッチ指向プログラミングは，バックトラッキングにより実装できるループをパターンに閉じ込めることにより，時間的計算量を減らすための本質的なループのみの記述にプログラマが注力できるようにする．
+これにより，プログラムの期日しやすさ・読解しやすさが向上する．
+

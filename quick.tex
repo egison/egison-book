@@ -209,7 +209,8 @@ take 10 (matchAll primes as list integer with _ ++ $p :: (!#(p + 2) & $q) :: _ -
 ターゲットのコレクションの2つの要素の組み合わせを列挙するパターンマッチを考えることからはじめる．
 これは以下のような\lstinline{matchAll}式で記述できる．
 \begin{lstlisting}[language=egison]
-comb2 xs = matchAll xs as list something with _ ++ $x_1 : _ ++ $x_2 : _ -> [x_1, x_2]
+comb2 xs = matchAll xs as list something with
+| _ ++ $x_1 :: _ ++ $x_2 :: _ -> [x_1, x_2]
 
 comb2 [1,2,3,4] -- [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4]]
 \end{lstlisting}
@@ -225,9 +226,10 @@ Egisonはこの例の中の\lstinline|$x_1|と\lstinline|$x_2|のように，パ
 ここで，ループ・パターンを使うことができる．
 \begin{lstlisting}[language=egison]
 comb n xs = matchAll xs as list something with
-              loop $i (1,n)
-                (_ ++ $x_i : ...)
-                _ -> map (\i -> x_i) [1..n]
+            | loop $i (1,n)
+                (_ ++ $x_i :: ...)
+                _
+              -> map (\i -> x_i) [1..n]
 
 comb 2 [1,2,3,4] -- [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4]]
 comb 3 [1,2,3,4] -- [[1,2,3],[1,2,4],[1,3,4],[2,3,4]]
@@ -248,7 +250,8 @@ comb 3 [1,2,3,4] -- [[1,2,3],[1,2,4],[1,3,4],[2,3,4]]
 三点リーダーパターンが終端パターンに展開されたときの繰り返し回数が，添字範囲の終了値のパターンとパターンマッチされる．
 以下のループ・パターンは，ターゲットのコレクションの先頭部分を列挙する．
 \begin{lstlisting}[language=egison]
-matchAll [1,2,3,4] as list something with loop $i (1, $n) ($x_i : ...) _ -> map (\i -> x_i) [1..n]
+matchAll [1,2,3,4] as list something with
+| loop $i (1, $n) ($x_i :: ...) _ -> map (\i -> x_i) [1..n]
 -- [[],[1],[1,2],[1,2,3],[1,2,3,4]]
 \end{lstlisting}
 
@@ -268,9 +271,10 @@ Egison処理系はパターンを左から右に順番に処理する．
 以下のシーケンシャルパターンは，リストの3つ目の要素，1つ目の要素，2つ目の要素の順番でターゲットのリストをパターンマッチする．
 \begin{lstlisting}[language=egison]
 matchAll [2,3,1,4,5] as list integer with
-  [ @ :       @       : $x : _,
-   (#(x + 1), @),
-   #(x + 2)] -> "Matched" -- ["Matched"]
+|  [ @ ::      @ :: $x :: _,
+    (#(x + 1), @),
+    #(x + 2)]
+-> "Matched" -- ["Matched"]
 \end{lstlisting}
 シーケンシャル・パターン中に現れる\lstinline|@|は，\emph{後回しパターン変数}（\emph{later pattern variable}）と呼ばれる．
 後回しパターン変数に束縛されたターゲットは，シーケンシャル・パターンの次の要素のパターンでパターンマッチされる．

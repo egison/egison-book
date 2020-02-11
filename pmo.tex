@@ -116,7 +116,8 @@ unique xs := matchAll xs as list eq with
 このとき，\lstinline{matchAllDFS}式を使うことが，正しい順番で結果のコレクションを生成するために必要なことに注意してほしい．
 
 \begin{lstlisting}[language=egison]
-concat xss = matchAllDFS xss as list (list something) with _ ++ (_ ++ $x : _) : _ -> x
+concat xss = matchAllDFS xss as list (list something) with
+  | _ ++ (_ ++ $x :: _) :: _ -> x
 \end{lstlisting}
 
 \noindent
@@ -145,7 +146,8 @@ matchAll [[1..], (map negate [1..])] as list (list something) with
 単一の多重集合のコンス・パターンは，リストのジョイン・コンス・パターンと置き換えることもできる．
 
 \begin{lstlisting}[language=egison]
-lookup k ls = match ls as multiset (eq, something) with (#k, $x) : _ -> x
+lookup k ls = match ls as multiset (eq, something) with
+  | (#k, $x) :: _ -> x
 \end{lstlisting}
 
 ただし，ネストした多重集合のコンス・パターンは，リストのジョイン・コンス・パターンと置き換えることができない．
@@ -239,7 +241,7 @@ card := algebraicDataMatcher
   | card suit (mod 13)
 \end{lstlisting}
 
-\section{タプル・パターンによるデータの比較}
+\section{タプル・パターンによるデータの比較}\label{pmo-tuple}
 
 複数のデータをくらべたいという場面は，プログラミングにおいて頻出する．
 このような場面で，とくにnotパターンと一緒に使われるタプル・パターンが役に立つことがおおい．
@@ -251,7 +253,7 @@ difference xs ys := matchAll (xs, ys) as (multiset eq, multiset eq) with
 \end{lstlisting}
 
 \noindent
-\lstinline|!($x : _, #x : _)|のように，notパターンの挿入位置をを変えることにより，2つのコレクションに共通要素が1つもない場合にパターンマッチに成功するパターンも記述できる．
+\lstinline|!($x :: _, #x :: _)|のように，notパターンの挿入位置をを変えることにより，2つのコレクションに共通要素が1つもない場合にパターンマッチに成功するパターンも記述できる．
 
 これらのパターンをシーケンシャル・パターンと組み合わせることにより，さらに複雑なパターンを記述することができる．
 シーケンシャル・パターンは，notパターンを，パターンの複数の離れた部分にまとめて適用することを可能にするからである．
@@ -261,9 +263,9 @@ difference xs ys := matchAll (xs, ys) as (multiset eq, multiset eq) with
 
 \begin{lstlisting}[language=egison]
 singleCommonElem = match (xs, ys) as (multiset eq, multiset eq) with
-                      [($x : @, #x : @),
-                       !($y : _, #y : _)] -> True
-                      _ -> False
+                   | [($x :: @, #x :: @),
+                      !($y :: _, #y :: _)] -> True
+                   | _ -> False
 \end{lstlisting}
 
 シーケンシャル・パターンをループ・パターンと組み合わせることも可能である．
@@ -271,9 +273,10 @@ singleCommonElem = match (xs, ys) as (multiset eq, multiset eq) with
 
 \begin{lstlisting}[language=egison]
 match (xs, ys) as (list eq, list eq) with
-  loop $i (1,$n)
-    [($x_i : @, #x_i : @), [...]]
-     !($y : _, #y : _)] -> map (\i -> x_i) [1..n]
+| loop $i (1,$n)
+    [($x_i :: @, #x_i :: @), [...]]
+    !($y :: _, #y :: _)
+-> map (\i -> x_i) [1..n]
 \end{lstlisting}
 
 \section{ループ・パターンによる再帰的パターン}\label{pmo-loop}
