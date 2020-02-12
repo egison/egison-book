@@ -200,10 +200,42 @@ MState [($rs, [2, 2], multiset integer)]
        [(m, 8)]
 \end{lstlisting}
 
+
 \section{ループ・パターンの実装}\label{mechanism-loop-pattern}
 
 \todo{}
 
+
 \section{パターン関数の実装}\label{mechanism-pat-func}
 
-\todo{}
+本節は，パターン関数の実装を解説する．
+以下のようなパターン関数の適用を含むパターンマッチを考える．
+\begin{lstlisting}[language=egison,numbers=none]
+twin := \p1 p2 => (~p1 & $x) :: #x :: ~p2
+
+matchAll [1, 2, 1, 3] as multiset integer with
+| $m :: twin $n _ -> (m, n)
+-- [(2, 1), (2, 1), (3, 1), (3, 1)]
+\end{lstlisting}
+このパターンマッチを処理する過程で，以下のようなマッチング・ステートの還元にいきつく．
+\begin{lstlisting}[language=egison,numbers=none]
+MState [(twin $n _, [1, 1, 3], multiset integer)]
+       [(m, 2)]
+\end{lstlisting}
+
+\begin{lstlisting}[language=egison,numbers=none]
+MState [MNode [(~p1 & $x) :: #x :: ~p2, [1, 1, 3], multiset integer)]
+              env1
+              []
+              [(p1, $n), (p2, _)]]
+       [(m, 2)]
+\end{lstlisting}
+
+\begin{lstlisting}[language=egison,numbers=none]
+MState [MNode [(p1, 1, integer),
+               (#x :: ~p2, [1, 3], multiset integer)]
+              env1
+              [(x, 1)]
+              [(p1, $n), (p2, _)]]
+       [(m, 2)]
+\end{lstlisting}

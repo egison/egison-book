@@ -256,7 +256,7 @@ matchAll [1,2,3,4] as list something with
 \end{lstlisting}
 
 ループ・パターンは，ツリーやグラフのパターンマッチをするときに特によく使われる．
-たとえば，第\ref{pmo}章\ref{pmo-loop}節と第\ref{advanced}章\ref{advanced-tree}節でそのような例を紹介する．
+第\ref{pmo}章\ref{pmo-loop}節でそのような例を紹介する．
 形式的なループ・パターンの構文と意味論は，ループ・パターンの論文~\cite{egi2018loop}で解説されている．
 
 \section{シーケンシャル・パターン}\label{quick-seq-pat}
@@ -397,7 +397,7 @@ algebraicDataMatcher binaryTree a = BLeaf a | BNode a (binaryTree a) (binaryTree
 
 代数的データ型に対するマッチャーと非自由データ型に対するマッチャーを組み合わせることができる．
 たとえば，任意の数の子供をもつツリーで子供の順番を無視するマッチャーは以下のように定義できる．
-第\ref{pmo}章\ref{pmo-loop}節と第\ref{advanced}章\ref{advanced-tree}節でこのツリーに対するパターンマッチを紹介する．
+第\ref{pmo}章\ref{pmo-loop}節でこのツリーに対するパターンマッチを紹介する．
 \begin{lstlisting}[language=egison]
 algebraicDataMatcher tree a = Leaf a | Node a (multiset (tree a))
 \end{lstlisting}
