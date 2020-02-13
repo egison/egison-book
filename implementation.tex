@@ -1,24 +1,34 @@
 \chapter{Egisonパターンマッチの実装}\label{implementation}
 
 本章は，Egisonパターンマッチの実装を紹介する．
-Egisonパターンマッチの実装については，現在2本の論文と複数の実装が公開されている．
+Egisonパターンマッチの実装については，5個の実装と現在2本の論文が公開されている．
 本章はこれらの参考になる外部資料を紹介していきたい．
 
 \section{インタプリタ実装}
 
 Egisonインタプリタ\cite{egisonGitHub}は，本書で紹介したEgisonのパターンマッチの全機能が実装された唯一の処理系である．
-EgisonインタプリタはHaskellで実装されている．
+このインタプリタはHaskellで実装されている．
+このインタプリタへのEgisonパターンマッチ実装の方法については，第\ref{mechanism}章で紹介した．
 このインタプリタには，パターンマッチ以外に数式処理システムとしての機能も実装されている．
 
-河田旺さんによるTyped Egison
+河田旺さんによるTyped Egison~\cite{typedEgison}は，Egisonインタプリタからパターンマッチに関する最小限の機能を切り出し，静的型システムを実装したものである．
 
-河田旺さんによるCoqによるインタプリタ実装\cite{formalizedEgison}もある．
+河田旺さんによるCoqによるインタプリタ実装Formalized Egison~\cite{formalizedEgison}もある．
+Formalized Egisonは，Typed Egisonの型安全性を証明するために実装された．
+2020年2月現在，証明を完成させるために開発を続けている最中である．
 
 \section{ほかの関数型言語へのライブラリ実装}
 
-Schemeマクロとしての実装
+ほかのプログラミング言語でEgisonパターンマッチが使えるようにするためのライブラリが開発されている．
 
-Haskellメタプログラミングによる実装
+EgisonパターンマッチをSchemeマクロとしての実装\cite{egisonScheme}したライブラリが公開されている．
+この実装は，\lstinline{match-all}式（Egisonの\lstinline{matchAll}に対応する）や\lstinline{match}式をSchemeプログラムに変換した後，Scheme処理系でコンパイルするために，Egisonインタプリタにくらべて格段に速い．
+EgisonパターンマッチをSchemeマクロとして実装する方法については論文\cite{egi2019macro}にまとめられている．
 
-ループ・パターンやシーケンシャル・パターン，forallパターンといったEgison独自のパターンで実装されていないパターンがある．
+Haskellメタプログラミングによる実装\cite{egisonHaskell}も公開されている．
+上記Schemeマクロと同様に，\lstinline{matchAll}式や{match}式をHaskellで実行できるプログラムに変換して，GHC（Haskellの標準的なコンパイラ）でコンパイルして実行するために，Egisonインタプリタにくらべて格段に速い．
+また，GHCの型検査・型推論機能を使って，型検査と型推論もおこなうように実装されている．
+このHaskellライブラリについては，現在論文を準備中である．
+
+上記のScheme実装とHaskell実装の両方について，ループ・パターンやシーケンシャル・パターン，forallパターンといったEgison独自のパターンで実装されていないパターンがある．
 その理由に添字付き変数など，どのように既存の言語の上に実装するのが適切なのか考えるのがむずかしいプログラミング言語の要素を含んでいるためである．
