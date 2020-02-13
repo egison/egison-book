@@ -15,29 +15,29 @@ matchAll [2,8,2] as multiset eq with
 \end{lstlisting}
 
 上記の\lstinline{matchAll}式を受け取るとEgison処理系は，以下のようなマッチング・ステート（\emph{matching state}）と呼ばれるオブジェクトを処理系内部で生成する．
-マッチング・ステートは，マッチング・アトム（emph{matching atom}）のスタックと，パターンマッチの途中結果からなる．
+マッチング・ステートは，マッチング・アトム（\emph{matching atom}）のスタックと，パターンマッチの途中結果（下記の場合，\lstinline{[]}），\lstinline{matchAll}式実行時の環境（下記の場合，\lstinline{env}）からなる．
 マッチング・アトムは，パターン，マッチャー，ターゲットからなる3つ組である．
 初期マッチング・ステートは，\lstinline{matchAll}式のパターン，マッチャー，ターゲットから構成されるマッチング・アトム1つからなるスタックから構成される．
 Egison内部のパターンマッチ・アルゴリズムは，マッチング・ステートの還元プロセスとして定義されている．
 還元の結果，マッチング・アトムのスタックが空になるとパターンマッチに成功する．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [($m :: #m :: _, multiset eq, [2,8,2])]
-       []
+       [] env
 \end{lstlisting}
 このマッチング・ステートは，次のステップで以下の3つのマッチング・ステートに還元される．
 この還元は，\lstinline{multiset}マッチャーのコンス・パターンの定義（第\ref{matcher}章\ref{matcher-multiset}節にて解説する）にもとづいて，実行される．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [($m, eq, 2)
        ,(#m :: _, multiset eq, [8,2])]
-       []
+       [] env
 
 MState [($m, eq, 8)
        ,(#m :: _, multiset eq, [2,2])]
-       []
+       [] env
 
 MState [($m, eq, 2)
        ,(#m :: _, multiset eq, [2,8])]
-       []
+       [] env
 \end{lstlisting}
 このように1つのマッチング・ステートを1ステップ還元すると複数のマッチング・ステートが生成される．
 生成されるマッチング・ステートの数が0個であることも，無限個ある場合もある．
@@ -49,34 +49,34 @@ MState [($m, eq, 2)
 \begin{lstlisting}[language=egison,numbers=none]
 MState [($m, something, 2)
        ,(#m :: _, multiset eq, [8,2])]
-       []
+       [] env
 \end{lstlisting}
 \lstinline{something}はEgison唯一の組み込みマッチャーであり，パターンマッチの途中結果に新しい束縛を追加する．
 ここでは，変数\lstinline{m}に\lstinline{2}を束縛している．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [(#m :: _, multiset eq, [8,2])]
-       [(m, 2)]
+       [(m, 2)] env
 \end{lstlisting}
 再び，\lstinline{multiset}のコンス・パターンの定義にもとづき，マッチング・ステートが還元される．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [(#m, eq, 8)
        ,(_, multiset eq, [2])]
-       [(m, 2)]
+       [(m, 2)] env
 
 MState [(#m, eq, 2)
        ,(_, multiset eq, [8])]
-       [(m, 2)]
+       [(m, 2)] env
 \end{lstlisting}
 上記，1つ目のマッチング・ステートは値パターン\lstinline{#m}のパターンマッチに失敗して消える．（還元された結果0個のマッチング・ステートを生成するともいうことができる．）
 2つ目のマッチング・ステートは，先頭のマッチング・アトムがポップアウトし，以下のように還元される．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [(_, multiset eq, [8])]
-       [(m, 2)]
+       [(m, 2)] env
 \end{lstlisting}
 このマッチング・ステートも，先頭のマッチング・アトムがポップアウトし，以下のように還元される．
 \begin{lstlisting}[language=egison,numbers=none]
 MState []
-       [(m, 2)]
+       [(m, 2)] env
 \end{lstlisting}
 最終的にマッチング・アトムのスタックが上記のように空になると，このパターンマッチの途中結果が最終結果としてボディの評価に使われる．
 
@@ -144,13 +144,13 @@ matchAll [1, 2, 3] as list integer with
 このパターンマッチを処理する過程で，以下のようなマッチング・ステートの還元にいきつく．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [(_ :: _ & $rs, [2, 3], list integer)]
-       [(n, 1)]
+       [(n, 1)] env
 \end{lstlisting}
 スタックの先頭のマッチング・アトムのパターンがandパターンであった場合，Egison処理系は以下のように還元する．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [(_ :: _, [2, 3], list integer)
        ,($rs, [2, 3], list integer)]
-       [(n, 1)]
+       [(n, 1)] env
 \end{lstlisting}
 andパターンのそれぞれの引数について，同じターゲットとマッチャーからつくったマッチング・アトムがスタックに追加される．
 
@@ -164,7 +164,7 @@ matchAll [1, 1, 2] as list integer with
 このパターンマッチを処理する過程で，以下のようなマッチング・ステートの還元にいきつく．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [(([] | #m :: _), [1, 2], list integer)]
-       [(m, 1)]
+       [(m, 1)] env
 \end{lstlisting}
 スタックの先頭のマッチング・アトムのパターンがorパターンであった場合，Egison処理系は以下のように還元する．
 \begin{lstlisting}[language=egison,numbers=none]
@@ -172,7 +172,7 @@ MState [([], [1, 2], list integer)]
        [(m, 1)]
 
 MState [(#m :: _, [1, 2], list integer)]
-       [(m, 1)]
+       [(m, 1)] env
 \end{lstlisting}
 orパターンのそれぞれの引数について，同じターゲットとマッチャーからつくったマッチング・アトムをスタックの先頭にもつマッチング・ステートを生成する．
 
@@ -187,23 +187,18 @@ matchAll [2, 8, 2] as multiset integer with
 \begin{lstlisting}[language=egison,numbers=none]
 MState [(!(#m :: _), [2, 2], multiset integer)
        ,($rs, [2, 2], multiset integer)]
-       [(m, 8)]
+       [(m, 8)] env
 \end{lstlisting}
 スタックの先頭のマッチング・アトムのパターンがnotパターンであった場合，Egison処理系は以下のように，スタックの先頭のマッチング・アトムからnotパターンのnotをのぞいたマッチング・アトムだけをスタックにもつマッチング・ステートを生成する．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [((#m :: _), [2, 2], multiset integer)
-       [(m, 8)]
+       [(m, 8)] env
 \end{lstlisting}
 このマッチング・ステートの還元した結果，1つもパターンマッチに成功するマッチング・ステートがなければ，以下のような先ほどのマッチング・ステートからnotパターンをもつ先頭のマッチング・アトムをのぞいたマッチング・ステートを還元する．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [($rs, [2, 2], multiset integer)]
-       [(m, 8)]
+       [(m, 8)] env
 \end{lstlisting}
-
-
-\section{ループ・パターンの実装}\label{mechanism-loop-pattern}
-
-\todo{}
 
 
 \section{パターン関数の実装}\label{mechanism-pat-func}
@@ -222,20 +217,102 @@ matchAll [1, 2, 1, 3] as multiset integer with
 MState [(twin $n _, [1, 1, 3], multiset integer)]
        [(m, 2)]
 \end{lstlisting}
-
+このようにスタックの先頭のマッチング・アトムのパターンが，パターン関数の適用であった場合，パターン関数が展開される．
+この展開と同時に，\lstinline{MNode}というほとんど\lstinline{MState}と同じ構造のデータにマッチング・アトムは変換される．
+\lstinline{MNode}は，パターンマッチの途中結果（下記の場合，\lstinline{[]}）と，パターン関数を定義したときの環境（下記の場合，\lstinline{env1}），パターン関数の引数に束縛されたパターンの環境（下記の場合，\lstinline{[(p1, $n), (p2, _)]}）をもつ．
+このように\lstinline{MState}がネストしたような構造をつくるのは，パターンの静的スコープを実現するためである．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [MNode [(~p1 & $x) :: #x :: ~p2, [1, 1, 3], multiset integer)]
-              env1
               []
+              env1
               [(p1, $n), (p2, _)]]
-       [(m, 2)]
+       [(m, 2)] env
 \end{lstlisting}
-
+このマッチング・ステートを還元していくと，スタックの先頭のパターンがパターン関数の仮引数（下記の場合，\lstinline{p1}）であるマッチング・ステートにいきつく．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [MNode [(p1, 1, integer),
                (#x :: ~p2, [1, 3], multiset integer)]
-              env1
               [(x, 1)]
+              env1
               [(p1, $n), (p2, _)]]
-       [(m, 2)]
+       [(m, 2)] env
 \end{lstlisting}
+パターン関数の引数に束縛されたパターンの環境（\lstinline{MNode}の3つ目の引数）から\lstinline{p1}に束縛されているパターンを取り出し，マッチング・アトムのパターンをそのパターンに展開する．
+同時に，このマッチング・アトムを\lstinline{MNode}から\lstinline{MState}のマッチング・アトムに持ち上げる．
+\begin{lstlisting}[language=egison,numbers=none]
+MState [($n, 1, integer),
+        MNode [(#x :: ~p2, [1, 3], multiset integer)]
+              [(x, 1)]
+              env1
+              [(p1, $n), (p2, _)]]
+       [(m, 2)] env
+\end{lstlisting}
+
+
+%\section{ループ・パターンの実装}\label{mechanism-loop-pattern}
+%
+%本節は，ループ・パターンの実装を解説する．
+%第\ref{pmo}章\ref{pmo-loop-nqueen}節で解説した$n$クイーン問題を解く二重にネストしたループ・パターンの例を使って説明する．
+%以下の\lstinline{matchAll}式は，$n=4$として問題を解いている．
+%\begin{lstlisting}[language=egison,numbers=none]
+%matchAll [1..4] as multiset integer with
+%| $a_1 ::
+%   (loop $i (2, 4)
+%         ((loop $j (1, i - 1)
+%                (!#(a_j - (i - j)) & !#(a_j + (i - j)) & ...)
+%                $a_i) :: ...)
+%         []
+%-> map (\i -> a_i) [1..4]
+%\end{lstlisting}
+%この\lstinline{matchAll}式を実行すると，下記のような初期マッチング・ステートが生成される．
+%下記のマッチング・ステートは前節よりも1つ引数を多くとっている．
+%\lstinline{MState}の第一引数の\lstinline{[]}がそれである．
+%この\lstinline{MState}の第一引数はループ・コンテクスト（loop context）と呼ばれるオブジェクトのスタックである．
+%\begin{lstlisting}[language=egison,numbers=none]
+%MState []
+%       [($a_1 ::
+%          (loop $i (2, 4)
+%                ((loop $j (1, i - 1)
+%                       (!#(a_j - (i - j)) & !#(a_j + (i - j)) & ...)
+%                       $a_i) :: ...)
+%                []]
+%        ,multiset integer, [1,2,3,4])]
+%       [] env
+%\end{lstlisting}
+%
+%\begin{lstlisting}[language=egison,numbers=none]
+%MState []
+%       [($a_1, something, 2)
+%       ,((loop $i (2, 4)
+%               ((loop $j (1, i - 1)
+%                      (!#(a_j - (i - j)) & !#(a_j + (i - j)) & ...)
+%                      $a_i) :: ...)
+%               []]
+%         ,multiset integer, [1,3,4])]
+%       [] env
+%\end{lstlisting}
+%
+%\begin{lstlisting}[language=egison,numbers=none]
+%MState []
+%       [((loop $i (2, 4)
+%               ((loop $j (1, i - 1)
+%                      (!#(a_j - (i - j)) & !#(a_j + (i - j)) & ...)
+%                      $a_i) :: ...)
+%               []]
+%         ,multiset integer, [1,3,4])]
+%       [(a, {|[1, 2]|})] env
+%\end{lstlisting}
+%
+%\begin{lstlisting}[language=egison,numbers=none]
+%MState [((i, 2), [4], _, ((loop $j (1, i - 1)
+%                                (!#(a_j - (i - j)) & !#(a_j + (i - j)) & ...)
+%                                $a_i) :: ...), [])]
+%       [((loop $i (2, 4)
+%               ((loop $j (1, i - 1)
+%                      (!#(a_j - (i - j)) & !#(a_j + (i - j)) & ...)
+%                      $a_i) :: ...)
+%               []]
+%         ,multiset integer, [1,3,4])]
+%       [(a, {|[1, 2]|})] env
+%\end{lstlisting}
+%
