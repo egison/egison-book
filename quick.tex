@@ -97,7 +97,7 @@ take 8 twinPrimes
 述語パターンは，述語パターンの中身の述語にターゲットを適用したときに真が帰ってきた場合，パターンマッチに成功するパターンである．
 述語パターンの先頭は，\lstinline{?}\index{?@\lstinline{?}}からはじまり，\lstinline{?}のあとには1引数の述語が続く．
 \begin{lstlisting}[language=egison]
-twinPrimes = matchAll primes as list integer with
+twinPrimes := matchAll primes as list integer with
   | _ ++ $p :: ?(\q -> q = p + 2) :: _ -> (p, p + 2)
 \end{lstlisting}
 
@@ -185,9 +185,9 @@ andパターンとorパターンの使用例として，三つ子素数を抽出
 andパターンは，asパターンのように使われている．
 orパターンは，$p+2$と$p+4$の両方にマッチするために使われている．
 \begin{lstlisting}[language=egison]
-primeTriples = matchAll primes as list integer with
-               | _ ++ $p :: ((#(p + 2) | #(p + 4)) & $m) :: #(p + 6) :: _
-               -> (p, m, p + 6)
+primeTriples := matchAll primes as list integer with
+  | _ ++ $p :: ((#(p + 2) | #(p + 4)) & $m) :: #(p + 6) :: _
+  -> (p, m, p + 6)
 
 take 6 primeTriples -- [(5,7,11),(7,11,13),(11,13,17),(13,17,19),(17,19,23),(37,41,43)]
 \end{lstlisting}
@@ -197,7 +197,8 @@ notパターンの先頭には，\lstinline{!}が付加される．
 \lstinline{!}の後に，任意のパターンが続く．
 以下の\lstinline{matchAll}は双子素数でない隣り合う素数のペアを列挙する．
 \begin{lstlisting}[language=egison]
-take 10 (matchAll primes as list integer with _ ++ $p :: (!#(p + 2) & $q) :: _ -> (p, q))
+take 10 (matchAll primes as list integer with
+         | _ ++ $p :: (!#(p + 2) & $q) :: _ -> (p, q))
 -- [(2,3),(7,11),(13,17),(19,23),(23,29),(31,37),(37,41),(43,47),(47,53),(53,59)]
 \end{lstlisting}
 
@@ -209,8 +210,8 @@ take 10 (matchAll primes as list integer with _ ++ $p :: (!#(p + 2) & $q) :: _ -
 ターゲットのコレクションの2つの要素の組み合わせを列挙するパターンマッチを考えることからはじめる．
 これは以下のような\lstinline{matchAll}式で記述できる．
 \begin{lstlisting}[language=egison]
-comb2 xs = matchAll xs as list something with
-| _ ++ $x_1 :: _ ++ $x_2 :: _ -> [x_1, x_2]
+comb2 xs := matchAll xs as list something with
+  | _ ++ $x_1 :: _ ++ $x_2 :: _ -> [x_1, x_2]
 
 comb2 [1,2,3,4] -- [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4]]
 \end{lstlisting}
@@ -225,11 +226,11 @@ Egisonはこの例の中の\lstinline|$x_1|と\lstinline|$x_2|のように，パ
 上記の\lstinline{comb2}の$2$を$n$に一般化してみよう．
 ここで，ループ・パターンを使うことができる．
 \begin{lstlisting}[language=egison]
-comb n xs = matchAll xs as list something with
-            | loop $i (1,n)
-                (_ ++ $x_i :: ...)
-                _
-              -> map (\i -> x_i) [1..n]
+comb n xs := matchAll xs as list something with
+             | loop $i (1,n)
+                 (_ ++ $x_i :: ...)
+                 _
+             -> map (\i -> x_i) [1..n]
 
 comb 2 [1,2,3,4] -- [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4]]
 comb 3 [1,2,3,4] -- [[1,2,3],[1,2,4],[1,3,4],[2,3,4]]
@@ -286,10 +287,10 @@ matchAll [2,3,1,4,5] as list integer with
 シーケンシャル・パターンとnotパターンの組み合わせは，数学的なアルゴリズムを記述するときに現れることがある．
 たとえば，第\ref{essence}章\ref{essence-sat}節でも現れる．
 \begin{lstlisting}[language=egison]
-singleCommonElem = match (xs, ys) as (multiset eq, multiset eq) with
-                   | [($x :: @, #x :: @),
-                      !($y :: _, #y :: _)] -> True
-                   | _ -> False
+singleCommonElem := match (xs, ys) as (multiset eq, multiset eq) with
+                    | [($x :: @, #x :: @),
+                       !($y :: _, #y :: _)] -> True
+                    | _ -> False
 \end{lstlisting}
 
 シーケンシャル・パターンと同等のことが\lstinline{matchAll}式のネストにより表現できるのではと考えた読者がいるかもしれない．
@@ -368,8 +369,7 @@ match [1, 1, 2, 3] as list integer with
 たとえば，以下は，第\ref{intro}章\ref{intro-pmo}節でも登場した\lstinline{intersect}関数の定義である．
 2つの多重集合のタプルに対するマッチャーを使って，コレクションの共通要素をパターンマッチで取り出している．
 \begin{lstlisting}[language=egison]
-intersect xs ys =
-  matchAll (xs,ys) as (multiset eq, multiset eq) with
+intersect xs ys := matchAll (xs,ys) as (multiset eq, multiset eq) with
   | ($x :: _, #x :: _) -> x
 \end{lstlisting}
 上記で使われている\lstinline{eq}マッチャーは，同値性が定義されたデータ型\footnote{現在のEgisonには静的な型はないが，Haskellでいうと\lstinline{Eq}型クラスに属するデータ型}のパターンマッチに使えるユーザー定義マッチャーである．
@@ -379,25 +379,29 @@ intersect xs ys =
 たとえば，辺の集合として表現したグラフのマッチャーが定義できる．
 以下の定義は，グラフのノードのIDが整数として表現されていることを仮定している．
 \begin{lstlisting}[language=egison]
-graph = multiset (integer, integer)
+graph := multiset (integer, integer)
 \end{lstlisting}
 隣接リストにより表現したグラフのマッチャーも定義できる．
 隣接リストによるグラフは，整数と整数の多重集合のタプルの多重集合として定義される．
 ここでも整数によりノードのIDを表現している．
 \begin{lstlisting}[language=egison]
-adjacencyGraph = multiset (integer, multiset integer)
+adjacencyGraph := multiset (integer, multiset integer)
 \end{lstlisting}
 
 代数的データ型に対するマッチャーも定義できる．
 代数的データ型に対するマッチャーを定義するための特別な構文がEgisonには用意されている．
 たとえば，二分木に対するマッチャーは\lstinline{algebraicDataMatcher}式を使って以下のように定義できる．
 \begin{lstlisting}[language=egison]
-algebraicDataMatcher binaryTree a = BLeaf a | BNode a (binaryTree a) (binaryTree a)
+binaryTree a := algebraicDataMatcher
+  | bLeaf a
+  | bNode a (binaryTree a) (binaryTree a)
 \end{lstlisting}
 
 代数的データ型に対するマッチャーと非自由データ型に対するマッチャーを組み合わせることができる．
 たとえば，任意の数の子供をもつツリーで子供の順番を無視するマッチャーは以下のように定義できる．
 第\ref{pmo}章\ref{pmo-loop}節でこのツリーに対するパターンマッチを紹介する．
 \begin{lstlisting}[language=egison]
-algebraicDataMatcher tree a = Leaf a | Node a (multiset (tree a))
+tree a := algebraicDataMatcher
+  | leaf a
+  | Node a (multiset (tree a))
 \end{lstlisting}

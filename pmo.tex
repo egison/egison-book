@@ -116,7 +116,7 @@ unique xs := matchAll xs as list eq with
 このとき，\lstinline{matchAllDFS}式を使うことが，正しい順番で結果のコレクションを生成するために必要なことに注意してほしい．
 
 \begin{lstlisting}[language=egison]
-concat xss = matchAllDFS xss as list (list something) with
+concat xss := matchAllDFS xss as list (list something) with
   | _ ++ (_ ++ $x :: _) :: _ -> x
 \end{lstlisting}
 
@@ -146,7 +146,7 @@ matchAll [[1..], (map negate [1..])] as list (list something) with
 単一の多重集合のコンス・パターンは，リストのジョイン・コンス・パターンと置き換えることもできる．
 
 \begin{lstlisting}[language=egison]
-lookup k ls = match ls as multiset (eq, something) with
+lookup k ls := match ls as multiset (eq, something) with
   | (#k, $x) :: _ -> x
 \end{lstlisting}
 
@@ -262,10 +262,10 @@ difference xs ys := matchAll (xs, ys) as (multiset eq, multiset eq) with
 たとえば，第\ref{essence}章\ref{essence-sat}節でで紹介するSATソルバーの実装でもシーケンシャル・notパターンは現れる．
 
 \begin{lstlisting}[language=egison]
-singleCommonElem = match (xs, ys) as (multiset eq, multiset eq) with
-                   | [($x :: @, #x :: @),
-                      !($y :: _, #y :: _)] -> True
-                   | _ -> False
+singleCommonElem := match (xs, ys) as (multiset eq, multiset eq) with
+                    | [($x :: @, #x :: @),
+                       !($y :: _, #y :: _)] -> True
+                    | _ -> False
 \end{lstlisting}
 
 シーケンシャル・パターンをループ・パターンと組み合わせることも可能である．
@@ -362,7 +362,8 @@ treeData :=
 ancestors x t := matchAll t as tree string with
   | loop $i (1,$n)
       (Node $c_i (... ::  _))
-      (Leaf #x) -> map (\i -> c_i) [1..n]
+      (Leaf #x)
+  -> map (\i -> c_i) [1..n]
 
 ancestors "Egison" treeData  
 -- [["Programming language","pattern-match-oriented"],"Programming language","Functional language","Dynamically typed"]]
@@ -374,37 +375,39 @@ ancestors "Egison" treeData
 ツリーのなかで現れる順番と同じ順番で言語を列挙するために，\lstinline{matchAllDFS}が使われている．
 
 \begin{lstlisting}[language=egison]
-descendants x t = matchAllDFS t as tree string with
+descendants x t := matchAllDFS t as tree string with
   | loop _ (1,_)
       (Node _ (... ::  _))
       (Node #x ((loop _ (1,_)
                    (Node _ (... :: _))
-                   (Leaf $y)) :: _)) -> y
+                   (Leaf $y)) :: _))
+  -> y
 
 descendants "Functional language" treeData  
 -- ["OCaml","Haskell","Curry","Coq","Egison","Lisp","Scheme","Racket"]
 \end{lstlisting}
 
 ツリーのパターンマッチができるDSL（domain-specific language）としては，XML pathがある．
-Egisonは，ユーザー定義可能な数少ないパターンコンストラクタとループ・パターンを組み合わせて幅広いパターンを記述できる点で優れている．
+ユーザー定義可能な数少ないパターンコンストラクタとループ・パターンを組み合わせて幅広いパターンを記述できることがEgisonの利点である．
 XML pathは，たとえば\lstinline{ancestor}コマンドなど，多くの組み込みコマンドを使ってパターンを記述する．
 
 \subsection{グラフのパターンマッチ}\label{pmo-graph}
 
-This section demonstrates pattern matching for graphs as sets of edges and adjacency graphs, respectively.
+本節では，グラフに対するパターンマッチを紹介する．
+辺の集合として表現したグラフと，隣接リストとして表現したグラフの両方についてのパターンマッチを紹介する．
 
 \subsubsection{Graphs as Sets of Edges}\label{graph-set}
 
-In this section, we pattern-match a graph as a set of edges.
-We can define a matcher and graph data as follows.
-
+本節は，辺の集合として表現したグラフに対してパターンマッチをおこなう．
+以下のような，マッチャーとグラフを定義する．
 \begin{lstlisting}[language=egison]
-graph = set edge
-algebraicDataMatcher edge = Edge integer integer
+graph := set edge
+edge := algebraicDataMatcher
+  | edge integer integer
 
-graphData = [Edge 1 2,Edge 2 1,Edge 2 3,Edge 2 4,Edge 3 4,Edge 4 5,Edge 4 6,Edge 4 7,
-             Edge 5 4,Edge 5 6,Edge 5 7,Edge 6 4,Edge 6 5,Edge 6 7,Edge 7 4,Edge 7 5,Edge 7 6,
-             Edge 7 8,Edge 9 10,Edge 10 7]
+graphData := [Edge 1 2,Edge 2 1,Edge 2 3,Edge 2 4,Edge 3 4,Edge 4 5,Edge 4 6,Edge 4 7
+             ,Edge 5 4,Edge 5 6,Edge 5 7,Edge 6 4,Edge 6 5,Edge 6 7,Edge 7 4,Edge 7 5,Edge 7 6
+             ,Edge 7 8,Edge 9 10,Edge 10 7]
 \end{lstlisting}
 
 \begin{figure}[t]
@@ -421,7 +424,7 @@ Various patterns for graphs can be described using techniques introduced in this
 A pattern for listing all nodes that are accessible from \lstinline{s} in two edges is described as follows.
 
 \begin{lstlisting}[language=egison]
-let s = 1 in
+let s := 1 in
   matchAll graphData1 as graph with
     Edge (and #s $x_1) $x_2 : Edge #x_2 $x_3 : _ -> x
 -- [1,3,4,5,6,7]
