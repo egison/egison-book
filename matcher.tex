@@ -79,7 +79,7 @@ matchAll (1, 2) as unorderedPair integer with
 \end{lstlisting}
 そのためには，\lstinline{unorderedPair}をマッチャーを引数にとってマッチャーを返す関数として定義すればよい．
 \lstinline{pair}パターンに対するマッチャー節のネクスト・マッチャー式で\lstinline{unorderedPair}の引数である\lstinline{a}を指定している．
-\begin{lstlisting}[language=egison]
+\begin{lstlisting}[language=egison,numbers=none]
 unorderedPair a := matcher
   | pair $ $ as (a, a) with
     | ($x, $y) -> [(x, y), (y, x)]
@@ -160,7 +160,7 @@ multiset a := matcher
 その理由は，二重にネストしたジョイン・コンス・パターンは，すべての素数の組み合わせを検査するためである．
 たとえば，このパターンは，$(3,5)$，$(3,7)$，$(3,11)$，$(3,13)$，$(3, 17)$，$(3,19)$のような素数のペアすべてを検査する．
 しかし，$(3,11)$以降の素数のペア，差が$6$より大きくなる最初の素数のペア，以降のペアについては，$(p,p+6)$であるか検査する必要はない．
-\begin{lstlisting}[language=egison]
+\begin{lstlisting}[language=egison,numbers=none]
 take 10 (matchAll primes as sortedList integer with
          | _ ++ $p :: (_ ++  #(p + 6) :: _) -> (p, p + 6))
 -- [(5,11),(7,13),(11,17),(13,19),(17,23),(23,29),(31,37),(37,43),(41,47),(47,53)]
@@ -169,7 +169,7 @@ take 10 (matchAll primes as sortedList integer with
 ソート済みリストに特化したマッチャーを使うことにより，この不必要な探索は避けることができる．
 通常の\lstinline{list}マッチャーに，\lstinline|$ ++ #$px : $|を原始パターンパターンにもつマッチャー節を追加すれば，ソート済みリストに特化したマッチャーをつくることができる．
 このマッチャー節が，$(p,p+6)$という形の素数のペアにマッチする二重にネストしたジョイン・コンス・パターンの計算量を$O(n^2)$から$O(n)$に減らす．
-\begin{lstlisting}[language=egison]
+\begin{lstlisting}[language=egison,numbers=none]
 sortedList a := matcher
   | $ ++ #$px :: $ as (sortedList a, sortedList a)
     | \tgt -> matchAll tgt as list a with
