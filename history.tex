@@ -89,9 +89,12 @@ Egison Version 3.7.0をリリース．
 
 \section*{2018年5月}
 
-楽天技術研究所でアルバイトしていた郡さんの協力でfunction symbolの機能をEgisonに実装する．
-\todo{}
+楽天技術研究所でアルバイトしていた郡さんの協力で，関数シンボル（\emph{function symbol}）の機能をEgisonに実装する．
 \begin{lstlisting}[language=egison,numbers=none]
+f := function (x, y)
+`$\partial$`/`$\partial$` f x -- f|x
+`$\partial$`/`$\partial$` (`$\partial$`/`$\partial$` f x) y -- f|x|y
+`$\partial$`/`$\partial$` f z -- 0
 \end{lstlisting}
 
 \section*{2018年8月}

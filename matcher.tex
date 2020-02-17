@@ -37,8 +37,8 @@ unorderedIntegerPair := matcher
 \lstinline{matcher}は，マッチャーを生成するための組み込み構文である．
 \begin{lstlisting}[language=egison,numbers=none]
 matcher
-| 原始パターンパターン as ネクスト・マッチャー式 with
-  | 原始データパターン -> ボディ
+| `原始パターンパターン` as `ネクスト・マッチャー式` with
+  | `原始データパターン` -> `ボディ`
   ...
 ...
 \end{lstlisting}
@@ -107,13 +107,13 @@ eq := matcher
 
 原始パターンパターンは，ここまでにでてきた3つの構成要素であるパターン・ホール，原始パターンパターンコンストラクタの適用，原始値パターンと，原始ワイルドカードからなる．
 \begin{lstlisting}[language=egison,numbers=none]
-primitive-pp := $ | c primitive-pp* | #$identifier | _
+`原始パターンパターン` := $ | c `原始パターンパターン`* | #$`ID` | _
 \end{lstlisting}
 原始ワイルドカードについては，\ref{matcher-primitive-wildcard}節で用例を紹介する．
 
 原始データパターンは，ワイルドカード，パターン変数，原始データパターンコンストラクタの適用からなる．
 \begin{lstlisting}[language=egison,numbers=none]
-primitive-dpp := _ | $identifier | C primitive-pp*
+`原始データパターン` := _ | $`ID` | C `原始データパターン`*
 \end{lstlisting}
 
 \section{\texttt{multiset}マッチャーの定義}\label{matcher-multiset}
