@@ -105,10 +105,11 @@ eq := matcher
 原始マッチ節で，値パターンの中身とターゲットの値が等しいかどうかチェックしている．
 \todo{\lstinline{[()]}の説明}
 
-原始パターンパターンは，ここまでにでてきた3つの構成要素であるパターン・ホール，原始パターンパターンコンストラクタの適用，原始値パターンからなる．
+原始パターンパターンは，ここまでにでてきた3つの構成要素であるパターン・ホール，原始パターンパターンコンストラクタの適用，原始値パターンと，原始ワイルドカードからなる．
 \begin{lstlisting}[language=egison,numbers=none]
-primitive-pp := $ | c primitive-pp* | #$identifier
+primitive-pp := $ | c primitive-pp* | #$identifier | _
 \end{lstlisting}
+原始ワイルドカードについては，\ref{matcher-primitive-wildcard}節で用例を紹介する．
 
 原始データパターンは，ワイルドカード，パターン変数，原始データパターンコンストラクタの適用からなる．
 \begin{lstlisting}[language=egison,numbers=none]
@@ -171,6 +172,51 @@ take 10 (matchAll primes as sortedList integer with
 このマッチャー節が，$(p,p+6)$という形の素数のペアにマッチする二重にネストしたジョイン・コンス・パターンの計算量を$O(n^2)$から$O(n)$に減らす．
 \begin{lstlisting}[language=egison,numbers=none]
 sortedList a := matcher
+  | $ ++ #$px :: $ as (sortedList a, sortedList a)
+    | \tgt -> matchAll tgt as list a with
+              | loop $i (1, $n)
+                  ((?(\x -> x < px) & $h_i) :: ...)
+                  (#px :: $ts)
+                -> (map (\i -> h_i) [1..n], ts)
+  ...
+\end{lstlisting}
+
+\section{原始ワイルドカードによる最適化}\label{matcher-primitive-wildcard}
+
+原始パターンパターン中で，原始ワイルドカードを使うことにより，ワイルドカードを特別扱いすることによって，ワイルドカードがパターン中に現れる特定のパターンの処理を高速化できる．
+本節は，\ref{matcher-multiset}節で紹介した\lstinline{multiset}マッチャーについて，そのような最適化を紹介する．
+
+本節で紹介する最適化の対象は，以下のようなコンス・パターンの第二引数がワイルドカードである場合である．
+この場合，対象のコレクションから要素を1つ除いた残りのコレクションを計算する必要はない．
+原始ワイルドカードを使うことにより，この計算を省くように\lstinline{multiset}マッチャーに記述することができる．
+\begin{lstlisting}[language=egison]
+matchAll [1, 2, 3, 4, 5] as multiset eq with
+| $x :: _ -> x
+-- [1, 2, 3, 4, 5]
+\end{lstlisting}
+このような最適化は，以下の2-3行目のマッチャー節を\ref{matcher-multiset}節の\lstinline{multiset}マッチャーの定義に追加すればできる．
+このマッチャー節の原始パターンパターンで原始ワイルドカードが使われている．
+パターン・ホールはコンス・パターンの第一引数だけであるので，ネクスト・マッチャーは\lstinline{a}だけになり，ネクスト・ターゲットは\lstinline{tgt}のそれぞれの要素であるために，\lstinline{tgt}をそのまま返すようになっている．
+\begin{lstlisting}[language=egison]
+multiset a := matcher
+  | $ :: _ as a with
+    | $tgt -> tgt
+  | $ :: $ as (a, multiset a) with
+    | $tgt -> matchAll tgt as list a with
+              | $hs ++ $x :: $ts -> (x, hs ++ ts)
+  ...
+\end{lstlisting}
+
+\label{matcher-sorted-list}節の\lstinline{sortedList}マッチャーも同様の最適化ができる．
+下記の2-7行目のマッチャー節は，ジョイン・パターンの第一引数を計算することを省略する役割を果たす．
+\begin{lstlisting}[language=egison]
+sortedList a := matcher
+  | _ ++ #$px :: $ as sortedList a
+    | \tgt -> matchAll tgt as list a with
+              | loop $i (1, _)
+                  (?(\x -> x < px) :: ...)
+                  (#px :: $ts)
+                -> ts
   | $ ++ #$px :: $ as (sortedList a, sortedList a)
     | \tgt -> matchAll tgt as list a with
               | loop $i (1, $n)

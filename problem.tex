@@ -1,6 +1,6 @@
 \chapter{パターンマッチ指向プログラミング問題集}
 
-\section*{\lstinline{member?}関数}
+\section*{\texttt{member?}関数}
 
 下記の空白をうめて\lstinline{member?}関数を完成させよ．
 
@@ -17,7 +17,7 @@ member? 5 [1,2,3,4]
 -- False
 \end{lstlisting}
 
-\section*{\lstinline{concat}関数}
+\section*{\texttt{concat}関数}
 
 下記の空白をうめて\lstinline{concat}関数を完成させよ．
 
@@ -51,7 +51,7 @@ take 6 (matchAll primes as list integer with
 -- [(5, 11), (7, 13), (11, 17), (13, 19), (17, 23), (23, 29)]
 \end{lstlisting}
 
-\section*{\lstinline{intersect}関数}
+\section*{\texttt{intersect}関数}
 
 下記の空白をうめて，2つのコレクションの共通部分を抽出する\lstinline{intersect}関数を完成させよ．
 
@@ -64,7 +64,7 @@ intersect [1,2,3,4] [2,4,5]
 -- [2,4]
 \end{lstlisting}
 
-\section*{\lstinline{difference}関数}
+\section*{\texttt{difference}関数}
 
 下記の空白をうめて，第二引数のコレクションに含まれていない第一引数のコレクションの要素のみを抽出する\lstinline{difference}関数を完成させよ．
 
@@ -77,7 +77,7 @@ difference [1,2,3,4] [2,4,5]
 -- [1,3]
 \end{lstlisting}
 
-\section*{\lstinline{doubles}関数}
+\section*{\texttt{doubles}関数}
 
 コレクション中にちょうど$2$回現れる要素のみを抽出する\lstinline{doubles}関数を完成させよ．
 
@@ -90,7 +90,7 @@ doubles [1,2,3,2,1,1,4,5,3]
 -- [2,3]
 \end{lstlisting}
 
-\section*{\lstinline{tails}関数}
+\section*{\texttt{tails}関数}
 
 \lstinline{tails}関数をパターンマッチを使って定義せよ．
 ループ・パターンを使う回答とそうでない回答の2つを考えてみよ．
@@ -140,7 +140,6 @@ equalMultiset xs ys :=
 \section*{ジョーカーの存在を考慮するポーカーの役判定}
 
 \ref{pmo}章\ref{pmo-poker}節のポーカーの役判定のためのパターンマッチ（\lstinline{poker}関数）の実装を一切変更せずに，\lstinline{card}マッチャーの定義だけを変更して，ジョーカーの存在を考慮するポーカーの役判定をできるようにせよ．
-
 \begin{lstlisting}[language=egison]
 card := matcher
   | card $ $ as (suit, mod 13) with 
