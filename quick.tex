@@ -39,7 +39,7 @@ Egisonの\lstinline{matchAll}式の特徴は，（1）\lstinline{matchAll}とい
 
 \lstinline{matchAll}式の文法の詳細についてもう少し説明する．
 \lstinline{as}\index{as@\lstinline{as}}と\lstinline{with}\index{with@\lstinline{with}}というキーワードでマッチャーは囲まれる．
-\lstinline{matchAll}式はマッチ節を複数とることができる．\todo{複数のマッチ節をとる\lstinline{matchAll}の例へのリンク}
+\lstinline{matchAll}式はマッチ節を複数とることができる．\footnote{\lstinline{matchAll} $t$ \lstinline{as} $m$ \lstinline{with} $c_1$ $c_2$ $...$は，\lstinline{matchAll} $t$ \lstinline{as} $m$ \lstinline{with} $c_1$ \lstinline{++} \lstinline{matchAll} $t$ \lstinline{as} $m$ \lstinline{with} $c_2$ \lstinline{++} $...$と同値である．}
 マッチ節同士の間は，\lstinline{|}で区切られる．
 最初のマッチ節の前にも\lstinline{|}は必須である．
 \lstinline{|}はマッチ節が複数行に渡る場合にプログラムの可読性を高める．
@@ -260,6 +260,8 @@ matchAll [1,2,3,4] as list something with
 第\ref{pmo}章\ref{pmo-loop}節でそのような例を紹介する．
 形式的なループ・パターンの構文と意味論は，ループ・パターンの論文~\cite{egi2018loop}で解説されている．
 
+\todo{index rangeについてすべて説明する．}
+
 \section{シーケンシャル・パターン}\label{quick-seq-pat}
 
 Egison処理系はパターンを左から右に順番に処理する．
@@ -340,24 +342,20 @@ matchAll [1,5,3] as multiset integer with
 \section{パターン関数によるパターンのモジュール化}\label{quick-pat-fun}
 
 コンス・パターンやジョイン・パターンのようなコンストラクタ・パターンは，第\ref{matcher}章で解説されるようにマッチャーで定義される．
-コンストラクタ・パターンを組み合わせて，新しいコンストラクタ・パターンをつくることもできる．
-そのために，パターンを引数にとってパターンを返すパターン関数を使う．
+これらのコンストラクタ・パターンを組み合わせて，新しいコンストラクタ・パターンをつくることができる．
+そのためには，パターンを引数にとってパターンを返すパターン関数（\emph{pattern function}）を使う．
 
-\todo{}
-
+パターン関数は，ラムダ式の矢印に\lstinline{->}の代わりに\lstinline{=>}を使うことによって定義される．
+以下で定義されているパターン関数\lstinline{twin}は，それぞれの第一引数が同じ値である場合にマッチする二重にネストしたコンス・パターンをモジュール化している．
 \begin{lstlisting}[language=egison]
 twin := \pat1 pat2 => (~pat1 & $x) :: #x :: ~pat2
 \end{lstlisting}
-
-\todo{}
-
+この\lstinline{twin}パターン関数は，以下のように動作する．
 \begin{lstlisting}[language=egison]
 match [1, 1, 2, 3] as list integer with
 | twin $n $ns -> [n, ns]
 --   [1, [2, 3]]
 \end{lstlisting}
-
-\todo{}
 
 \section{マッチャー合成による新しいマッチャーの生成}\label{quick-matcher-composition}
 
