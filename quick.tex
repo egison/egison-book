@@ -22,38 +22,40 @@ matchAll [1,2,3] as list something with
 | $x :: $ts -> (x, ts)
 -- [(1,[2,3])]
 \end{lstlisting}
-\lstinline{matchAll}式は，ターゲット（上記の場合， \lstinline{[1,2,3]} ），マッチャー（上記の場合，\lstinline{list something}），マッチ節（上記の場合，\lstinline{$x :: $xs -> (x,xs)}）から構成される．
+\lstinline{matchAll}式は，ターゲット（上記の場合， \lstinline{[1,2,3]} ），マッチャー（上記の場合，\lstinline{list something}），1つ以上のマッチ節（上記の場合，\lstinline{$x :: $xs -> (x,xs)}）から構成される．
 マッチ節は，パターン（上記の場合，\lstinline{$x :: $xs}）とボディ（上記の場合，\lstinline{(x,xs)}）からなる．
 \lstinline{matchAll}式は，既存のプログラミング言語のマッチ式と同様に，ターゲットとパターンのパターンマッチを試みて，もしマッチしたらそのマッチ節のボディを評価する．
 
-Egisonの\lstinline{matchAll}式の特徴は，（1）\lstinline{matchAll}という名前と結果としてリストを返すことと，（2）マッチャーという追加の引数をとることにある．
+Egisonの\lstinline{matchAll}式の特徴は，（1）結果としてリストを返すことと，（2）マッチャーという追加の引数をとることにある．
 （1）の特徴は，複数の結果をもつパターンマッチをサポートするための特徴である．
 \lstinline{matchAll}式は複数のパターンマッチの結果すべてについてボディを評価して，その結果を集めてリストとして返す．
 上記の例のパターンに使われている\lstinline{::}\index{::@\lstinline{::}}は\index{こんすぱたーん@コンスパターン}と呼ばれるリストを先頭の要素と残りのリストに分解するパターンコンストラクタである．
-そのため，上記の例の場合は，パターンマッチの結果が一つであるので，長さが$1$のリストを返している．
-（2） の特徴は，パターンマッチアルゴリズムの拡張性とパターンの多相性を実現するための特徴である．
+そのため，上記の例の場合はパターンマッチの結果が一つであるので，長さが$1$のリストを返している．
+（2）の特徴は，パターンマッチアルゴリズムの拡張性とパターンの多相性を実現するための特徴である．
 マッチャー\index{まっちゃー@マッチャー}はEgison以外の言語ではみられない独自のオブジェクトで，パターンマッチアルゴリズムを保持するためのオブジェクトである．
 マッチャーによるパターンの多相性については，\ref{quick-matcher}節で扱う．
-\lstinline{--}\index{--@\lstinline{--}}はEgisonのインライン・コメント・デリミタである．
-本書を通して，プログラム直後のインライン・コメントを使って，プログラムの実行結果を記述する．
+\lstinline{--}\index{--@\lstinline{--}}で始まる行はコメントである．
+本書において，プログラム直後のコメントはプログラムの実行結果を記述するものとする．
 
 \lstinline{matchAll}式の文法の詳細についてもう少し説明する．
 \lstinline{as}\index{as@\lstinline{as}}と\lstinline{with}\index{with@\lstinline{with}}というキーワードでマッチャーは囲まれる．
 \lstinline{matchAll}式はマッチ節を複数とることができる．\footnote{\lstinline{matchAll} $t$ \lstinline{as} $m$ \lstinline{with} $c_1$ $c_2$ $...$は，\lstinline{matchAll} $t$ \lstinline{as} $m$ \lstinline{with} $c_1$ \lstinline{++} \lstinline{matchAll} $t$ \lstinline{as} $m$ \lstinline{with} $c_2$ \lstinline{++} $...$と同値である．}
-マッチ節同士の間は，\lstinline{|}で区切られる．
-最初のマッチ節の前にも\lstinline{|}は必須である．
+マッチ節同士の間は\lstinline{|}で区切られる．
+マッチ節が複数ある場合，最初のマッチ節の前にも\lstinline{|}は必須である．
 \lstinline{|}はマッチ節が複数行に渡る場合にプログラムの可読性を高める．
 マッチ節中のパターンとボディは\lstinline{->}で区切られる．
 \begin{lstlisting}[language=egison,numbers=none]
 matchAll ターゲット as マッチャー with
-| パターン -> ボディ
-| パターン -> ボディ
+| パターン1 -> ボディ1
+| パターン2 -> ボディ2
 ...
 \end{lstlisting}
 マッチ節が1つであるときは，下記のようにマッチ節の前の\lstinline{|}を省略することができる．
 \begin{lstlisting}[language=egison,numbers=none]
 matchAll ターゲット as マッチャー with パターン -> ボディ
 \end{lstlisting}
+
+\todo{下の例についての解説は？}
 \begin{lstlisting}[language=egison,numbers=none]
 matchAll [1,2,3] as list something with
 | $hs ++ $ts -> (hs, ts)
@@ -80,7 +82,7 @@ matchAll [1,2,3,2,4,3] as list integer with
 （どうしてもパターンの右側に現れるパターン変数の値を参照したいという場合は，\ref{quick-seq-pat}節で紹介するシーケンシャル・パターンが使える．）
 
 ほかの非線形パターンの例として，双子素数のパターンマッチを紹介する．
-双子素数とは，$(p, p+2)$という形の素数のペアのことをいう．
+双子素数とは，差が2であるような素数のペアのことをいう．
 \lstinline{primes}\index{primes@\lstinline{primes}}には素数の無限列が束縛されている．
 \lstinline{primes}はEgisonの組み込みライブラリで定義されている．
 この\lstinline{matchAll}式は，素数の無限列からすべての双子素数を順番に抜き出す．
@@ -92,9 +94,9 @@ take 8 twinPrimes
 -- [(3, 5), (5, 7), (11, 13), (17, 19), (29, 31), (41, 43), (59, 61), (71, 73)]
 \end{lstlisting}
 
-パターンマッチのときに，同値性よりも一般的な述語を使いたいことがある．
+パターンマッチのときに，同値性よりも一般的な条件を使いたいことがある．
 \emph{述語パターン}\index{じゅつごぱたーん@述語パターン}はそのために用意されている組み込みパターンである．
-述語パターンは，述語パターンの中身の述語にターゲットを適用したときに真が帰ってきた場合，パターンマッチに成功するパターンである．
+述語パターンは，中身の述語にターゲットを適用した結果が\lstinline{True}である場合，パターンマッチに成功するパターンである．
 述語パターンの先頭は，\lstinline{?}\index{?@\lstinline{?}}からはじまり，\lstinline{?}のあとには1引数の述語が続く．
 \begin{lstlisting}[language=egison,numbers=none]
 twinPrimes := matchAll primes as list integer with
@@ -120,6 +122,8 @@ Egison内部のパターンマッチアルゴリズムについては，第\ref{
 
 \section{マッチャーによるパターンの拡張性と多相性}\label{quick-matcher}
 
+\todo{「パターンのアドホック多相性」の概念の説明}
+\todo{「コレクション」という単語を定義する}
 パターンの拡張性以外のマッチャーがもたらすメリットに，パターンのアドホック多相性がある．
 パターンのアドホック多相性は，さまざまな非自由データ型のパターンマッチを許すEgisonにおいて非常に重要である．
 なぜなら，ある同じデータがプログラムの複数の箇所でそれぞれ違う非自由データ型としてパターンマッチされることが多々あるためである．
@@ -144,8 +148,8 @@ matchAll [1,2,3] as set something with $x :: $xs -> (x,xs)
 パターンの多相性は特に値パターンを表現するときに便利である．
 コンスパターンなどのコンストラクタパターンと同様に値パターンの挙動もマッチャーによって異なる．
 たとえば，\lstinline{[1,2,3] == [2,1,3]}のようなコレクション同士の同値性は，コレクションをリストとしてみなすか多重集合としてみなすかによって変わってくる．
-しかし，Egisonでは，パターンのアドホック多相性のおかげで，同じ構文で両者の同値性をパターンでチェックできる．
-値パターンの多相性は，非自由データ型を扱うプログラムの読解のしやすさを大幅に向上させる．
+しかしEgisonでは，パターンのアドホック多相性のおかげで，両者の同値性を同じパターンでチェックできる．
+値パターンの多相性によって，非自由データ型を扱うプログラムが大幅に読みやすくなる．
 \begin{lstlisting}[language=egison,numbers=none]
 matchAll [1,2,3] as list integer with #[2,1,3] -> "Matched" -- []
 matchAll [1,2,3] as multiset integer with #[2,1,3] -> "Matched" -- ["Matched"]
@@ -153,8 +157,9 @@ matchAll [1,2,3] as multiset integer with #[2,1,3] -> "Matched" -- ["Matched"]
 
 \section{\texttt{matchAllDFS}式によるパターンマッチ結果の順序の制御}\label{quick-matchalldfs}
 
-\lstinline{matchAll}式は，可算無限個の結果すべてを列挙するように内部のパターンマッチアルゴリズムが設計されている．
-そのため，パターンマッチの結果の順序にユーザーは気を付ける必要がある場合がある．
+\lstinline{matchAll}式は可算無限個の結果すべてを列挙するように内部のパターンマッチアルゴリズムが設計されているが，
+その列挙の仕方は処理系によって決められている．
+場合によっては，この順序が重要であることがある．
 
 典型的な例を紹介する．
 以下の\lstinline{matchAll}式はすべての自然数のペアを列挙する．
@@ -165,24 +170,31 @@ matchAll [1,2,3] as multiset integer with #[2,1,3] -> "Matched" -- ["Matched"]
 take 8 (matchAll [1..] as set something with $x :: $y :: _ -> (x,y))
 -- [(1,1),(1,2),(2,1),(1,3),(2,2),(3,1),(2,3),(3,2)]
 \end{lstlisting}
-上記の順序は無限の大きい可能性がある探索木をすべてたどることには適している．
+上記の順序は，無限に大きい可能性がある探索木をすべてたどる場合に適している．
 しかし，この順序が好ましくない場面もある．
-たとえば，\ref{intro-pmo}節で登場した\lstinline{concat}や\lstinline{unique}のパターンマッチはそうである．
 パターンマッチの探索木を深さ優先探索する\lstinline{matchAllDFS}\index{matchAllDFS@\lstinline{matchAllDFS}}は，このような場面のために用意されている．
 \begin{lstlisting}[language=egison,numbers=none]
 take 8 (matchAllDFS [1..] as set something with $x :: $y :: _ -> (x,y))
 -- [(1,1),(1,2),(1,3),(1,4),(1,5),(1,6),(1,7),(1,8)]
 \end{lstlisting}
 
+たとえば\ref{intro-pmo}節で登場した\lstinline{concat}や\lstinline{unique}のパターンマッチはそうである．
+
+\todo{第3章の例をここに持ってくる}
+
 \section{andパターン・orパターン・notパターン}\label{quick-logical-pat}
 
+\todo{andパターンというものは既存の関数型言語にないと思うし，orパターンも知らない人がいるかもしれないので，一応説明したい}
+
 andパターンやorパターンをはじめとする論理パターンも，パターンの表現力を広げるために重要な役目を果たす．
-andパターンとorパターンの使い方は，既存関数型言語とほとんど同じである．
+andパターンとorパターンの使い方は，既存の関数型言語とほとんど同じである．
 対して，notパターンは複数の結果をもつ非線形パターンマッチをサポートするEgisonならではパターンである．
 
+\todo{ここ説明をもっと丁寧にしたほうがいいと思います}
+
 andパターンとorパターンの使用例として，三つ子素数を抽出するパターンマッチを紹介する．
-三つ子素数とは，$(p,p+2,p+6)$または$(p,p+4,p+6)$の形の素数の三つ組のことをいう．
-andパターンは，asパターンのように使われている．
+三つ子素数とは，$(p,p+2,p+6)$または$(p,p+4,p+6)$の形で表される素数の三つ組のことをいう．
+andパターンは，Haskellのasパターンのように使われている．
 orパターンは，$p+2$と$p+4$の両方にマッチするために使われている．
 \begin{lstlisting}[language=egison,numbers=none]
 primeTriples := matchAll primes as list integer with
@@ -193,7 +205,7 @@ take 6 primeTriples -- [(5,7,11),(7,11,13),(11,13,17),(13,17,19),(17,19,23),(37,
 \end{lstlisting}
 
 notパターンは，その名前が示すとおり，ターゲットがパターンとマッチしない場合にパターンマッチに成功する．
-notパターンの先頭には，\lstinline{!}が付加される．
+notパターンの先頭には\lstinline{!}が付加される．
 \lstinline{!}の後に，任意のパターンが続く．
 以下の\lstinline{matchAll}は双子素数でない隣り合う素数のペアを列挙する．
 \begin{lstlisting}[language=egison,numbers=none]
@@ -215,7 +227,7 @@ comb2 xs := matchAll xs as list something with
 
 comb2 [1,2,3,4] -- [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4]]
 \end{lstlisting}
-Egisonはこの例の中の\lstinline|$x_1|と\lstinline|$x_2|のように，パターン変数に添字を付加することを許す．
+Egisonはこの例の中の\lstinline|$x_1|と\lstinline|$x_2|のように，パターン変数に添字を付加することを許す．\footnote{このため，Egisonでは\texttt{snake_case}によって命名された変数を使うことができない．}
 これらは\emph{添字付き変数}\index{そえじつきへんすう@添字付き変数}と呼ばれ，$x_1$や$x_2$のような数式に対応する．
 \lstinline|_|のあとに続く式は，添字と呼ばれ，整数に評価される必要がある．
 \lstinline|x_i_j_k|のように任意個の添字を変数に付加することができる．
@@ -235,15 +247,20 @@ comb n xs := matchAll xs as list something with
 comb 2 [1,2,3,4] -- [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4]]
 comb 3 [1,2,3,4] -- [[1,2,3],[1,2,4],[1,3,4],[2,3,4]]
 \end{lstlisting}
-ループ・パターンは，\emph{添字変数}（\emph{index variable}），\emph{添字範囲}（\emph{index range}），\emph{繰り返しパターン}（\emph{repeat pattern}），\emph{終端パターン}（\emph{final pattern}）を引数にとる．
+\todo{listingや表を使ってわかりやすく書く}
+\tood{それぞれの引数が上のプログラムにおいて何であるか書く}
+
+ループ・パターンは，\emph{添字変数}，\emph{添字範囲}，\emph{繰り返しパターン}，\emph{終端パターン}を引数にとる．
 添字変数は，現在の繰り返し回数を保持するための変数である．
 添字範囲は，添字変数が動く範囲を指定するために使われる．
-添字範囲は，\emph{開始値}（\emph{initial number}）と\emph{終了値}（\emph{final number}）のペアである．
+添字範囲は，\emph{開始値}と\emph{終了値}のペアである．
 繰り返しパターンは，添字変数が添字範囲のなかにいる間，繰り返されるパターンである．
 終端パターンは，添字変数が添字範囲の外に動いたときに展開されるパターンである．
-ループ・パターンの中では，\emph{三点リーダーパターン}（\emph{ellipsis pattern}）\lstinline{...}が使われる．
+ループ・パターンの中では，\emph{三点リーダーパターン} \lstinline{...} が使われる．
 繰り返しパターンや終端パターンは，三点リーダーパターンの場所に展開される．
 三点リーダーパターンで繰り返しパターン展開されるとき，添字変数の値がインクリメントされる．
+
+\todo{展開の例を示した方がわかりやすい}
 
 上記のループ・パターンの繰り返し回数は定数だった．
 しかし，添字範囲の終了値を整数値でなくパターンにすることにより，ターゲットによりループ・パターンの繰り返し回数が変わるようにすることができる．
@@ -287,9 +304,9 @@ Egison処理系はパターンを左から右に順番に処理する．
 以下のシーケンシャルパターンは，リストの3つ目の要素，1つ目の要素，2つ目の要素の順番でターゲットのリストをパターンマッチする．
 \begin{lstlisting}[language=egison,numbers=none]
 matchAll [2,3,1,4,5] as list integer with
-|  [ @ ::      @ :: $x :: _,
-    (#(x + 1), @),
-    #(x + 2)]
+|  [     @    ::     @    :: $x :: _,
+    (#(x + 1),       @    ),
+                 #(x + 2)]
 -> "Matched" -- ["Matched"]
 \end{lstlisting}
 シーケンシャル・パターン中に現れる\lstinline|@|は，\emph{後回しパターン変数}（\emph{later pattern variable}）と呼ばれる．
@@ -358,6 +375,9 @@ matchAll [1,5,3] as multiset integer with
 これらのコンストラクタ・パターンを組み合わせて，新しいコンストラクタ・パターンをつくることができる．
 そのためには，パターンを引数にとってパターンを返すパターン関数（\emph{pattern function}）を使う．
 
+\todo{パターン変数\texttt{~}についての説明}
+\todo{もっとpattern functionによるモジュール化の嬉しさがわかる例だと良い？}
+
 パターン関数は，ラムダ式の矢印に\lstinline{->}の代わりに\lstinline{=>}を使うことによって定義される．
 以下で定義されているパターン関数\lstinline{twin}は，それぞれの第一引数が同じ値である場合にマッチする二重にネストしたコンス・パターンをモジュール化している．
 \begin{lstlisting}[language=egison,numbers=none]
@@ -387,8 +407,8 @@ intersect xs ys := matchAll (xs,ys) as (multiset eq, multiset eq) with
 \lstinline{eq}マッチャーに対して，値パターンが使われた場合，同値性のチェックによりパターンマッチがおこなわれる．
 
 また，タプル・マッチャーと，マッチャーを引数にとってマッチャーを返す関数を組み合わせると，さまざまな非自由データ型に対するマッチャーが定義できる．
-たとえば，辺の集合として表現したグラフのマッチャーが定義できる．
-以下の定義は，グラフのノードのIDが整数として表現されていることを仮定している．
+たとえば，グラフの各ノードを整数，グラフの辺を2つのノードのペアとして表現したとき，
+有向グラフを表すマッチャーは次のように辺の多重集合として定義できる．
 \begin{lstlisting}[language=egison,numbers=none]
 graph := multiset (integer, integer)
 \end{lstlisting}
@@ -398,6 +418,8 @@ graph := multiset (integer, integer)
 \begin{lstlisting}[language=egison,numbers=none]
 adjacencyGraph := multiset (integer, multiset integer)
 \end{lstlisting}
+
+\todo{ADTに対するマッチャーがこれ以外で定義できないような印象を受ける}
 
 代数的データ型に対するマッチャーも定義できる．
 代数的データ型に対するマッチャーを定義するための特別な構文がEgisonには用意されている．
