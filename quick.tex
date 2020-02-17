@@ -22,32 +22,32 @@ matchAll [1,2,3] as list something with
 | $x :: $ts -> (x, ts)
 -- [(1,[2,3])]
 \end{lstlisting}
-\lstinline{matchAll}式は，ターゲット（上記の場合， \lstinline{[1,2,3]} ），マッチャー（上記の場合，\lstinline{list something}），マッチ節（上記の場合，\lstinline{$x :: $xs -> (x,xs)}）から構成される．
+\lstinline{matchAll}式は，ターゲット（上記の場合， \lstinline{[1,2,3]} ），マッチャー（上記の場合，\lstinline{list something}），1つ以上のマッチ節（上記の場合，\lstinline{$x :: $xs -> (x,xs)}）から構成される．
 マッチ節は，パターン（上記の場合，\lstinline{$x :: $xs}）とボディ（上記の場合，\lstinline{(x,xs)}）からなる．
 \lstinline{matchAll}式は，既存のプログラミング言語のマッチ式と同様に，ターゲットとパターンのパターンマッチを試みて，もしマッチしたらそのマッチ節のボディを評価する．
 
-Egisonの\lstinline{matchAll}式の特徴は，（1）\lstinline{matchAll}という名前と結果としてリストを返すことと，（2）マッチャーという追加の引数をとることにある．
+Egisonの\lstinline{matchAll}式の特徴は，（1）結果としてリストを返すことと，（2）マッチャーという追加の引数をとることにある．
 （1）の特徴は，複数の結果をもつパターンマッチをサポートするための特徴である．
 \lstinline{matchAll}式は複数のパターンマッチの結果すべてについてボディを評価して，その結果を集めてリストとして返す．
 上記の例のパターンに使われている\lstinline{::}\index{::@\lstinline{::}}は\index{こんすぱたーん@コンスパターン}と呼ばれるリストを先頭の要素と残りのリストに分解するパターンコンストラクタである．
-そのため，上記の例の場合は，パターンマッチの結果が一つであるので，長さが$1$のリストを返している．
-（2） の特徴は，パターンマッチアルゴリズムの拡張性とパターンの多相性を実現するための特徴である．
+そのため，上記の例の場合はパターンマッチの結果が一つであるので，長さが$1$のリストを返している．
+（2）の特徴は，パターンマッチアルゴリズムの拡張性とパターンの多相性を実現するための特徴である．
 マッチャー\index{まっちゃー@マッチャー}はEgison以外の言語ではみられない独自のオブジェクトで，パターンマッチアルゴリズムを保持するためのオブジェクトである．
 マッチャーによるパターンの多相性については，\ref{quick-matcher}節で扱う．
-\lstinline{--}\index{--@\lstinline{--}}はEgisonのインライン・コメント・デリミタである．
-本書を通して，プログラム直後のインライン・コメントを使って，プログラムの実行結果を記述する．
+\lstinline{--}\index{--@\lstinline{--}}で始まる行はコメントである．
+本書において，プログラム直後のコメントはプログラムの実行結果を記述するものとする．
 
 \lstinline{matchAll}式の文法の詳細についてもう少し説明する．
 \lstinline{as}\index{as@\lstinline{as}}と\lstinline{with}\index{with@\lstinline{with}}というキーワードでマッチャーは囲まれる．
 \lstinline{matchAll}式はマッチ節を複数とることができる．\footnote{\lstinline{matchAll} $t$ \lstinline{as} $m$ \lstinline{with} $c_1$ $c_2$ $...$は，\lstinline{matchAll} $t$ \lstinline{as} $m$ \lstinline{with} $c_1$ \lstinline{++} \lstinline{matchAll} $t$ \lstinline{as} $m$ \lstinline{with} $c_2$ \lstinline{++} $...$と同値である．}
-マッチ節同士の間は，\lstinline{|}で区切られる．
-最初のマッチ節の前にも\lstinline{|}は必須である．
+マッチ節同士の間は\lstinline{|}で区切られる．
+マッチ節が複数ある場合，最初のマッチ節の前にも\lstinline{|}は必須である．
 \lstinline{|}はマッチ節が複数行に渡る場合にプログラムの可読性を高める．
 マッチ節中のパターンとボディは\lstinline{->}で区切られる．
 \begin{lstlisting}[language=egison,numbers=none]
 matchAll ターゲット as マッチャー with
-| パターン -> ボディ
-| パターン -> ボディ
+| パターン1 -> ボディ1
+| パターン2 -> ボディ2
 ...
 \end{lstlisting}
 マッチ節が1つであるときは，下記のようにマッチ節の前の\lstinline{|}を省略することができる．
@@ -144,8 +144,8 @@ matchAll [1,2,3] as set something with $x :: $xs -> (x,xs)
 パターンの多相性は特に値パターンを表現するときに便利である．
 コンスパターンなどのコンストラクタパターンと同様に値パターンの挙動もマッチャーによって異なる．
 たとえば，\lstinline{[1,2,3] == [2,1,3]}のようなコレクション同士の同値性は，コレクションをリストとしてみなすか多重集合としてみなすかによって変わってくる．
-しかし，Egisonでは，パターンのアドホック多相性のおかげで，同じ構文で両者の同値性をパターンでチェックできる．
-値パターンの多相性は，非自由データ型を扱うプログラムの読解のしやすさを大幅に向上させる．
+しかしEgisonでは，パターンのアドホック多相性のおかげで，両者の同値性を同じパターンでチェックできる．
+値パターンの多相性によって，非自由データ型を扱うプログラムが大幅に読みやすくなる．
 \begin{lstlisting}[language=egison,numbers=none]
 matchAll [1,2,3] as list integer with #[2,1,3] -> "Matched" -- []
 matchAll [1,2,3] as multiset integer with #[2,1,3] -> "Matched" -- ["Matched"]
@@ -153,8 +153,9 @@ matchAll [1,2,3] as multiset integer with #[2,1,3] -> "Matched" -- ["Matched"]
 
 \section{\texttt{matchAllDFS}式によるパターンマッチ結果の順序の制御}\label{quick-matchalldfs}
 
-\lstinline{matchAll}式は，可算無限個の結果すべてを列挙するように内部のパターンマッチアルゴリズムが設計されている．
-そのため，パターンマッチの結果の順序にユーザーは気を付ける必要がある場合がある．
+\lstinline{matchAll}式は可算無限個の結果すべてを列挙するように内部のパターンマッチアルゴリズムが設計されているが，
+その列挙の仕方は処理系によって決められている．
+場合によっては，この順序が重要であることがある．
 
 典型的な例を紹介する．
 以下の\lstinline{matchAll}式はすべての自然数のペアを列挙する．
@@ -167,7 +168,7 @@ take 8 (matchAll [1..] as set something with $x :: $y :: _ -> (x,y))
 \end{lstlisting}
 上記の順序は無限の大きい可能性がある探索木をすべてたどることには適している．
 しかし，この順序が好ましくない場面もある．
-たとえば，\ref{intro-pmo}節で登場した\lstinline{concat}や\lstinline{unique}のパターンマッチはそうである．
+たとえば\ref{intro-pmo}節で登場した\lstinline{concat}や\lstinline{unique}のパターンマッチはそうである．
 パターンマッチの探索木を深さ優先探索する\lstinline{matchAllDFS}\index{matchAllDFS@\lstinline{matchAllDFS}}は，このような場面のために用意されている．
 \begin{lstlisting}[language=egison,numbers=none]
 take 8 (matchAllDFS [1..] as set something with $x :: $y :: _ -> (x,y))
@@ -177,7 +178,7 @@ take 8 (matchAllDFS [1..] as set something with $x :: $y :: _ -> (x,y))
 \section{andパターン・orパターン・notパターン}\label{quick-logical-pat}
 
 andパターンやorパターンをはじめとする論理パターンも，パターンの表現力を広げるために重要な役目を果たす．
-andパターンとorパターンの使い方は，既存関数型言語とほとんど同じである．
+andパターンとorパターンの使い方は，既存の関数型言語とほとんど同じである．
 対して，notパターンは複数の結果をもつ非線形パターンマッチをサポートするEgisonならではパターンである．
 
 andパターンとorパターンの使用例として，三つ子素数を抽出するパターンマッチを紹介する．
@@ -193,7 +194,7 @@ take 6 primeTriples -- [(5,7,11),(7,11,13),(11,13,17),(13,17,19),(17,19,23),(37,
 \end{lstlisting}
 
 notパターンは，その名前が示すとおり，ターゲットがパターンとマッチしない場合にパターンマッチに成功する．
-notパターンの先頭には，\lstinline{!}が付加される．
+notパターンの先頭には\lstinline{!}が付加される．
 \lstinline{!}の後に，任意のパターンが続く．
 以下の\lstinline{matchAll}は双子素数でない隣り合う素数のペアを列挙する．
 \begin{lstlisting}[language=egison,numbers=none]
@@ -287,9 +288,9 @@ Egison処理系はパターンを左から右に順番に処理する．
 以下のシーケンシャルパターンは，リストの3つ目の要素，1つ目の要素，2つ目の要素の順番でターゲットのリストをパターンマッチする．
 \begin{lstlisting}[language=egison,numbers=none]
 matchAll [2,3,1,4,5] as list integer with
-|  [ @ ::      @ :: $x :: _,
-    (#(x + 1), @),
-    #(x + 2)]
+|  [     @    ::     @    :: $x :: _,
+    (#(x + 1),       @    ),
+                 #(x + 2)]
 -> "Matched" -- ["Matched"]
 \end{lstlisting}
 シーケンシャル・パターン中に現れる\lstinline|@|は，\emph{後回しパターン変数}（\emph{later pattern variable}）と呼ばれる．
