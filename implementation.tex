@@ -20,14 +20,15 @@ Formalized Egisonは，Typed Egisonの型安全性を証明するためにCoqで
 
 Egisonパターンマッチを使えるようにするためのライブラリが，SchemeとHaskellで提供されている．
 
-Schemeについては，EgisonパターンマッチをSchemeマクロとしての実装\cite{egisonScheme}したライブラリが公開されている．
-この実装は，\lstinline{match-all}式（Egisonの\lstinline{matchAll}に対応する）や\lstinline{match}式をSchemeプログラムに変換した後，Scheme処理系でコンパイルするために，Egisonインタプリタにくらべて格段に速い．
+Schemeについては，EgisonパターンマッチをSchemeマクロとして実装\cite{egisonScheme}したライブラリが公開されている．
+この実装は，\lstinline{match-all}式（Egisonの\lstinline{matchAll}に対応する）や\lstinline{match}式をSchemeプログラムに変換した後Scheme処理系でコンパイルするため，Egisonインタプリタにくらべて格段に速い．
 EgisonパターンマッチをSchemeマクロとして実装する方法については論文\cite{egi2019macro}にまとめられている．
 
 Haskellメタプログラミングによる実装\cite{egisonHaskell}も公開されている．
-上記Schemeマクロと同様に，\lstinline{matchAll}式や{match}式をHaskellで実行できるプログラムに変換して，GHC（Haskellの標準的なコンパイラ）でコンパイルして実行するために，Egisonインタプリタにくらべて格段に速い．
-また，GHCの型検査・型推論機能を使って，型検査と型推論もおこなうように実装されている．
+上記Schemeマクロと同様に，\lstinline{matchAll}式や\lstinline{match}式をHaskellで実行できるプログラムに変換して，GHC（Haskellの標準的なコンパイラ）でコンパイルして実行するため，Egisanインタプリタにくらべて格段に速い．
+またGHCの型検査・型推論機能を使って，型検査と型推論もおこなうように実装されている．
 このHaskellライブラリについては，現在論文を準備中である．
 
 上記のScheme実装とHaskell実装の両方について，ループ・パターンやシーケンシャル・パターン，forallパターンといったEgison独自のパターンで実装されていないパターンがある．
-その理由に添字付き変数など，どのように既存の言語の上に実装するのが適切なのか考えるのがむずかしいプログラミング言語の要素を含んでいるためである．
+その理由は添字付き変数など，既存の言語の上にどのように実装するのが適切なのか考えるのがむずかしいプログラミング言語の機能を含んでいるためである．
+\todo{「どのように実装するのが適切なのか考えるのが難しい」→「適切に実装するのが難しい」？}

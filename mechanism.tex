@@ -2,8 +2,8 @@
 
 本章は，Egison内部のパターンマッチの仕組みを解説する．
 まず，\ref{mechanism-overview}節で概略を説明する．
-Egisonの使い方に興味ある読者はこの節を読めば，第\ref{matcher}章に進むことができる．
-\ref{mechanism-traversal}節以降では，Egisonパターンマッチを自身で実装するためには必要な事項を解説する．
+\ref{mechanism-traversal}節以降では，Egisonパターンマッチを自身で実装するために必要な事項を解説する．
+単にEgisonの使い方を知りたい読者は，\ref{mechanism-traversal}節以降を読み飛ばして第\ref{matcher}章に進んでも構わない．
 
 \section{パターンマッチ・アルゴリズムの概略}\label{mechanism-overview}
 
@@ -13,18 +13,19 @@ matchAll [2,8,2] as multiset eq with
 | $m :: #m :: _ -> m
 -- [2,2]
 \end{lstlisting}
-上記の\lstinline{matchAll}式を受け取るとEgison処理系は，以下のようなマッチング・ステート（\emph{matching state}）と呼ばれるオブジェクトを処理系内部で生成する．
-マッチング・ステートは，マッチング・アトム（\emph{matching atom}）のスタックと，パターンマッチの途中結果（下記の場合，\lstinline{[]}），\lstinline{matchAll}式実行時の環境（下記の場合，\lstinline{env}）からなる．
+
+上記の\lstinline{matchAll}式を受け取るとEgison処理系は，以下のような\emph{マッチング・ステート}（\emph{matching state}）と呼ばれるオブジェクトを処理系内部で生成する．
+マッチング・ステートは，\emph{マッチング・アトム}（\emph{matching atom}）のスタックと，パターンマッチの途中結果（下記の場合，\lstinline{[]}），\lstinline{matchAll}式実行時の環境（下記の場合，\lstinline{env}）からなる．
 マッチング・アトムは，パターン，マッチャー，ターゲットからなる3つ組である．
 初期マッチング・ステートは，\lstinline{matchAll}式のパターン，マッチャー，ターゲットから構成されるマッチング・アトム1つからなるスタックから構成される．
-Egison内部のパターンマッチ・アルゴリズムは，マッチング・ステートの還元プロセスとして定義されている．
-還元の結果，マッチング・アトムのスタックが空になるとパターンマッチに成功する．
+Egison内部のパターンマッチ・アルゴリズムは，マッチング・ステートの簡約プロセスとして定義されている．
+簡約の結果，マッチング・アトムのスタックが空になるとパターンマッチに成功する．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [($m :: #m :: _, multiset eq, [2,8,2])]
        [] env
 \end{lstlisting}
-このマッチング・ステートは，次のステップで以下の3つのマッチング・ステートに還元される．
-この還元は，\lstinline{multiset}マッチャーのコンス・パターンの定義（第\ref{matcher}章\ref{matcher-multiset}節にて解説する）にもとづいて，実行される．
+このマッチング・ステートは，次のステップで以下の3つのマッチング・ステートに簡約される．
+この簡約は\lstinline{multiset}マッチャーのコンス・パターンの定義（第\ref{matcher}章\ref{matcher-multiset}節にて解説する）にもとづいて実行される．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [($m, eq, 2)
        ,(#m :: _, multiset eq, [8,2])]
@@ -38,13 +39,13 @@ MState [($m, eq, 2)
        ,(#m :: _, multiset eq, [2,8])]
        [] env
 \end{lstlisting}
-このように1つのマッチング・ステートを1ステップ還元すると複数のマッチング・ステートが生成される．
+このように1つのマッチング・ステートを1ステップ簡約すると複数のマッチング・ステートが生成される．
 生成されるマッチング・ステートの数が0個であることも，無限個ある場合もある．
-これらのマッチング・ステートがどのような順番で還元されるのかは，\ref{mechanism-traversal}節で論じる．
-ここでは，1つ目のマッチング・ステートの還元をみる．
-1つ目のマッチング・ステートは，次のステップで以下のように還元される．
+これらのマッチング・ステートがどのような順番で簡約されるのかは，\ref{mechanism-traversal}節で論じる．
+ここでは，1つ目のマッチング・ステートの簡約をみる．
+1つ目のマッチング・ステートは，次のステップで以下のように簡約される．
 スタックの先頭のマッチング・アトムのマッチャーが\lstinline{eq}から\lstinline{something}に変わる．
-この還元は，\lstinline{eq}マッチャーに定義されている．（第\ref{matcher}章\ref{matcher-eq}節でその定義をみる．）
+この簡約は，\lstinline{eq}マッチャーに定義されている．（第\ref{matcher}章\ref{matcher-eq}節でその定義をみる．）
 \begin{lstlisting}[language=egison,numbers=none]
 MState [($m, something, 2)
        ,(#m :: _, multiset eq, [8,2])]
@@ -56,7 +57,7 @@ MState [($m, something, 2)
 MState [(#m :: _, multiset eq, [8,2])]
        [(m, 2)] env
 \end{lstlisting}
-再び，\lstinline{multiset}のコンス・パターンの定義にもとづき，マッチング・ステートが還元される．
+再び，\lstinline{multiset}のコンス・パターンの定義にもとづき，マッチング・ステートが簡約される．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [(#m, eq, 8)
        ,(_, multiset eq, [2])]
@@ -66,13 +67,13 @@ MState [(#m, eq, 2)
        ,(_, multiset eq, [8])]
        [(m, 2)] env
 \end{lstlisting}
-上記，1つ目のマッチング・ステートは値パターン\lstinline{#m}のパターンマッチに失敗して消える．（還元された結果0個のマッチング・ステートを生成するともいうことができる．）
-2つ目のマッチング・ステートは，先頭のマッチング・アトムがポップアウトし，以下のように還元される．
+上記，1つ目のマッチング・ステートは値パターン\lstinline{#m}のパターンマッチに失敗して消える．（簡約された結果0個のマッチング・ステートを生成するともいうことができる．）
+2つ目のマッチング・ステートは，先頭のマッチング・アトムが解決されて以下のようになる．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [(_, multiset eq, [8])]
        [(m, 2)] env
 \end{lstlisting}
-このマッチング・ステートも，先頭のマッチング・アトムがポップアウトし，以下のように還元される．
+このマッチング・ステートも，先頭のマッチング・アトムが解決されて以下のようになる．
 \begin{lstlisting}[language=egison,numbers=none]
 MState []
        [(m, 2)] env
@@ -82,8 +83,8 @@ MState []
 \section{\texttt{matchAll}・\texttt{matchAllDFS}による探索木のトラバース}\label{mechanism-traversal}
 
 本節では，\lstinline{matchAll}式と\lstinline{matchAllDFS}式を実行したときに内部でどのような探索木がトラバースされるのかを解説する．
-ある1つのマッチング・ステートを還元すると0個から無限個までを含む複数のマッチング・ステートが生成される．
-そのため，Egisonの内部のパターンマッチ・アルゴリズムは，初期マッチング・ステートをルートとするツリーの探索と考えることができる．
+ある1つのマッチング・ステートを簡約すると0個から無限個までを含む複数のマッチング・ステートが生成される．
+そのため，Egisonの内部のパターンマッチ・アルゴリズムは，初期マッチング・ステートを根とする木の探索と考えることができる．
 
 まずは，以下のような\lstinline{matchAllDFS}式の探索木をみる．
 \begin{lstlisting}[language=egison,numbers=none]
@@ -101,10 +102,17 @@ take 8 (matchAllDFS [1..] as set integer with
   \label{fig:reduction-tree-1}
 \end{figure}
 \lstinline{matchAllDFS}式はこの探索木を深さ優先探索する．
+<<<<<<< HEAD
 そのため，マッチング・ステートは，a1，b2，e3，f4，h5，j6，m7，o8，k7，p8，r9，...という順番で還元されていく．
 マッチング・ステートh5は無限個のマッチング・ステート（j6，k7，...）に還元される．
 そのため，深さ優先探索では，マッチング・ステートc3の還元に行き着くことがない．
 このように\lstinline{matchAllDFS}では，すべてのマッチング・ステートをたどれず，可算無限のパターンマッチ結果をすべて列挙できない場合がある．
+=======
+そのため，マッチング・ステートは，a1，b2，e3，f4，h5，j6，m7，o8，k7，p8，r9，...という順番で簡約されていく．
+マッチング・ステートh5は無限個のマッチング・ステート（j6，k7，...）に簡約される．
+そのため，深さ優先探索では，マッチング・ステートc3の簡約に行き着くことがない．
+このように\lstinline{matchAllDFS}では，可算無限のパターンマッチ結果をすべて列挙できない場合がある．
+>>>>>>> 1d67a21aa126fcf1026ce9ed61c97a2e86050372
 
 \lstinline{matchAll}式は，可算無限のパターンマッチ結果をすべて列挙するために，この探索木に変形を加えて幅優先探索をおこなう．
 図\ref{fig:reduction-tree-2}は，下記の\lstinline{matchAll}式を実行したときの探索木である．
@@ -127,7 +135,7 @@ take 8 (matchAll [1..] as set integer with
 図\ref{fig:reduction-tree-1}の探索木を斜めにとらえることによって，図\ref{fig:reduction-tree-2}の二分木への変形はできる．
 b2，c3，d4，...からなるノードに注目しよう．
 このノードの子は，e3単独からなるノードと，c3，d4，...からなるノードである．
-一般に，あるノードの子は，そのノードの先頭のマッチング・ステートを還元した結果と，そのノードの先頭の要素を取り除いたマッチング・ステートのリストとなる．
+一般に，あるノードの子は，そのノードの先頭のマッチング・ステートを簡約した結果と，そのノードの先頭の要素を取り除いたマッチング・ステートのリストとなる．
 
 \section{andパターン・orパターン・notパターンの実装}\label{mechanism-and-pat-or-pat}
 
@@ -140,12 +148,12 @@ matchAll [1, 2, 3] as list integer with
 | $n :: (_ :: _ & $rs) -> (n, rs)
 -- [(1, [2, 3])]
 \end{lstlisting}
-このパターンマッチを処理する過程で，以下のようなマッチング・ステートの還元にいきつく．
+このパターンマッチを処理する過程で，以下のようなマッチング・ステートの簡約にいきつく．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [(_ :: _ & $rs, [2, 3], list integer)]
        [(n, 1)] env
 \end{lstlisting}
-スタックの先頭のマッチング・アトムのパターンがandパターンであった場合，Egison処理系は以下のように還元する．
+スタックの先頭のマッチング・アトムのパターンがandパターンであった場合，Egison処理系は以下のように簡約する．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [(_ :: _, [2, 3], list integer)
        ,($rs, [2, 3], list integer)]
@@ -160,12 +168,12 @@ matchAll [1, 1, 2] as list integer with
 | $m :: ([] | #m :: _) -> m
 -- [1]
 \end{lstlisting}
-このパターンマッチを処理する過程で，以下のようなマッチング・ステートの還元にいきつく．
+このパターンマッチを処理する過程で，以下のようなマッチング・ステートの簡約にいきつく．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [(([] | #m :: _), [1, 2], list integer)]
        [(m, 1)] env
 \end{lstlisting}
-スタックの先頭のマッチング・アトムのパターンがorパターンであった場合，Egison処理系は以下のように還元する．
+スタックの先頭のマッチング・アトムのパターンがorパターンであった場合，Egison処理系は以下のように簡約する．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [([], [1, 2], list integer)]
        [(m, 1)]
@@ -182,7 +190,7 @@ matchAll [2, 8, 2] as multiset integer with
 | $m :: (!(#m :: _) & $rs) -> (m, rs)
 -- [(8, [2,2])]
 \end{lstlisting}
-このパターンマッチを処理する過程で，以下のようなマッチング・ステートの還元にいきつく．
+このパターンマッチを処理する過程で，以下のようなマッチング・ステートの簡約にいきつく．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [(!(#m :: _), [2, 2], multiset integer)
        ,($rs, [2, 2], multiset integer)]
@@ -193,7 +201,7 @@ MState [(!(#m :: _), [2, 2], multiset integer)
 MState [((#m :: _), [2, 2], multiset integer)
        [(m, 8)] env
 \end{lstlisting}
-このマッチング・ステートの還元した結果，1つもパターンマッチに成功するマッチング・ステートがなければ，以下のような先ほどのマッチング・ステートからnotパターンをもつ先頭のマッチング・アトムをのぞいたマッチング・ステートを還元する．
+このマッチング・ステートの簡約した結果，1つもパターンマッチに成功するマッチング・ステートがなければ，以下のような先ほどのマッチング・ステートからnotパターンをもつ先頭のマッチング・アトムをのぞいたマッチング・ステートを簡約する．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [($rs, [2, 2], multiset integer)]
        [(m, 8)] env
@@ -211,7 +219,7 @@ matchAll [1, 2, 1, 3] as multiset integer with
 | $m :: twin $n _ -> (m, n)
 -- [(2, 1), (2, 1), (3, 1), (3, 1)]
 \end{lstlisting}
-このパターンマッチを処理する過程で，以下のようなマッチング・ステートの還元にいきつく．
+このパターンマッチを処理する過程で，以下のようなマッチング・ステートの簡約にいきつく．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [(twin $n _, [1, 1, 3], multiset integer)]
        [(m, 2)]
@@ -227,7 +235,7 @@ MState [MNode [(~p1 & $x) :: #x :: ~p2, [1, 1, 3], multiset integer)]
               [(p1, $n), (p2, _)]]
        [(m, 2)] env
 \end{lstlisting}
-このマッチング・ステートを還元していくと，スタックの先頭のパターンがパターン関数の仮引数（下記の場合，\lstinline{p1}）であるマッチング・ステートにいきつく．
+このマッチング・ステートを簡約していくと，スタックの先頭のパターンがパターン関数の仮引数（下記の場合，\lstinline{p1}）であるマッチング・ステートにいきつく．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [MNode [(p1, 1, integer),
                (#x :: ~p2, [1, 3], multiset integer)]

@@ -43,26 +43,24 @@ matcher
 ...
 \end{lstlisting}
 \lstinline{matcher}式は，複数のマッチャー節（\emph{matcher clause}）をとる．
-マッチャー節は，原始パターンパターン（\emph{primitive pattern-pattern}），ネクストマッチャー式（\emph{next matcher expression}），複数の原始マッチ節（\emph{primitive match clause}）からなる．
-原始マッチ節は，原始データパターン（\emph{primitive data pattern}）とボディからなる．
+マッチャー節は，\emph{原始パターンパターン}（\emph{primitive pattern-pattern}）\index{げんしぱたーんぱたーん@原始パターンパターン}，ネクスト・マッチャー式（\emph{next matcher expression}），複数の原始マッチ節（\emph{primitive match clause}）からなる．
+原始マッチ節は，\emph{原始データパターン}（\emph{primitive data pattern}）\index{げんしでーたぱたーん@原始データパターン}とボディからなる．
 
 \lstinline{unorderedIntegerPair}の1つ目のマッチャー節（2-3行目）をみていく．
-まず，このマッチャー節の原始パターンパターンは，\lstinline{pair $ $}である．
-原始パターンパターンは，パターンに対するパターンである．
+まず，このマッチャー節の原始パターンパターンは\lstinline{pair $ $}である．
+原始パターンパターンはパターンに対するパターンである．
 この原始パターンパターンは\lstinline{pair}パターンにマッチし，このマッチャー節は\lstinline{pair}パターンに対するパターンマッチの方法を定義している．
 \lstinline{pair}のように，原始パターンパターン中にあらわれるパターンコンストラクタは，原始パターンパターンコンストラクタ（\emph{primitive pattern-pattern constructor}）と呼ばれる．
-\lstinline{pair}パターンの引数としてあらわれている\lstinline{$}は，パターン・ホール（\emph{pattern hole}）と呼ばれる原始パターンパターンの構成要素である．
-パターン・ホールは無名パターン変数のようなもので，任意のパターンがパターン・ホールにマッチする．
-パターン・ホールにマッチしたパターンは，ネクスト・パターン（\emph{next patterns}）と呼ばれる．
-原始パターンパターンのパターンマッチは，代数的データ型に対する他の関数型プログラミング言語のパターンマッチとほぼ同じようにおこなわれる．
+\lstinline{pair}パターンの引数としてあらわれている\lstinline{$}はパターン・ホール（\emph{pattern hole}）と呼ばれる原始パターンパターンの構成要素で，任意のパターンがマッチする．
+パターン・ホールにマッチしたパターンは，ネクスト・パターン（\emph{next pattern}）と呼ばれる．
+原始パターンパターンのパターンマッチは，一般の関数型プログラミング言語の代数的データ型に対するパターンマッチとほぼ同じようにおこなわれる．
 次に，このマッチャー節のネクスト・マッチャー式は，\lstinline{(integer, integer)}である．
 これは，上記のパターン・ホールに束縛された2つのパターン（\lstinline{pair}パターンの引数）がそれぞれ\lstinline{integer}マッチャーを使って再帰的にパターンマッチされることを表現している．
 このマッチャー節は，1つの原始マッチ節（3行目）をとる．
 原始データパターンは，ターゲットとパターンマッチされる．
-原始データパターンのパターンマッチも，代数的データ型に対する他の関数型プログラミング言語のパターンマッチとほぼ同じようにおこなわれる．
+原始データパターンのパターンマッチも，一般の関数型プログラミング言語の代数的データ型に対するパターンマッチとほぼ同じようにおこなわれる．
 原始マッチ節のボディは，ターゲットの分解結果を返す．
-\lstinline{(x, y)}と\lstinline{(y, x)}はそれぞれネクスト・ターゲット（\emph{next target}）と呼ばれる．
-それぞれネクスト・パターンとネクスト・マッチャーを使って再帰的にパターンマッチされる．
+\lstinline{(x, y)}と\lstinline{(y, x)}はネクスト・ターゲット（\emph{next target}）と呼ばれ，ネクスト・パターンとネクスト・マッチャーを使って再帰的にパターンマッチされる．
 
 2つ目のマッチャー節（4-5行目）の原始パターンパターンは，パターン・ホールである．
 パターン・ホールは任意のパターンにマッチするため，1つ目のマッチャー節でマッチしなかったパターンはすべて2つ目のマッチ節で処理される．
@@ -106,18 +104,18 @@ eq := matcher
 
 原始パターンパターンは，ここまでにでてきた3つの構成要素であるパターン・ホール，原始パターンパターンコンストラクタの適用，原始値パターンと，原始ワイルドカードからなる．
 \begin{lstlisting}[language=egison,numbers=none]
-`原始パターンパターン` := $ | c `原始パターンパターン`* | #$`ID` | _
+`原始パターンパターン` ::= $ | c `原始パターンパターン`* | #$`ID` | _
 \end{lstlisting}
 原始ワイルドカードについては，\ref{matcher-primitive-wildcard}節で用例を紹介する．
 
 原始データパターンは，ワイルドカード，パターン変数，原始データパターンコンストラクタの適用からなる．
 \begin{lstlisting}[language=egison,numbers=none]
-`原始データパターン` := _ | $`ID` | C `原始データパターン`*
+`原始データパターン` ::= _ | $`ID` | C `原始データパターン`*
 \end{lstlisting}
 
 \section{\texttt{multiset}マッチャーの定義}\label{matcher-multiset}
 
-本節は，\lstinline{multiset}マッチャー定義を解説する．
+本節は，\lstinline{multiset}マッチャーの定義を解説する．
 \begin{lstlisting}[language=egison]
 multiset a := matcher
   | [] as () with
