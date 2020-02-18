@@ -171,14 +171,16 @@ matchAll [1,2,3] as multiset integer with #[2,1,3] -> "Matched" -- ["Matched"]
 \lstinline{matchAll}はパターンマッチの探索木をすべてのノードをたどるために幅優先探索する．\footnote{この幅優先探索の詳細については，Egisonパターンマッチの設計についての論文\cite{egi2018Aplas}の5.2節にて詳しく解説されている.}
 その結果，パターンマッチの結果の順序は以下のようになる．
 \begin{lstlisting}[language=egison,numbers=none]
-take 8 (matchAll [1..] as set something with $x :: $y :: _ -> (x,y))
+take 8 (matchAll [1..] as set something with
+        | $x :: $y :: _ -> (x,y))
 -- [(1,1),(1,2),(2,1),(1,3),(2,2),(3,1),(2,3),(3,2)]
 \end{lstlisting}
 上記の順序は，無限に大きい可能性がある探索木をすべてたどる場合に適している．
 しかし，この順序が好ましくない場面もある．
 パターンマッチの探索木を深さ優先探索する\lstinline{matchAllDFS}\index{matchAllDFS@\lstinline{matchAllDFS}}は，このような場面のために用意されている．
 \begin{lstlisting}[language=egison,numbers=none]
-take 8 (matchAllDFS [1..] as set something with $x :: $y :: _ -> (x,y))
+take 8 (matchAllDFS [1..] as set something with
+        | $x :: $y :: _ -> (x,y))
 -- [(1,1),(1,2),(1,3),(1,4),(1,5),(1,6),(1,7),(1,8)]
 \end{lstlisting}
 たとえば，以下のようにパターンマッチにより\lstinline{concat}関数を定義する場合，\lstinline{matchAllDFS}式を使うことで正しい順番で結果のコレクションを生成できる．

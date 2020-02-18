@@ -13,7 +13,6 @@ matchAll [2,8,2] as multiset eq with
 | $m :: #m :: _ -> m
 -- [2,2]
 \end{lstlisting}
-
 上記の\lstinline{matchAll}式を受け取るとEgison処理系は，以下のようなマッチング・ステート（\emph{matching state}）と呼ばれるオブジェクトを処理系内部で生成する．
 マッチング・ステートは，マッチング・アトム（\emph{matching atom}）のスタックと，パターンマッチの途中結果（下記の場合，\lstinline{[]}），\lstinline{matchAll}式実行時の環境（下記の場合，\lstinline{env}）からなる．
 マッチング・アトムは，パターン，マッチャー，ターゲットからなる3つ組である．
@@ -105,7 +104,7 @@ take 8 (matchAllDFS [1..] as set integer with
 そのため，マッチング・ステートは，a1，b2，e3，f4，h5，j6，m7，o8，k7，p8，r9，...という順番で還元されていく．
 マッチング・ステートh5は無限個のマッチング・ステート（j6，k7，...）に還元される．
 そのため，深さ優先探索では，マッチング・ステートc3の還元に行き着くことがない．
-このように\lstinline{matchAllDFS}では，可算無限のパターンマッチ結果をすべて列挙できない場合がある．
+このように\lstinline{matchAllDFS}では，すべてのマッチング・ステートをたどれず，可算無限のパターンマッチ結果をすべて列挙できない場合がある．
 
 \lstinline{matchAll}式は，可算無限のパターンマッチ結果をすべて列挙するために，この探索木に変形を加えて幅優先探索をおこなう．
 図\ref{fig:reduction-tree-2}は，下記の\lstinline{matchAll}式を実行したときの探索木である．
