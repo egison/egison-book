@@ -7,7 +7,7 @@
 Egisonのパターンマッチは，非自由データ型に対するパターンマッチを実現するために，複数のマッチ結果をもつ非線形パターン（パターン変数に束縛した値を同じパターン内で参照するパターン）を効率的に処理できるように設計されている．
 本章の前半では，この機能がどのように構文として表現できるのか解説する．
 
-本章の後半（\ref{quick-logical-pat}節，\ref{quick-loop-pat}節，\ref{quick-seq-pat}節，\ref{quick-forall-pat}節，\ref{quick-pat-fun}節，\ref{quick-matcher-composition}節）では，さまざまな組み込みパターンを紹介する．
+本章の後半（\ref{quick-logical-pat}節，\ref{quick-loop-pat}節，\ref{quick-seq-pat}節，\ref{quick-pat-fun}節，\ref{quick-matcher-composition}節）では，さまざまな組み込みパターンを紹介する．
 そのうち後半で紹介されるループ・パターンや，シーケンシャル・パターン，forallパターンはEgison以外のプログラミング言語にはまだ実装されていないパターンである．
 これらの組み込みパターンは，最初は特殊でアドホックにみえるかもしれない．
 これらの組み込みパターンの意味は，初見で完全に理解できなくても問題ない．
@@ -381,9 +381,9 @@ match [1, 1, 2, 3] as list integer with
 タプルに対するマッチャーは，マッチャーのタプルにより表現される．
 \emph{タプル・パターン}\index{たぷるぱたーん@タプル・パターン}はそのようなマッチャーを使ったパターンマッチのときに使われる．
 たとえば，以下は，第\ref{intro}章\ref{intro-pmo}節でも登場した\lstinline{intersect}関数の定義である．
-2つの多重集合のタプルに対するマッチャーを使って，コレクションの共通要素をパターンマッチで取り出している．
+2つの集合のタプルに対するマッチャーを使って，コレクションの共通要素をパターンマッチで取り出している．
 \begin{lstlisting}[language=egison,numbers=none]
-intersect xs ys := matchAll (xs,ys) as (multiset eq, multiset eq) with
+intersect xs ys := matchAll (xs,ys) as (set eq, set eq) with
   | ($x :: _, #x :: _) -> x
 \end{lstlisting}
 上記で使われている\lstinline{eq}マッチャーは，同値性が定義されたデータ型\footnote{現在のEgisonには静的な型はないが，Haskellでいうと\lstinline{Eq}型クラスに属するデータ型}のパターンマッチに使えるユーザー定義マッチャーである．

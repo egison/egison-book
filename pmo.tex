@@ -225,7 +225,7 @@ card := algebraicDataMatcher
 このような場面で，とくにnotパターンと一緒に使われるタプル・パターンが役に立つことがおおい．
 たとえば， \lstinline{difference}関数は，第\ref{quick}章\ref{quick-matcher-composition}節に登場した\lstinline{intersect}関数の実装にnotパターンを挿入することにより定義できる．
 \begin{lstlisting}[language=egison,numbers=none]
-difference xs ys := matchAll (xs, ys) as (multiset eq, multiset eq) with
+difference xs ys := matchAll (xs, ys) as (set eq, set eq) with
   | ($x :: _, !(#x :: _)) -> x
 \end{lstlisting}
 \lstinline|!($x :: _, #x :: _)|のように，notパターンの挿入位置をを変えることにより，2つのコレクションに共通要素が1つもない場合にパターンマッチに成功するパターンも記述できる．
