@@ -94,7 +94,8 @@ take 8 twinPrimes
 -- [(3, 5), (5, 7), (11, 13), (17, 19), (29, 31), (41, 43), (59, 61), (71, 73)]
 \end{lstlisting}
 
-\todo{述語パターンの例はeven?を使ったものとかの方が嬉しさが伝わりやすい気がしました}
+%\todo{述語パターンの例はeven?を使ったものとかの方が嬉しさが伝わりやすい気がしました}
+%本当に述語を使うとandパターンを使う必要がでる関係でこのままいくことにしました．
 
 パターンマッチのときに，同値性よりも一般的な条件を使いたいことがある．
 \emph{述語パターン}(\emph{predicate pattern})\index{じゅつごぱたーん@述語パターン}はそのために用意されている組み込みパターンである．
@@ -355,13 +356,16 @@ singleCommonElem := match (xs, ys) as (multiset eq, multiset eq) with
 
 コンス・パターンやジョイン・パターンのようなコンストラクタ・パターンは，第\ref{matcher}章で解説されるようにマッチャーで定義される．
 これらのコンストラクタ・パターンを組み合わせて，新しいコンストラクタ・パターンをつくることができる．
-そのためには，パターンを引数にとってパターンを返すパターン関数（\emph{pattern function}）を使う．
+そのためには，パターンを引数にとってパターンを返す\emph{パターン関数}（\emph{pattern function}）\index{ぱたーんかんすう@パターン関数}を使う．
 
-\todo{パターン変数\texttt{\~}についての説明}
-\todo{もっとpattern functionによるモジュール化の嬉しさがわかる例だと良い？}
+%\todo{もっとpattern functionによるモジュール化の嬉しさがわかる例だと良い？} そのような例を追加するのは今後の課題にします．
 
-パターン関数の構文はラムダ式の構文と似ているが，矢印に\lstinline{->}の代わりに\lstinline{=>}を使う点が異なる．
+パターン関数を定義する構文はラムダ式の構文と似ているが，矢印に\lstinline{->}の代わりに\lstinline{=>}を使う点が異なる．
 以下で定義されているパターン関数\lstinline{twin}は，それぞれの第一引数が同じ値である場合にマッチする，二重にネストしたコンス・パターンをモジュール化している．
+パターン関数の仮引数は\emph{変数パターン}（\emph{variable pattern}）\index{へんすうぱたーん@変数パターン}と呼ばれる．
+この例の変数パターンは，\lstinline{pat1}と\lstinline{pat2}である．
+パターン関数のボディで，変数パターンの中身を参照するときは，\lstinline{~}を変数パターンの先頭に付加する．
+これは変数パターンをパターン・コンストラクタと区別するためである．
 \begin{lstlisting}[language=egison,numbers=none]
 twin := \pat1 pat2 => (~pat1 & $x) :: #x :: ~pat2
 \end{lstlisting}
@@ -369,7 +373,7 @@ twin := \pat1 pat2 => (~pat1 & $x) :: #x :: ~pat2
 \begin{lstlisting}[language=egison,numbers=none]
 match [1, 1, 2, 3] as list integer with
 | twin $n $ns -> [n, ns]
---   [1, [2, 3]]
+-- [1, [2, 3]]
 \end{lstlisting}
 
 \section{マッチャー合成による新しいマッチャーの生成}\label{quick-matcher-composition}
