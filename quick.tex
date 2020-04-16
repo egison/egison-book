@@ -191,8 +191,8 @@ concat xss := matchAllDFS xss as list (list something) with
 \end{lstlisting}
 もし，\lstinline{matchAllDFS}の代わりに\lstinline{matchAll}を使ってしまうと，以下のように，引数のリストのリストの要素を交互に列挙してしまう．
 \begin{lstlisting}[language=egison,numbers=none]
-matchAll [[1..], (map negate [1..])] as list (list something) with
-| _ ++ (_ ++ $x :: _) :: _ -> x
+take 10 (matchAll [[1..], map neg [1..]] as list (list something) with
+         | _ ++ (_ ++ $x :: _) :: _ -> x)
 --  [1,2,-1,3,-2,4,-3,5,-4,6]
 \end{lstlisting}
 
