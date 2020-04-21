@@ -1,0 +1,116 @@
+\chapter{Egison開発の目標と方針}\label{direction}
+
+\section{Egisonの目標}\label{direction-goal}
+
+\subsection{直感的な表現}\label{direction-goal-intuitive}
+
+Egison開発の動機は，「人間の頭の中の認識を，コンピュータ向けに翻訳することなしに，表現できる言語を作りたい」というものである．
+その動機のもとに試行錯誤した結果，（i）集合や数式のような1つの定まった表現を持たないデータに対しても適用可能なパターンマッチ，（ii）特別な準備の必要なしに任意のユーザー定義関数に対して適用可能なテンソルの添字記法，というアルゴリズムの記述を簡潔にする2つの新しい機能を持つプログラミング言語にEgisonはなった．
+
+より幅広いアルゴリズムの簡潔な記述を可能にする新しいプログラミング言語は，既知のコンピュータ科学の問題のプログラミングを簡単にするだけでなく，従来はプログラミングが難しいために敬遠されていた問題を扱いやすくし，コンピュータ科学の扱う範囲を広げる可能性を持っている．
+研究のサイクルを速める．
+
+ただし，ユーザーがいなければ，そのポテンシャルは発揮されない．
+Egisonをコミュニティで広めるためには，処理系の完成度，マニュアルや論文の執筆，応用例の提案，既存のメジャーなプログラミング言語へのEgisonの機能の移植が必要である．
+
+以上，Egison開発の目標は，以下の2つにまとめられる．
+\begin{enumerate}
+\item コンピュータ・プログラムを簡潔に表現するための新しい機能の設計・開発する．
+\item それらの機能によりプログラミングの未来に影響を与えるためにユーザー数を増やす．
+\end{enumerate}
+
+\subsection{独自のプログラミング言語を用意する理由}\label{direction-goal-independent}
+
+アルゴリズムの直感的な記述を可能にする新しいプログラミング言語の機能を，独自のプログラミング言語Egisonにではなく，既存のプログラミング言語を拡張して実装するという手段もある．
+このような手段を選ばず，独自のプログラミング言語Egisonを作る理由は，そのほうが新しい機能をすばやく確実に実装できるためである．
+既存のプログラミング言語に新しく発明した機能を追加するには，その新機能が既存の機能と競合してしまう場合や，言語の実装の広範囲に影響を与える場合があるために，新機能本体の実装以外のための大規模な調査や実装が必要になってしまう場合がある．
+Egisonのパターンマッチとテンソルの添字記法は両者ともそのような機能である．
+たとえば，HaskellにEgisonのパターンマッチを実装しようとしたら，パターンマッチ機能の実装に加えて型システムの設計と実装もせねばならない．
+また，Haskellにテンソルの添字記法を実装する場合も，シンボリックな添字を扱うためのシンボル計算の機能や，シンボリックな添字をもつテンソルを扱うためのデータ構造の設計や型システムの設計・実装も必要となる．
+たいして，自身で発明した新機能を実装するために設計した独自のプログラミング言語を用意すれば，新機能の実装を最低限の労力で実装できる．
+ただし，独自のプログラミング言語を用意することには，既知の機能を再実装する必要があるというデメリットもある．
+
+\section{Egison本体の開発}\label{direction-interpreter}
+
+親しみやすいインターフェース，実用に耐えうる実行速度．
+
+\subsection{Egison Version 4のリリースと開発}\label{direction-interpreter-version4}
+
+Egison Version 4は，多くのユーザーにとって馴染みやすいように文法を一新した．
+以下は，素数の無限リストから双子素数を抽出するパターンマッチを記述したプログラムである．
+\begin{lstlisting}[caption=Egison version 3,language=egison]
+(define $twin-primes
+  (match-all primes (list integer)
+    [<join _ <cons $p <cons ,(+ p 2) _>>> [p (+ p 2)]]))
+
+(take 5 twin-primes) ; => {[3 5] [5 7] [11 13] [17 19] [29 31]}
+\end{lstlisting}
+\begin{lstlisting}[caption=Egison version 4,language=egison]
+twinPrimes :=
+  matchAll primes as list integer with
+    | _ ++ $p :: #(p + 2) :: _ -> (p, p + 2)
+
+take 5 twinPrimes -- => [(3, 5), (5, 7), (11, 13), (17, 19), (29, 31)]
+\end{lstlisting}
+
+新文法の親しみやすさは，特に数式を書いたときに発揮される．
+以下は，リーマン曲率テンソルの公式をEgison Version 3とEgison Version 4で書きくらべたものである．
+\begin{lstlisting}[caption=Egison version 3,language=egison]
+(define $R~i_j_k_l
+  (with-symbols {m}
+    (+ (- (`$\partial$`/`$\partial$` `$\Gamma$`~i_j_l x~k) (`$\partial$`/`$\partial$` `$\Gamma$`~i_j_k x~l))
+       (- (. `$\Gamma$`~m_j_l `$\Gamma$`~i_m_k) (. `$\Gamma$`~m_j_k `$\Gamma$`~i_m_l)))))
+\end{lstlisting}
+\begin{lstlisting}[caption=Egison version 4,language=egison]
+R~i_j_k_l := withSymbols [m]
+  `$\partial$`/`$\partial$` `$\Gamma$`~i_j_l x~k - `$\partial$`/`$\partial$` `$\Gamma$`~i_j_k x~l + `$\Gamma$`~m_j_l . `$\Gamma$`~i_m_k - `$\Gamma$`~m_j_k . `$\Gamma$`~i_m_l
+\end{lstlisting}
+
+
+\subsection{マニュアル・チュートリアルの作成}
+
+\subsection{Egison Journalの発行}
+
+\section{Egisonのアプリケーションの提示・開発}
+
+\subsection{数式処理システム}
+
+Egisonが提供する新機能を理解してもらう必要がない場合がある．
+普段手で書いている記法をプログラムでも記述できるようにする．
+抽象的な新しい記法を理解することに対しても，一般のプログラマよりも抵抗がない．
+
+手で計算するより速ければ喜ばれるケースが多いため，実行速度も求められない．
+
+\subsection{クエリー言語（パターンマッチの応用）}
+
+\subsection{機械学習（テンソル添字記法の応用）}
+
+テンソルを扱う機械学習のアルゴリズムを添字記法を使って簡潔に表現できる．
+その例として，Egisonによるニューラルネットワークの実装を現在すすめている．
+
+\section{Egisonを既存のプログラミング・コミュニティで広める}
+
+既存の言語のライブラリとしてEgisonの機能を実装する．
+言語の拡張機能（メタプログラミングのための機能）が強力な言語をほど，実行しやすい．
+
+\subsection{数式処理システム}
+
+\subsection{関数型プログラミング言語（Scheme・Haskell）}
+
+\subsection{システム・プログラミング言語（Rust）}
+
+\section{Egisonの先にある新しい研究}
+
+パターンマッチ・テンソル記法のようなEgisonによりすでに提示された機能だけでなく，新しい機能を開発することも重要である．
+
+\subsection{Egisonのパターンマッチを応用した定理証明記述言語}
+
+将来はコンピュータ上で数学の証明は記述し検査されるようになる．
+現在これがされていないのは，コンピュータ上で数学の証明を紙の上のように簡潔に表現できないためである．
+Egisonはプログラミング言語としてアルゴリズムの表現を簡潔にする機能を開発したが，同様に証明の記述を簡潔にすることもできるはずである．
+たとえば，Egisonのパターンマッチは証明のための条件分岐を記述するために役に立つはずである．
+本研究は，Egisonのパターンマッチをもつ証明支援システムを実装することによりこのことを確かめる．
+
+\subsection{数以外のユーザー定義型もシンボリックに処理できる数式処理システム}
+
+\subsection{複数のプログラミング・スタイルの表現力の差をくらべるための理論}
