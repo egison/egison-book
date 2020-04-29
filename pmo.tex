@@ -31,22 +31,22 @@ filter pred xs := matchAll xs as list something with
   | _ ++ (?pred & $x) :: _ -> x
 \end{lstlisting}
 
-\lstinline{member?}関数は値パターンを挿入することにより定義できる．
-\lstinline{member?}関数は第一引数の要素が第二引数のコレクションに含まれているかどうか判定する述語である．
-\lstinline{member?}関数は，\lstinline{match}式を使って定義する．
+\lstinline{member}関数は値パターンを挿入することにより定義できる．
+\lstinline{member}関数は第一引数の要素が第二引数のコレクションに含まれているかどうか判定する述語である．
+\lstinline{member}関数は，\lstinline{match}式を使って定義する．
 \lstinline{match}式は，\lstinline{car (matchAll ...)}\footnote{\lstinline{car}はコレクションの先頭要素を取り出す関数である．}のエイリアスとして実装されている．
 この実装が可能であるのは，Egisonが\lstinline{matchAll}式を遅延評価するためである．
 %\footnote{\lstinline{matchAll} also can handle multiple match clauses. \lstinline{matchAll} $t$ \lstinline{as} $m$ \lstinline{with} $c_1$ $c_2$ $...$ is equivalent to \lstinline{matchAll} $t$ \lstinline{as} $m$ \lstinline{with} $c_1$ \lstinline{++} \lstinline{matchAll} $t$ \lstinline{as} $m$ \lstinline{with} $c_2$ \lstinline{++} $...$.}
 
 {\footnotesize
 \begin{lstlisting}[language=egison,numbers=none]
-member? x xs := match xs as list eq with
+member x xs := match xs as list eq with
   | _ ++ #x :: _ -> True
   | _            -> False
 \end{lstlisting}
 }
 
-\lstinline{delete}関数は，\lstinline{member?}関数をすこし編集して実装できる．
+\lstinline{delete}関数は，\lstinline{member}関数をすこし編集して実装できる．
 \lstinline{delete}関数は，第一引数\lstinline{x}の最初の出現を第二引数のコレクション\lstinline{xs}から取り除く．
 
 {\footnotesize
@@ -91,7 +91,7 @@ unique [1,2,3,2,4] -- [1,3,2,4]
 Egisonのパターンマッチはパターンを左から右に処理するため，そのようなパターンは，コンス・パターンとジョイン・パターンを単純に組み合わせるだけでは書けない．
 \begin{lstlisting}[language=egison,numbers=none]
 unique2 xs := matchAllDFS xs as list eq with
-  | $hs ++ (!?(\x -> member? x hs) & $x) :: _ -> x
+  | $hs ++ (!?(\x -> member x hs) & $x) :: _ -> x
 
 unique2 [1,2,3,2,4] -- [1,2,3,4]
 \end{lstlisting}

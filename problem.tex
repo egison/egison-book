@@ -1,19 +1,19 @@
 \chapter{パターンマッチ指向プログラミング問題集}
 
-\section*{\texttt{member?}関数}
+\section*{\texttt{member}関数}
 
-下記の空白をうめて\lstinline{member?}関数を完成させよ．
+下記の空白をうめて\lstinline{member}関数を完成させよ．
 
 \begin{lstlisting}[language=egison]
-member? x xs :=
+member x xs :=
   match xs as list eq with
   | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` -> True
   | _ -> False
 
-member? 1 [1,2,3,4]
+member 1 [1,2,3,4]
 -- True
 
-member? 5 [1,2,3,4]
+member 5 [1,2,3,4]
 -- False
 \end{lstlisting}
 
