@@ -142,7 +142,7 @@ matchAll [1, 2, 3] as multiset something with
 | $x :: $y :: _ -> (x, y)
 -- [(1,2),(1,3),(2,1),(2,3),(3,1),(3,2)]
 \end{lstlisting}
-上記と同等なプログラムは，従来の関数型プログラミングの一般的な方法では，リスト内包表記によって以下のような記述できる．
+上記と同等なプログラムは，従来の関数型プログラミングの一般的な方法では，リスト内包表記によって以下のように記述できる．
 \lstinline{tails}は，引数のリストの後方部分からなる部分リストを返す関数である．
 \lstinline{splits}は，引数のリストを先頭部分のリストと残りのリストに分解したものを返す関数である．
 \begin{lstlisting}[language=egison,numbers=none]
@@ -206,6 +206,7 @@ poker [Card Spade 5, Card Diamond 10, Card Spade 7, Card Club 5, Card Heart 8]
 poker [Card Spade 5, Card Spade 6, Card Spade 7, Card Spade 8, Card Diamond 11]
 -- "Nothing"
 \end{lstlisting}
+パターンコンストラクタ（\lstinline{card}）は小文字から始まり，データコンストラクタ（\lstinline{Card}）は大文字から始まるというルールがEgisonにはある．
 
 なお，上の例でカードのマッチャーは以下のように代数的データマッチャーとして定義されている．
 \begin{lstlisting}[language=egison,numbers=none]
@@ -228,7 +229,7 @@ card := algebraicDataMatcher
 difference xs ys := matchAll (xs, ys) as (set eq, set eq) with
   | ($x :: _, !(#x :: _)) -> x
 \end{lstlisting}
-\lstinline|!($x :: _, #x :: _)|のように，notパターンの挿入位置をを変えることにより，2つのコレクションに共通要素が1つもない場合にパターンマッチに成功するパターンも記述できる．
+\lstinline|!($x :: _, #x :: _)|のように，notパターンの挿入位置を変えることにより，2つのコレクションに共通要素が1つもない場合にパターンマッチに成功するパターンも記述できる．
 
 これらのパターンをシーケンシャル・パターンと組み合わせることにより，さらに複雑なパターンを記述することができる．
 シーケンシャル・パターンは，notパターンを，パターンの複数の離れた部分にまとめて適用することを可能にするからである．
@@ -311,6 +312,7 @@ nQueens 4 -- [[2,4,1,3],[3,1,4,2]]
 プログラミング言語をカテゴリー分けしたツリーにたいしてパターンを書く．
 \lstinline{treeData}がそのカテゴリーツリーを定義している．
 たとえば，\lstinline{"Egison"}は，\lstinline{"pattern-match-oriented"}（パターンマッチ指向）カテゴリーと，\lstinline{"Functional programming"}（関数型プログラミング）カテゴリーの\lstinline{"Dynamically typed"}（動的型付け）サブカテゴリーに属している．
+データコンストラクタ\lstinline{Node}と\lstinline{Leaf}は大文字から始まる．
 \begin{lstlisting}[language=egison,numbers=none]
 treeData :=
   Node "Programming language"
@@ -326,11 +328,12 @@ treeData :=
 ツリーの末端は任意の深さでありうるため，添字範囲の終了値がパターン（下記の場合\lstinline{$n}）であるループ・パターンが使われている．
 このループ・パターンの三点リーダーパターンは，繰り返しパターンの末尾でない場所に位置している．
 繰り返しの場所をユーザーが指定できることも，正規表現のクリーネスター演算子にはないループ・パターンの強みのひとつである．
+パターンコンストラクタ\lstinline{node}と\lstinline{leaf}は小文字から始まる．
 \begin{lstlisting}[language=egison,numbers=none]
 ancestors x t := matchAll t as tree string with
   | loop $i (1,$n)
-      (Node $c_i (... ::  _))
-      (Leaf #x)
+      (node $c_i (... ::  _))
+      (leaf #x)
   -> map (\i -> c_i) [1..n]
 
 ancestors "Egison" treeData
@@ -344,10 +347,10 @@ ancestors "Egison" treeData
 \begin{lstlisting}[language=egison,numbers=none]
 descendants x t := matchAllDFS t as tree string with
   | loop _ (1,_)
-      (Node _ (... ::  _))
-      (Node #x ((loop _ (1,_)
-                   (Node _ (... :: _))
-                   (Leaf $y)) :: _))
+      (node _ (... ::  _))
+      (node #x ((loop _ (1,_)
+                   (node _ (... :: _))
+                   (leaf $y)) :: _))
   -> y
 
 descendants "Functional language" treeData
@@ -383,6 +386,7 @@ graphData :=
   \caption{\lstinline{graphData}の描画}
   \label{fig:graphVis}
 \end{figure}
+パターンコンストラクタ\lstinline{edge}は小文字から始まり，データコンストラクタ\lstinline{Edge}は大文字から始まっている．
 図\ref{fig:graphVis}は，上記のグラフを描画している．
 本節は，このグラフに対していくつかのパターンマッチを紹介する．
 

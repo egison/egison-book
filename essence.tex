@@ -14,13 +14,13 @@ SATソルバーが入力にとる論理式は，連言標準形（\emph{conjunct
 
 \subsection{Davis-Putnamアルゴリズム}
 
-ここではDavis-Putnumアルゴリズム\cite{harrison2009handbook}という，SAT問題を解くアルゴリズムのなかでもシンプルなアルゴリズムを実装する．
+ここではDavis-Putnamアルゴリズム\cite{harrison2009handbook}という，SAT問題を解くアルゴリズムのなかでもシンプルなアルゴリズムを実装する．
 本節の実装では，連言標準形の命題論理式をリテラルのコレクションのコレクションとして表現する．
 $\wedge$と$\lor$は可換な演算子であるため，このコレクションのコレクションは，リテラルの多重集合の多重集合としてパターンマッチできる．
 さらに，リテラルを整数として表現し，$p$の形のリテラルは正整数，$\neg p$の形のリテラルは$p$に対応する正整数の$-1$倍の負整数となるようにする．
 % たとえば，$p$と$\neg p$は，それぞれ$1$と$-1$のように表現される．
 そうすると，これらの論理式に対するマッチャーは\lstinline{multiset (multiset integer)}と定義できる．
-以下のプログラムは，Davis-Putnumアルゴリズムの核の実装である．
+以下のプログラムは，Davis-Putnamアルゴリズムの核の実装である．
 \lstinline{dp}関数は，論理変数のリストと論理式を引数にとり，解がある場合は\lstinline{True}を，そうでない場合は\lstinline{False}を返す．
 \begin{lstlisting}[language=egison]
 dp vars cnf :=

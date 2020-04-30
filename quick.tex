@@ -322,9 +322,9 @@ Egison処理系はパターンを左から右に順番に処理する．
 以下のシーケンシャルパターンは，リストの3つ目の要素，1つ目の要素，2つ目の要素の順番でターゲットのリストをパターンマッチする．
 \begin{lstlisting}[language=egison,numbers=none]
 matchAll [2,3,1,4,5] as list integer with
-|  [     @    ::     @    :: $x :: _,
-    (#(x + 1),       @    ),
-                 #(x + 2)]
+| {     @    ::     @    :: $x :: _,
+   (#(x + 1),       @    ),
+                 #(x + 2)}
 -> "Matched" -- ["Matched"]
 \end{lstlisting}
 シーケンシャル・パターン中に現れる\lstinline|@|は，\emph{後回しパターン変数}（\emph{later pattern variable}）と呼ばれる．
@@ -337,10 +337,10 @@ matchAll [2,3,1,4,5] as list integer with
 シーケンシャル・パターンとnotパターンの組み合わせは，数学的なアルゴリズムを記述するときに現れることがある．
 たとえば，第\ref{essence}章\ref{essence-sat}節でも現れる．
 \begin{lstlisting}[language=egison,numbers=none]
-singleCommonElem := match (xs, ys) as (multiset eq, multiset eq) with
-                    | [($x :: @, #x :: @),
-                       !($y :: _, #y :: _)] -> True
-                    | _ -> False
+singleCommonElem xs ys := match (xs, ys) as (multiset eq, multiset eq) with
+| {($x :: @, #x :: @),
+   !($y :: _, #y :: _)} -> True
+| _ -> False
 \end{lstlisting}
 
 シーケンシャル・パターンと同等のことが\lstinline{matchAll}式のネストにより表現できるのではと考えた読者がいるかもしれない．
@@ -420,5 +420,5 @@ binaryTree a := algebraicDataMatcher
 \begin{lstlisting}[language=egison,numbers=none]
 tree a := algebraicDataMatcher
   | leaf a
-  | Node a (multiset (tree a))
+  | node a (multiset (tree a))
 \end{lstlisting}

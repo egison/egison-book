@@ -133,7 +133,7 @@ multiset a := matcher
   | $ as something with
     | $tgt -> [tgt]
 \end{lstlisting}
-1つ目の4つ目のマッチャー節はほぼ自明であるので，2つ目の3つ目のマッチャー節をみていく．
+1つ目と4つ目のマッチャー節はほぼ自明であるので，2つ目と3つ目のマッチャー節をみていく．
 
 2つ目のマッチャー節（6-8行目）をみていこう．
 原始プリミティブパターンは\lstinline{$ :: $}で，ネクスト・マッチャー式は\lstinline{(a, multiset a)}である．
@@ -169,12 +169,12 @@ take 10 (matchAll primes as sortedList integer with
 このマッチャー節が，$(p,p+6)$という形の素数のペアにマッチする二重にネストしたジョイン・コンス・パターンの計算量を$O(n^2)$から$O(n)$に減らす．
 \begin{lstlisting}[language=egison,numbers=none]
 sortedList a := matcher
-  | $ ++ #$px :: $ as (sortedList a, sortedList a)
-    | \tgt -> matchAll tgt as list a with
-              | loop $i (1, $n)
-                  ((?(\x -> x < px) & $h_i) :: ...)
-                  (#px :: $ts)
-                -> (map (\i -> h_i) [1..n], ts)
+  | $ ++ #$px :: $ as (sortedList a, sortedList a) with
+    | \$tgt -> matchAll tgt as list a with
+               | loop $i (1, $n)
+                   ((?(\x -> x < px) & $h_i) :: ...)
+                   (#px :: $ts)
+                 -> (map (\i -> h_i) [1..n], ts)
   ...
 \end{lstlisting}
 
