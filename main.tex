@@ -51,7 +51,7 @@
 \addtolength{\topmargin}{-\topskip}
 \addtolength{\textheight}{-45mm}
 
-\renewcommand*\thesection{\arabic{section}}
+%\renewcommand*\thesection{\arabic{section}}
 
 \title{プログラミング言語Egison入門}
 \author{Egison開発チーム}
@@ -167,6 +167,8 @@
 \setcounter{section}{0}
 \include{intro}
 
+\part{パターンマッチ指向プログラミング}\label{part-pmo}
+
 \include{quick}
 
 \include{pmo}
@@ -183,7 +185,15 @@
 
 %\include{future}
 
-%\include{direction}
+\part{数式処理システムとしてのEgison}\label{part-cas}
+
+\include{cas}
+
+\include{tensor}
+
+\part{Egisonの今後}
+
+\include{direction}
 
 \appendix
 
