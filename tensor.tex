@@ -1,1 +1,302 @@
 \chapter{テンソル計算}\label{tensor}
+
+\section{テンソルとは}
+
+
+テンソルとは，ベクトルや行列を一般化したものである．
+ベクトルは一階のテンソル，行列は二階のテンソルである．
+ベクトルは一次元配列，行列は二次元配列としてプログラムでは表現されることが多い．
+$n$階のテンソルは，$n$次元配列により表現される．
+
+$
+\begin{pmatrix}
+a_{1} & a_{2} & a_{3}\\
+\end{pmatrix}
+$
+
+$
+\begin{pmatrix}
+a_{11} & a_{12} & a_{13} \\
+a_{21} & a_{22} & a_{23}
+\end{pmatrix}
+$
+
+$
+\begin{pmatrix}
+
+\begin{pmatrix}
+a_{111} & a_{112} & a_{113} \\
+a_{121} & a_{122} & a_{123} 
+\end{pmatrix}
+
+\begin{pmatrix}
+a_{211} & a_{212} & a_{213} \\
+a_{221} & a_{222} & a_{223} 
+\end{pmatrix}
+
+\begin{pmatrix}
+a_{311} & a_{312} & a_{313} \\
+a_{321} & a_{322} & a_{323} 
+\end{pmatrix}
+
+\end{pmatrix}
+$
+
+\section{テンソルの添字記法}
+
+テンソル計算は，ベクトルについてのテンソル積・アダマール積・内積の組み合わせでほとんど表現できます．
+テンソル積は，ベクトルのすべての成分の組み合わせからなる行列を返します．
+アダマール積は，対応する成分同士のみからなるベクトルを返します．
+内積は，アダマール積の結果の成分を足し合わせた結果のスカラー値を返します．
+
+$
+\begin{pmatrix}
+a_{1} & a_{2}
+\end{pmatrix}
+\otimes
+\begin{pmatrix}
+b_{1} & b_{2}
+\end{pmatrix}
+=
+\begin{pmatrix}
+a_{1} b_{1} & a_{1} b_{2} \\
+a_{2} b_{1} & a_{2} b_{2}
+\end{pmatrix}
+$
+
+$
+\begin{pmatrix}
+a_{1} & a_{2}
+\end{pmatrix}
+\circ
+\begin{pmatrix}
+b_{1} & b_{2}
+\end{pmatrix}
+=
+\begin{pmatrix}
+a_{1} b_{1} & a_{2} b_{2}
+\end{pmatrix}
+$
+
+$
+\begin{pmatrix}
+a_{1} & a_{2}
+\end{pmatrix}
+\cdot
+\begin{pmatrix}
+b_{1} & b_{2}
+\end{pmatrix}
+=
+a_{1} b_{1} + a_{2} b_{2}
+$
+
+
+たとえば，行列同士の掛け算は，Aの行とBの列についてはテンソル積，Aの列とBの行については内積をとる演算と解釈できます．
+
+$
+\begin{pmatrix}
+a_{11} & a_{12} \\
+a_{21} & a_{22}
+\end{pmatrix}
+\begin{pmatrix}
+b_{11} & b_{12} \\
+b_{21} & b_{22}
+\end{pmatrix}
+=
+\begin{pmatrix}
+a_{11} b_{11} + a_{12} b_{21} & a_{11} b_{12} + a_{12} b_{22} \\
+a_{21} b_{11} + a_{22} b_{21} & a_{21} b_{12} + a_{22} b_{22}
+\end{pmatrix}
+$
+
+ベクトルについては，掛け算の方法は，テンソル積・アダマール積・内積の3つだけですが，行列や行列よりさらに高階なテンソルとなると掛け算の方法が無数にあります．
+これらの掛け算のすべてに名前をつけるのは大変であるので，数学者はシンボリックな添字をテンソルに付加し，その添字をパラメーターにしてこれらの掛け算を表現します．
+たとえば，それぞれのベクトルに異なるシンボルが付加されている場合はテンソル積に，それぞれのベクトルの同じ位置に同じシンボルが付加されている場合はアダマール積に，それぞれのベクトルの上下に同じシンボルが付加されている場合は内積になります．
+添字には上添字と下添字があります．
+この位置関係によってアダマール積となるか内積となるか区別します．
+このようにシンボリックな添字を使って，テンソルのかけあわせ方を指定する記法は，添字記法と呼ばれています．
+
+$
+\begin{pmatrix}
+a_{1} & a_{2}
+\end{pmatrix}_{i}
+\begin{pmatrix}
+b_{1} & b_{2}
+\end{pmatrix}_{j}
+=
+\begin{pmatrix}
+a_{1} b_{1} & a_{1} b_{2} \\
+a_{2} b_{1} & a_{2} b_{2}
+\end{pmatrix}_{ij}
+$
+
+$
+\begin{pmatrix}
+a_{1} & a_{2}
+\end{pmatrix}_{i}
+\begin{pmatrix}
+b_{1} & b_{2}
+\end{pmatrix}_{i}
+=
+\begin{pmatrix}
+a_{1} b_{1} & a_{2} b_{2}
+\end{pmatrix}_{i}
+$
+
+$
+\begin{pmatrix}
+a_{1} & a_{2}
+\end{pmatrix}^{i}
+\begin{pmatrix}
+b_{1} & b_{2}
+\end{pmatrix}_{i}
+=
+a_{1} b_{1} + a_{2} b_{2}
+$
+
+行列のかけ算も添字記法をつかってうまく表現できます．
+内積をとるAの列とBの行について，それぞれ上下を逆にし，同じシンボルにすれば，行列の掛け算は表現できます．
+
+$
+\begin{pmatrix}
+a_{11} & a_{12} \\
+a_{21} & a_{22}
+\end{pmatrix}^{i}_{\ j}
+\begin{pmatrix}
+b_{11} & b_{12} \\
+b_{21} & b_{22}
+\end{pmatrix}^{j}_{\ k}
+=
+\begin{pmatrix}
+a_{11} b_{11} + a_{12} b_{21} & a_{11} b_{12} + a_{12} b_{22} \\
+a_{21} b_{11} + a_{22} b_{21} & a_{21} b_{12} + a_{22} b_{22}
+\end{pmatrix}^{i}_{\ k}
+$
+
+
+\section{テンソルの対称性・歪対称性の宣言}
+
+\subsection{動機}
+
+テンソルが対称性をもつとは，下記の例のように，上三角の成分と下三角の成分が一致することをいう．
+$
+\begin{pmatrix}
+a_{11} & a_{12} & a_{13} \\
+a_{12} & a_{22} & a_{23} \\
+a_{13} & a_{23} & a_{33} \\
+\end{pmatrix}
+$
+
+テンソルが歪対称性をもつとは，下記の例のように，上三角の成分と下三角の成分の符号が反転することをいう．
+テンソルが歪対称性をもつとき，対角成分は0となる．
+$
+\begin{pmatrix}
+0 & a_{12} & a_{13} \\
+-a_{12} & 0 & a_{23} \\
+-a_{13} & -a_{23} & 0 \\
+\end{pmatrix}
+$
+
+数学や物理で現れるテンソルの多くは対称性をもつ．
+たとえばリーマン曲率テンソル$R_{abcd}$は$R_{abcd} = -R_{abdc}$，$R_{abcd} = -R_{bacd}$，$R_{abcd} = R_{cdab}$という対称性をもつ．
+数学者や物理学者はこれらの対称性を意識しながら適宜計算を省略する．
+コンピュータ・プログラムでも対称性による計算の省略をエレガントに表現したい．
+
+$
+R_{abcd} = g_{ai} \left( \frac{\partial \Gamma^{i}_{\ bd}}{\partial x_{c}} -  \frac{\partial \Gamma^{i}_{\ bc}}{\partial x_{d}} + \Gamma^{j}_{\ bd} \Gamma^{i}_{\ jc} - \Gamma^{j}_{\ bc} \Gamma^{i}_{\ jd} \right)
+$
+
+
+\subsection{設計}
+
+リーマン曲率テンソルには，上記の対称性に加えて第一ビアンキ恒等式$R_{abcd} + R_{acdb} + R_{adbc} = 0$とよばれる対称性もある．
+この第一ビアンキ恒等式の表現として，$R_{a[bcd]} = 0$という表記がある．
+この表記を拡張してプログラムに導入するというアイデアを得た．
+
+具体例をみせながら，その表記を紹介する．
+リーマン曲率テンソル$R_{abcd}$は以下のように定義できる．
+\begin{lstlisting}[language=egison,numbers=none]
+def R_a_b_c_d := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
+\end{lstlisting}
+$R_{abcd} = -R_{abdc}$という歪対称性を宣言するには，以下のように添字\lstinline{_a_b}を角括弧\lstinline{[]}で囲む．
+\begin{lstlisting}[language=egison,numbers=none]
+def R[_a_b]_c_d := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
+\end{lstlisting}
+上記のように$R_{abcd}$を定義すると，たとえば$R_{21cd}$を参照したとき，$R_{12cd}$の計算結果の符号を反転した値を返すようになる．
+対称性を複数同時に宣言することもできる．
+$R_{abcd} = -R_{abdc}$と$R_{abcd} = -R_{bacd}$を同時に宣言するには，以下のように添字\lstinline{_a_b}と\lstinline{_c_d}の両方を角括弧\lstinline{[]}で囲む．
+\begin{lstlisting}[language=egison,numbers=none]
+def R[_a_b][_c_d] := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
+\end{lstlisting}
+こうすると，たとえば$R_{2121}$を参照したとき，$R_{1212}$の計算結果を返すようになる．
+
+$R_{abcd} = R_{cdab}$のような複雑な対称性も記述できる．
+この対称性を記述するためには添字\lstinline{_a_b}と\lstinline{_c_d}をそれぞれひとまとまりで扱うために丸括弧\lstinline{()}で囲む．
+そして，これらを波括弧\lstinline|{}|で囲む．
+\begin{lstlisting}[language=egison,numbers=none]
+def R{(_a_b)(_c_d)} := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
+\end{lstlisting}
+
+対称性の宣言には三種類の括弧を使い分ける．
+波括弧\lstinline|{}|は対称性を宣言するために使う．
+角括弧\lstinline|[]|は歪対称性を宣言するために使う．
+丸括弧\lstinline|()|は複数の添字をひとまとまりにするために使う．
+
+三つの対称性$R_{abcd} = -R_{abdc}$，$R_{abcd} = -R_{bacd}$，$R_{abcd} = R_{cdab}$を同時に宣言することもできる．
+\begin{lstlisting}[language=egison,numbers=none]
+def R{[_a_b][_c_d]} := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
+\end{lstlisting}
+
+この表記法の良いところは，\lstinline{:=}の右辺のプログラムを全く変更せずに対称性を宣言できるところである．
+%Wolfram言語(Mathematica)にもテンソルの対称テンソルを定義するための機能があるのですが，対称性を考慮したデータ構造をもつテンソルを生成するために右辺のプログラムは複雑化してしまう．
+
+\subsection{さらに具体例}
+
+さきほど，この手法の利点として，\lstinline{:=}の右辺のプログラムを全く変更する必要がないと述べたが，\lstinline{:=}の右辺のプログラムが簡略化できるケースもある．
+たとえば，下記のようにテンソルの各ブロックごとに異なる式を使って値が定義されるテンソルがそのようなケースに該当する．
+下記のプログラムは\ref{math}節の共同研究のためのプログラム\footnote{\url{https://github.com/egisatoshi/EMR-Paper-Computation/blob/master/program/thurston.egi}}からとってきた．
+\begin{lstlisting}[language=egison,numbers=none]
+def R'_i_j_k_l :=
+  generateTensor
+    (\x y z w -> match (x, y, z, w) as (integer, integer, integer, integer) with
+       | (#1, #1, _, _) -> 0
+       | (_, _, #1, #1) -> 0
+       | (#1, $b, #1, $d) -> -1 * p^2 * `$\delta$`~(b - 1)_(d - 1)
+       | ($a, #1, #1, $d) ->      p^2 * `$\delta$`~(a - 1)_(d - 1)
+       | (#1, $b, $c, #1) ->      p^2 * g_(b - 1)_(c - 1)
+       | ($a, #1, $c, #1) -> -1 * p^2 * g_(a - 1)_(c - 1)
+       | (#1, $b, $c, $d) -> -1 * p * `$\nabla$`J_(b - 1)_(c - 1)~(d - 1)
+       | ($a, #1, $c, $d) ->      p * `$\nabla$`J_(a - 1)_(c - 1)~(d - 1)
+       | ($a, $b, #1, $d) -> -1 * p * `$\nabla$`J~(d - 1)_(a - 1)_(b - 1)
+       | ($a, $b, $c, #1) ->      p * `$\nabla$`J_(c - 1)_(a - 1)_(b - 1)
+       | ($a, $b, $c, $d) -> R_(a - 1)_(b - 1)_(c - 1)~(d - 1)
+                             + -1 * p^2 * J_(b - 1)_(c - 1) * J_(a - 1)~(d - 1)
+                             +      p^2 * J_(a - 1)_(c - 1) * J_(b - 1)~(d - 1)
+                             +  2 * p^2 * J_(a - 1)_(b - 1) * J_(c - 1)~(d - 1))
+    [5, 5, 5, 5]
+\end{lstlisting}
+対称性により条件分岐を大きく減らすことができる．
+\begin{lstlisting}[language=egison,numbers=none]
+def R'{[_i_j][_k_l]} :=
+  generateTensor
+    (\x y z w -> match (x, y, z, w) as (integer, integer, integer, integer) with
+       | (#1, #1, _, _) -> 0
+       | (#1, $b, #1, $d) -> -1 * p^2 * `$\delta$`~(b - 1)_(d - 1)
+       | (#1, $b, $c, $d) -> -1 * p * `$\nabla$`J_(b - 1)_(c - 1)~(d - 1)
+       | ($a, $b, $c, $d) -> R_(a - 1)_(b - 1)_(c - 1)~(d - 1)
+                             + -1 * p^2 * J_(b - 1)_(c - 1) * J_(a - 1)~(d - 1)
+                             +      p^2 * J_(a - 1)_(c - 1) * J_(b - 1)~(d - 1)
+                             +  2 * p^2 * J_(a - 1)_(b - 1) * J_(c - 1)~(d - 1))
+    [5, 5, 5, 5]
+\end{lstlisting}
+

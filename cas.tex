@@ -1,1 +1,94 @@
 \chapter{シンボリックな計算}\label{cas}
+
+数式処理システムとは，シンボリックな計算をサポートするプログラミング言語のことをいう．
+数式処理システムは，未束縛の変数をシンボルとして扱う．
+数式処理システムを使うと，たとえば，$x + x = 2x$や$(x + y)^2 = x^2 + 2 x y + y^2$のような計算ができる．
+Egisonもこのようなシンボリックな計算をサポートしている．
+本章は，シンボリックな計算を扱うためのEgisonの機能を紹介する．
+
+\section{未定義変数 = シンボル}label{cas-symbol}
+
+数式処理システムは，未束縛の変数をシンボルとして扱う．
+そのため，未定義の変数をプログラム中で使ってもエラーにならない．
+\begin{lstlisting}[language=egison,numbers=none]
+x -- x
+\end{lstlisting}
+
+数式処理システムとしての機能をもつEgisonには，シンボル同士の足し算や掛け算が組み込みで定義されている．
+そのため，たとえば，$x + x = 2x$や$(x + y)^2 = x^2 + 2 x y + y^2$のような計算ができる．
+\begin{lstlisting}[language=egison,numbers=none]
+x + x -- 2x
+(x + y)^2 -- x^2 + 2 * y * x + y^2
+\end{lstlisting}
+
+Egisonは数式を自動で積和標準形に展開する．
+積和標準形とは，掛け算が内側に，足し算が外側になるような形の数式のことである．
+そのため，$(x + y)^2$は$x^2 + 2 x y + y^2$のように展開される．
+
+
+\section{数式の簡約}\label{cas-simplify}
+
+$sin^2\theta + cos^2\theta = 1$のような数式を紙の上で扱うときにおこなう簡約が，Egisonには実装されている．
+\begin{lstlisting}[language=egison,numbers=none]
+(sin θ)^2 + (cos θ)^2 -- 1
+\end{lstlisting}
+このような簡約のための機能は，Sweet Egison(Egisonのパターンマッチ機能を提供するHaskellライブラリ)を使ってHaskellにより言語に組み込みで実装されている．
+
+三角関数以外にも，複素数や平方根の簡約ルールも実装されている．
+\begin{lstlisting}[language=egison,numbers=none]
+i^2 -- -1
+(sqrt x)^2 -- x
+\end{lstlisting}
+
+
+\section{バッククオート（\texttt{`}）による式展開の制御}\label{cas-backquote}
+
+Egisonは数式を自動で積和標準形に展開すると\ref{cas-symbol}で述べたが，この展開をバッククオート（\lstinline{`}）により制御することができる．
+バッククオートに続く式は，ひとつのシンボルのように扱われる．
+\begin{lstlisting}[language=egison,numbers=none,escapechar=']
+`(x + 1)^2
+--  `(x + 1)^2
+
+`(x + 1) + `(x + 1)
+--  2 * `(x + 1)
+
+`(x + 1) + (x + 1)
+-- `(x + 1) + x + 1
+\end{lstlisting}
+
+バッククオートが役に立つのは，主に下記のような多項式の割り算を含む計算のときである．
+\begin{lstlisting}[language=egison,numbers=none,escapechar=']
+(x + 1)^2 / (x + 1)
+-- (x^2 + 2 * x + 1) / (x + 1)
+
+`(x + 1)^2 / `(x + 1)
+-- '(x + 1)
+\end{lstlisting}
+
+
+\section{シングルクオート（\texttt{'}）による関数適用の制御}
+
+Egisonは未定義の関数を適用すると以下のようにシンボリックな結果を返す．
+\begin{lstlisting}[language=egison,numbers=none]
+f a -- f a
+\end{lstlisting}
+ときに，定義済みの関数の適用についても上記のようにシンボリックな結果を返したいときがある．
+そのようなときは，シングルクオート（\lstinline{'}）を関数の前に付加すればよい．
+\begin{lstlisting}[language=egison,numbers=none]
+def f x := x + 1
+
+f a -- a + 1
+'f a -- f a
+\end{lstlisting}
+
+シングルクオートは三角関数\lstinline{sin}や\lstinline{cos}，平方根を計算する\lstinline{sqrt}の実装でEgisonライブラリ内で使われている．
+シングルクオートによって，たとえば下記のような\lstinline{sqrt}の挙動が実装されている．
+\begin{lstlisting}[language=egison,numbers=none]
+sqrt 4 -- 2
+sqrt 5 -- sqrt 5
+\end{lstlisting}
+
+\section{関数シンボルによるシンボリックな関数の引数の省略}
+
+
+\section{\texttt{withSymbols}式によるローカルシンボルの宣言}
