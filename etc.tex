@@ -1,0 +1,50 @@
+\chapter{関数型プログラミング言語としてのいくつかの機能}\label{etc}
+
+\section{無名パラメーター関数}
+
+無名パラメーター関数（anonymous parameter function）\index{むめいぱらめーたーかんすう@無名パラメーター関数}を使うと引数に名前をつけずに関数を定義できる．
+ラムダ式を使うと関数の命名を省略できる．
+引数の命名まで省略できる無名パラメーター関数は，これをさらにおしすすめたものと考えることができる．
+たとえば，第一引数を10倍して第二引数と足し合わせる無名パラメーター関数は以下のように定義できる．
+\begin{lstlisting}[language=egison,numbers=none]
+2#(%1 * 10 + %2) 1 2
+-- 12
+\end{lstlisting}
+\lstinline{#}の前の\lstinline{2}は$2$引数の関数を定義していることを意味する．
+関数のボディの中で現れる\lstinline{%1}と\lstinline{%2}はそれぞれ第一引数と第二引数を表している．
+
+無名パラメータ関数には，引数にタプルをとるものとリストをとるものの2つの変種がある．
+この2つの変種は\lstinline{#}の前に指定する引数の数を括弧で囲むことによって定義する．
+\lstinline{#}の前の数を\lstinline{()}で囲むとタプルを引数に取る無名パラメーター関数を定義できる．
+\begin{lstlisting}[language=egison,numbers=none]
+(2)#(%1, %2) (10, 20)
+-- (10, 20)
+\end{lstlisting}
+\lstinline{#}の前の数を\lstinline{[]}で囲むとリストを引数に取る無名パラメーター関数を定義できる．
+\begin{lstlisting}[language=egison,numbers=none]
+[2]#(%2, %1) [10, 20]
+-- (20, 10)
+\end{lstlisting}
+
+\section{無名\texttt{matchAll}関数・無名\texttt{match}関数}
+
+関数定義のとき，仮引数をすぐにパターンマッチすることが多い．
+するとその仮引数の名前がそのパターンマッチのターゲットとしてしか役に立たない．
+この問題を解決するために無名\lstinline{matchAll}関数と無名\lstinline{match}関数がある．
+
+まず，無名\lstinline{matchAll}関数を紹介する．
+\lstinline{\}にスペースを入れずに\lstinline{matchAll}を続けることで無名\lstinline{matchAll}関数は定義される．
+このときっパターンマッチのターゲットは省略される．
+この無名\lstinline{matchAll}関数の引数がターゲットとなるからである．
+\begin{lstlisting}[language=egison,numbers=none]
+\matchAll as list something with
+  | $hs ++ $ts -> (hs, ts)
+\end{lstlisting}
+
+無名\lstinline{match}関数は，無名\lstinline{matchAll}関数の\lstinline{matchAll}を\lstinline{match}に変えるだけで定義できる．
+\begin{lstlisting}[language=egison,numbers=none]
+\match as list something with
+  | nil -> True
+  | _ -> False
+\end{lstlisting}
+

@@ -6,7 +6,7 @@
 Egisonもこのようなシンボリックな計算をサポートしている．
 本章は，シンボリックな計算を扱うためのEgisonの機能を紹介する．
 
-\section{未定義変数 = シンボル}label{cas-symbol}
+\section{未定義変数 = シンボル}\label{cas-symbol}
 
 数式処理システムは，未束縛の変数をシンボルとして扱う．
 そのため，未定義の変数をプログラム中で使ってもエラーにならない．
@@ -30,7 +30,7 @@ Egisonは数式を自動で積和標準形に展開する．
 
 $sin^2\theta + cos^2\theta = 1$のような数式を紙の上で扱うときにおこなう簡約が，Egisonには実装されている．
 \begin{lstlisting}[language=egison,numbers=none]
-(sin θ)^2 + (cos θ)^2 -- 1
+(sin `$\theta$`)^2 + (cos `$\theta$`)^2 -- 1
 \end{lstlisting}
 このような簡約のための機能は，Sweet Egison(Egisonのパターンマッチ機能を提供するHaskellライブラリ)を使ってHaskellにより言語に組み込みで実装されている．
 
@@ -40,6 +40,7 @@ i^2 -- -1
 (sqrt x)^2 -- x
 \end{lstlisting}
 
+\todo{簡約ルール一覧}
 
 \section{バッククオート（\texttt{`}）による式展開の制御}\label{cas-backquote}
 
@@ -90,5 +91,45 @@ sqrt 5 -- sqrt 5
 
 \section{関数シンボルによるシンボリックな関数の引数の省略}
 
+名前が$f$，引数が$x,y$と決まっているが，中身は未定義の関数$f(x,y)$は，紙の上では$f$と引数を省略して表記されることが多い．
+このシンボリックな関数の引数を省略する表記をプログラミングにも導入するための機能が関数シンボル(function symbol)である．
+
+このような，シンボリックな関数について引数を省略する記法をプログラミングに導入するときに問題となるのは微分である．
+引数が省略されたシンボリックな関数に対する微分に対して，微分結果を適切に返したい．
+たとえば，$f(x,y)$の省略である$f$を$x$で微分すれば，$\frac{\partial f}{\partial x}$を返し，$z$で微分すれば，$0$を返したい．
+\begin{lstlisting}[language=egison,numbers=none]
+def f := function (x, y)
+
+`$\partial$`/`$\partial$` f x -- f|x
+`$\partial$`/`$\partial$` f z -- 0
+\end{lstlisting}
+
+また，合成関数の微分に対応することも重要である．
+さきほどと同様に$f$を，$f(x,y)$の省略であるとする．
+また，$x=r \cos \theta, y= r \sin \theta$という関係式もあるとする．
+このとき，$f$を$r$で微分すると，$\frac{\partial f}{\partial x} \cos \theta + \frac{\partial f}{\partial y} \sin \theta$という結果を返したい．
+\begin{lstlisting}[language=egison,numbers=none]
+def x := r * cos `$\theta$`
+def y := r * sin `$\theta$`
+def f := function (x, y)
+
+`$\partial$`/`$\partial$` f r
+-- f|x * cos `$\theta$` + f|y * sin `$\theta$`
+\end{lstlisting}
+
 
 \section{\texttt{withSymbols}式によるローカルシンボルの宣言}
+
+\label{cas-symbol}で述べたとおり，未定義の変数はシンボルとして扱われる．
+そのために，ユーザが意識していなかったところで定義済みの変数をユーザーがシンボルとして扱おうとし，バグが生じる場面がある．
+この問題を解決するために，\lstinline{withSymbols}式というローカルシンボルを宣言するための構文がEgisonには用意されている．
+
+\begin{lstlisting}[language=egison,numbers=none]
+def i := 10
+
+i -- 10
+withSymbols [i] i -- i
+i + withSymbols [i] i -- 10 + i
+j + withSymbols [j] j -- j + j
+\end{lstlisting}
+
