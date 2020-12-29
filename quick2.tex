@@ -68,7 +68,7 @@ $ egison -M mathematica
 #mathematica|x + Sqrt[2]|#
 \end{lstlisting}
 
-\section{二次方程式を解くプログラム}\label{quick2-quadratic}
+\section{二次方程式を解くプログラム - 数式を処理するアルゴリズムの記述}\label{quick2-quadratic}
 
 本節では，二次方程式を解くアルゴリズムをプログラムとして書いていく．
 実際には，以下のように二次方程式を引数にとり，解を返す関数\lstinline{qF}を定義していく．
@@ -119,9 +119,10 @@ def qF' a b c :=
 二次の係数で方程式を割ることにより，二次の係数が$1$の方程式に変換し，ふたたび\lstinline{qF}関数にわたす処理をしている．
 
 
-\section{三次方程式を解くプログラム}\label{quick2-cubic}
+二次方程式より一段と複雑になるが，三次方程式・四次方程式を解くプログラムを書いてみると面白い．
+これらのプログラムはEgisonのソースコードの\texttt{sample/math/algebra}ディレクトリ以下に公開されている．
 
-\section{微分するプログラム}\label{quick2-derivative}
+\section{微分するプログラム - 数式に対するパターンマッチ}\label{quick2-derivative}
 
 Egisonには微分計算をするための関数\lstinline{d/d}がライブラリ関数として実装されている．
 この関数は第一引数の関数を第二引数のシンボルについて微分した結果を返す．
@@ -137,8 +138,9 @@ d/d (1 / log x) x -- -1 / (x * (log x)^2)
 \end{lstlisting}
 本節はこの関数の実装を紹介する．
 
-\begin{lstlisting}[language=egison,numbers=none]
-def d/d $f *$x :=
+\lstinline{d/d}は以下のように定義される．
+\begin{lstlisting}[language=egison]
+def d/d $f $x :=
   match f as mathExpr with
     -- `シンボルの微分`
     | #x -> 1
@@ -150,9 +152,6 @@ def d/d $f *$x :=
     | #'(^) $g $h -> f * d/d (log g * h) x
     | #'cos $g -> (- sin g) * d/d g x
     | #'sin $g -> cos g * d/d g x
-    | #'arccos $g -> 1 / sqrt (1 - g ^ 2) * d/d g x
-    | apply $g $args ->
-      sum (map2 (\nat arg -> (capply '(userRefs g [nat]) args) * d/d arg x) nats args)
     -- `定数の微分`
     | #0 -> 0
     | _ * #1 -> 0
@@ -167,3 +166,17 @@ def d/d $f *$x :=
           p2' := d/d p2 x
        in (p1' * p2 - p2' * p1) / p2 ^ 2
 \end{lstlisting}
+第一引数の$f$を数式としてパターンマッチしている．
+4-5行目はシンボルの微分を定義している．
+もし，\lstinline{f}が\lstinline{x}そのものであったら，$1$を返し，\lstinline{f}が\lstinline{x}以外のシンボルであったら$0$を返すように定義されている．
+7-12行目はいくつかの基本的な関数の適用について合成関数の微分を記述している．
+14-15行目は定数項に対する微分を定義している．
+定数項は微分すると$0$になる．
+\todo{パターンの説明}
+17-18行目は，ここまでに微分を定義した項を掛け合わせた項についての微分を定義している．
+$x^n$は$n x^{n-1}$に微分されることと，$f g$は$f' g + f g'$に微分されることを利用して定義している．
+ここでも合成関数の微分の公式が使われている．
+20行目は多項式の微分が定義されている．
+ここまでで単項式についての微分が定義されているので，それらを足し合わせたものについては，それぞれの項について微分して足し合わせてやればよい．
+22-24行目は多項式を分母と分子にもつ式に対する微分が定義されている．
+商の微分の公式を使って定義されている．
