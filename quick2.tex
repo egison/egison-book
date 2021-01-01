@@ -27,7 +27,7 @@ Egisonは数式を自動で積和標準形に展開する．
 
 \section{関数適用のシンボル化}\label{quick2-symbol2}
 
-\lstinline{sqrt 2}や\lstinline{exp x}のように関数適用を進められない場合，関数適用を止めて，その式をシンボリックな値としてそのまま返すことができる．
+\lstinline{sqrt 2}や\lstinline{exp x}のような評価を進められない関数適用については，関数適用を止めて，その式をシンボリックな値としてそのまま返すことができる．
 これらの値は，\lstinline{x}や\lstinline{y}のようなシンボルと同様に扱われる．
 \begin{lstlisting}[language=egison,numbers=none]
 sqrt 4 -- 2
@@ -71,7 +71,7 @@ $ egison -M mathematica
 \section{二次方程式を解くプログラム - 数式を処理するアルゴリズムの記述}\label{quick2-quadratic}
 
 本節では，二次方程式を解くアルゴリズムをプログラムとして書いていく．
-実際には，以下のように二次方程式を引数にとり，解を返す関数\lstinline{qF}を定義していく．
+以下のように二次方程式を引数にとり，解を返す関数\lstinline{qF}を定義していく．
 \begin{lstlisting}[language=egison,numbers=none]
 qF (x ^ 2 + x + 1) x
 -- ((-1 + i * sqrt 3) / 2, (-1 - i * sqrt 3) / 2)
@@ -85,11 +85,12 @@ qF (a * x ^ 2 + b * x + c) x
 qF (a * x ^ 2 + 2 * b * x + c) x
 -- ((- b + sqrt (b^2 - a * c)) / a, (- b - sqrt (b^2 - a * c)) / a)
 \end{lstlisting}
-\lstinline{qF}はは以下のように解の公式をそのまま書くだけでも定義することができる．
-\lstinline{qF'}という補助関数を使って\lstinline{qF}を定義している．
+\lstinline{qF}は解の公式$\frac{-b \pm \sqrt{b^2 - 4 a c}}{2 a}$をそのまま書くだけでも定義することができる．
+以下のプログラムは\lstinline{qF'}という補助関数を使って\lstinline{qF}を定義している．
 \lstinline{qF'}は第一引数に二次の係数，第二引数に一次の係数，第三引数に定数項をとる．
 たとえば，\lstinline{qF' 1 0 2}は2次方程式$x^2 + 2 = 0$の解を返す．
 \lstinline{coefficients}は多項式とシンボルを引数にとり，そのシンボルについて係数のリストを返す関数である．
+\lstinline{qF'}は単純に$\frac{-b + \sqrt{b^2 - 4 a c}}{2 a}$と$\frac{-b - \sqrt{b^2 - 4 a c}}{2 a}$からなるタプルを返す関数として定義されている．
 \begin{lstlisting}[language=egison,numbers=none]
 def qF f x :=
   match coefficients f x as list mathExpr with
@@ -99,7 +100,8 @@ def qF' a b c :=
   ( ((- b) + sqrt (b ^ 2 - 4 * a * c)) / 2 * a
   , ((- b) - sqrt (b ^ 2 - 4 * a * c)) / 2 * a )
 \end{lstlisting}
-しかし，今回はこの解の公式を求めるアルゴリズムを書いていく．
+しかし，上記の記述ではアルゴリズムっぽさがないため，今回は平方完成によりこの解の公式を求めるアルゴリズムを書いていく．
+平方完成とは，$x^2 + b x + c$のような二次式を$(x + b / 2)^2 - b^2 / 4 + c$のように変形する操作のことである．
 \begin{lstlisting}[language=egison]
 def qF' a b c :=
   match (a, b, c) as (mathExpr, mathExpr, mathExpr) with
@@ -110,11 +112,19 @@ def qF' a b c :=
           qF (substitute [(x, y - b / 2)] (x ^ 2 + b * x + c)) y)
     | (_, _, _) -> qF' 1 (b / a) (c / a)
 \end{lstlisting}
+平方完成を使ってを二次方程式を解くアルゴリズムを記述すると\lstinline{qF'}は3つのマッチ節からなる関数となる．
 3行目のマッチ節は，$x^2 + c = 0$のような形の二次方程式を処理する．
 このマッチ節は，$\sqrt{c}$と$-\sqrt{c}$という結果を返す．
 4-7行目のマッチ節は，$x^2 + b x + c = 0$のような二次の係数が$1$である形の二次方程式を処理する．
-ここがこの関数の本体である．
-\todo{説明}
+このマッチ節が平方完成の操作をするこの関数の本体である．
+\lstinline{substitute}はEgisonのライブラリ関数である．
+\lstinline{substitute}は第一引数で指定された代入を第二引数の式に対しておこなう．
+ここでは第一引数で，\lstinline{(x, y - b / 2)}という代入が指定されているため，$x = y - b / 2$という代入を式$x^2 + b x + c$に対しておこなう．
+同時に複数の代入を指定するために，\lstinline{substitute}の第一引数はリストを引数に取るようになっている．
+$x = y - b / 2$という代入をするとこの方程式は3行目のマッチ節でマッチする$y$についての二次方程式に変形される．
+そのため，\lstinline{qF}関数にこの変形された方程式を渡せば，$y$についてこの二次方程式の解を得られる．
+この$y$についての解に$\frac{-b}{2}$を加えることにより，もとの$x$についての解を得ることができる．
+\todo{withSymbols式についての説明}
 8行目のマッチ節は，二次の係数が$1$でない二次方程式を処理する．
 二次の係数で方程式を割ることにより，二次の係数が$1$の方程式に変換し，ふたたび\lstinline{qF}関数にわたす処理をしている．
 
