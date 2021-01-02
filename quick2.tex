@@ -27,14 +27,21 @@ Egisonは数式を自動で積和標準形に展開する．
 
 \section{関数適用のシンボル化}\label{quick2-symbol2}
 
-\lstinline{sqrt 2}や\lstinline{exp x}のような評価を進められない関数適用については，関数適用を止めて，その式をシンボリックな値としてそのまま返すことができる．
-これらの値は，\lstinline{x}や\lstinline{y}のようなシンボルと同様に扱われる．
+\lstinline{sqrt x}や\lstinline{exp x}のようにシンボルを引数にとる可能性がある関数について，関数適用を止めて，その式をシンボリックな値としてそのまま返すようにライブラリで定義されている．
 \begin{lstlisting}[language=egison,numbers=none]
 sqrt 4 -- 2
-sqrt 2 -- sqrt 2
+sqrt x -- sqrt x
 exp 1 -- e
 exp x -- exp x
 \end{lstlisting}
+
+\lstinline{sqrt 2}のように評価を進められない関数適用についても，関数適用を止めて，その式をそのまま返すようにライブラリで定義されている．
+$\sqrt{8} \rightarrow 2 \sqrt{2}$のような簡約もライブラリで定義されている．
+\begin{lstlisting}[language=egison,numbers=none]
+sqrt 2 -- sqrt 2
+sqrt 8 -- 2 * sqrt 2
+\end{lstlisting}
+これらの定義については，\ref{cas-squote}節\todo{}で紹介する．
 
 
 \section{数式の簡約}\label{quick2-simplify}
@@ -54,8 +61,8 @@ i^2 -- -1
 \todo{簡約ルール一覧}
 
 
-数式の簡約は非常に難しい問題で，Egisonでは簡潔なアルゴリズムしか用意されていない．
-たとえば，多項式の分数の簡約にはグレブナー基底についての理論に基づいたアルゴリズムが有用であるが，Egisonには実装されていない．
+数式の簡約の自動化は非常に難しく，Egisonでは簡潔なアルゴリズムしか用意されていない．
+たとえば，多項式の約分にはグレブナー基底についての理論に基づいたアルゴリズムが有用であるが，Egisonには実装されていない．
 
 Wolfram言語のプログラムへの変換．
 
