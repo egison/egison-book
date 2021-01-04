@@ -1,0 +1,131 @@
+\chapter{数式データの扱い}\label{mexpr}
+
+本章は，シンボリックな計算を扱うためのEgisonの機能を紹介する．
+
+\section{数式データの内部表現}\label{mexpr-expr}
+
+数式は組み込みデータ型としてEgison処理系内部でHaskellの代数的データ型を用いて直接実装されている．
+\lstinline{fromMathExpr}という組み込み関数を使うと，この数式データをEgison上の代数的データ型に変換することができる．
+\begin{lstlisting}[language=egison,numbers=none]
+fromMathExpr  (x - sqrt 2)
+-- Div (Plus [Term 1 [(Symbol x [], 1)], Term -1 [(Apply sqrt [Div (Plus [Term 2 []])
+--     (Plus [Term 1 []])], 1)]]) (Plus [Term 1 []])
+\end{lstlisting}
+本節は，数式データを表現するこの内部の代数的データ型について説明する．
+
+上記の出力の代数的データ型からもわかるように，数式データ型は，分母と分子の両方に積和標準形の多項式をとる分数として定義されている．
+\lstinline{Div}がこの分数を生成するためのデータコンストラクタで，\lstinline{Plus}が多項式を生成するためのデータコンストラクタとなっている．
+そのため，たとえば分数同士の足し算の結果は一つの分数にまとめられる．
+\begin{lstlisting}[language=egison,numbers=none]
+a / b + x / y
+-- (a * y + x * b) / (b * y)
+\end{lstlisting}
+\lstinline{Plus}の引数がリストであることからもわかるように，多項式は，項のリストからなるデータ型として定義されている．
+そして，項は係数と因子のリストからなるデータ型として定義されている．
+項は\lstinline{Term}データコンストラクタを使って生成される．
+\lstinline{Term}は第一引数に係数，第二引数に因子のリストをとる．
+係数には整数，因子にはシンボルなどをとることができる．
+たとえば，\lstinline{3 * x^2 * sqrt 2}という項は，係数として\lstinline{3}，因子のリストとして\lstinline{[x^2, sqrt 2]}をとる．
+因子にはシンボル以外に，$\sqrt{2}$のような項もとることもできる．
+\begin{lstlisting}[language=egison,numbers=none]
+fromMathExpr (3 * x^2 * sqrt 2)
+-- Div (Plus [Term 3 [(Symbol x [], 2), (Apply sqrt [Div (Plus [Term 2 []]) (Plus [Term 1 []])], 1)]]) (Plus [Term 1 []])
+\end{lstlisting}
+上記の例のように，因子は\lstinline{Symbol}や\lstinline{Apply}といったデータコンストラクタを使って生成される．
+その他に因子のデータコンストラクタに\lstinline{Quote}がある．
+\lstinline{Quote}データコンストラクタについては，\ref{mexpr-backquote}節で紹介する．
+
+\lstinline{fromMathExpr}の逆にEgison上の代数的データ型として表現された数式をEgison処理系内部の数式データに変換する\lstinline{toMathExpr}関数も用意されている．
+\lstinline{toMathExpr}関数を使うと，Egison上の代数的データ型として数式を処理したあとに，これらのデータをEgison内部の数式データに戻すことができる．
+\begin{lstlisting}[language=egison,numbers=none]
+toMathExpr (fromMathExpr  (x - sqrt 2))
+-- x - sqrt 2
+\end{lstlisting}
+ただし，\lstinline{fromMathExpr}と\lstinline{toMathExpr}のような組み込み関数は，Egisonライブラリで定義されている\lstinline{mathExpr}マッチャーを使えば，ユーザーが触る必要はほぼない．
+\lstinline{mathExpr}マッチャーの実装に\lstinline{fromMathExpr}と\lstinline{toMathExpr}は使われている．
+
+数は複雑なデータ型である．
+自然数までであれば代数的データ型としてエレガントに定義できる．
+しかし，自然数の足し算の逆関数引き算を考えると，負の数という概念が得られる．
+さらに足し算を繰り返すことによって得られる掛け算の逆を考えると，有理数という概念が得られる．
+さらに掛け算を繰り返すことによって得られるべき乗という操作の逆を考えると，平方根や虚数，それらを含む代数的数の概念が得られる．
+
+\section{バッククオート（\texttt{`}）による式展開の制御}\label{mexpr-backquote}
+
+Egisonは数式を自動で積和標準形に展開すると\ref{mexpr-symbol}で述べたが，この展開をバッククオート（\lstinline{`}）により制御することができる．
+バッククオートに続く式は，ひとつのシンボルのように扱われる．
+\begin{lstlisting}[language=egison,numbers=none,escapechar=']
+`(x + 1)^2
+--  `(x + 1)^2
+
+`(x + 1) + `(x + 1)
+--  2 * `(x + 1)
+
+`(x + 1) + (x + 1)
+-- `(x + 1) + x + 1
+\end{lstlisting}
+
+バッククオートが役に立つのは，主に下記のような多項式の割り算を含む計算のときである．
+\begin{lstlisting}[language=egison,numbers=none,escapechar=']
+(x + 1)^2 / (x + 1)
+-- (x^2 + 2 * x + 1) / (x + 1)
+
+`(x + 1)^2 / `(x + 1)p
+-- '(x + 1)
+\end{lstlisting}
+
+バッククオートによりクオートされた項は，Egison内部の数式データのなかで因子として扱われる．
+\lstinline{Quote}は，\lstinline{Symbol}や\lstinline{Apply}と同列のデータコンストラクタとして定義されている．
+\begin{lstlisting}[language=egison,numbers=none,escapechar=']
+fromMathExpr (`(x + 1)^2)
+-- Div (Plus [Term 1 [(Quote (Div (Plus [Term 1 [(Symbol x [], 1)], Term 1 []]) (Plus [Term 1 []])), 2)]]) (Plus [Term 1 []])fromMathExpr `(x + 1)^2
+\end{lstlisting}
+
+\section{シングルクオート（\texttt{'}）による関数適用の制御}
+
+Egisonはシンボルを関数として適用するとシンボリックな結果を返す．
+例えば，未定義の変数\lstinline{f}についての関数適用は以下のように動作する．
+\begin{lstlisting}[language=egison,numbers=none]
+f a -- f a
+\end{lstlisting}
+定義済みの関数の適用についても上記のようにシンボリックな結果を返したいことがある．
+たとえば，\lstinline{sqrt}関数については以下のように動作してほしい．
+\begin{lstlisting}[language=egison,numbers=none]
+sqrt 4 -- 2
+sqrt 5 -- sqrt 5
+\end{lstlisting}
+このような動作を実現するために，Egisonには組み込み構文としてシングルクオート（\lstinline{'}）が用意されている．
+シングルクオートには変数が続き，たとえその変数が定義済みであったとしても，その変数の名前のシンボルを返す．
+シングルクオートを関数の前に付加すれば，定義済みの関数に対してもシンボリックな関数適用を表現できる．
+\begin{lstlisting}[language=egison,numbers=none]
+def f x := x + 1
+
+f a -- a + 1
+'f a -- f a
+\end{lstlisting}
+シングルクオートは平方根を計算する\lstinline{sqrt}の実装以外にも，三角関数\lstinline{sin}や\lstinline{cos}の実装などでEgisonライブラリ内で使われている．
+
+\begin{lstlisting}[language=egison,numbers=none]
+fromMathExpr x
+-- Div (Plus [Term 1 [(Symbol x [], 1)]]) (Plus [Term 1 []])
+fromMathExpr 'x
+-- Div (Plus [Term 1 [(Symbol x [], 1)]]) (Plus [Term 1 []])
+\end{lstlisting}
+
+\section{\texttt{withSymbols}式によるローカルシンボルの宣言}
+
+未定義の変数はシンボルとして扱われるという仕様は，すでに定義済みの変数をユーザーがシンボルとして扱おうとするミスを誘発しやすい．
+この問題を解決するために，\lstinline{withSymbols}式というローカルシンボルを宣言するための構文がEgisonには用意されている．
+\lstinline{withSymbols}式は，第一引数に変数のリストをとり，これらの変数は第二引数の式の評価時にシンボルとして扱われる．
+\begin{lstlisting}[language=egison,numbers=none]
+def i := 10
+
+i -- 10
+withSymbols [i] i -- i
+i + withSymbols [i] i -- 10 + i
+\end{lstlisting}
+
+\lstinline{withSymbols}式で宣言されたローカルなシンボルは，未定義変数から生成されるグローバルなシンボルとは独立したシンボルとして処理される．
+\begin{lstlisting}[language=egison,numbers=none]
+j + withSymbols [j] j -- j + j
+\end{lstlisting}

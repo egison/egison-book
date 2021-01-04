@@ -194,7 +194,7 @@ $
 ここでは，2引数をとってそのタプルを返す関数により，スカラー関数とテンソル関数をデモしている．
 
 \begin{lstlisting}[language=egison,numbers=none]
-(\$u$v -> (u, v)) [| a, b |]_i [| x, y |]_j
+(\$u $v -> (u, v)) [| a, b |]_i [| x, y |]_j
 -- [| [| (a, x), (a, y) |],
         [| (b, x), (b, y) |] |]_i_j
 
