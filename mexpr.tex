@@ -176,22 +176,51 @@ match ('f x 1 y)  as mathExpr with
 -- (f, x, [1, y])
 \end{lstlisting}
 
+\todo{quoteパターン}
+
 \subsection{項に対するパターンマッチ}
 
+項に対するパターンマッチには，\lstinline{term}パターンコンストラクタを使う．
+\lstinline{term}パターンコンストラクタの第一引数は係数に，第二引数は因子の連想リストにパターンマッチする．
+因子の連想リストのパターンマッチには，assocMultisetマッチャーが使われる．\todo{assocMultisetマッチャーの説明}
 \begin{lstlisting}[language=egison,numbers=none]
-term 係数 因子のリスト
+matchAll 3 * x^2 * y  as mathExpr with
+  | term $a ($x :: $xs) -> (a, x, xs)
+-- [(3, x, [(x, 1), (y, 1)]), (3, y, [(x, 2)])]
+\end{lstlisting}
 
-$a * $x * $xs -- term $a ($x :: $xs)
-$a * $x * 1 -- term $a ($x :: [])
+\lstinline{term}パターンコンストラクタには，より数式に近いパターンを記述するための糖衣構文がある．
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll 3 * x^2 * y  as mathExpr with
+  | $a * $x * $xs -> (a, x, xs)
+-- [(3, x, x * y), (3, y, x^2)]
+\end{lstlisting}
+
+\todo{べき乗パターンの説明}
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll 3 * x^2 * y  as mathExpr with
+  | $a * $x^#2 * $xs -> (a, x, xs)
+-- [(3, x, y)]
 \end{lstlisting}
 
 \subsection{多項式に対するパターンマッチ}
 
+有理式に対するパターンマッチには，\lstinline{poly}パターンコンストラクタを使う．
+\lstinline{poly}パターンコンストラクタは引数に項のリストにマッチするパターンをとる．
+\begin{lstlisting}[language=egison,numbers=none]
+\end{lstlisting}
+
+\lstinline{poly}パターンコンストラクタにも，より数式に近いパターンを記述するための糖衣構文がある．
+\begin{lstlisting}[language=egison,numbers=none]
+\end{lstlisting}
 
 \subsection{有理式に対するパターンマッチ}
 
+有理式に対するパターンマッチには，\lstinline{div}パターンコンストラクタを使う．
+\lstinline{div}パターンコンストラクタの第一引数は分子の多項式に，第二引数は分母の多項式にパターンマッチする．
 \begin{lstlisting}[language=egison,numbers=none]
-div 分子の多項式 分母の多項式
+\end{lstlisting}
 
-$f / $g -- div $f $g
+\lstinline{div}パターンコンストラクタにも，より数式に近いパターンを記述するための糖衣構文がある．
+\begin{lstlisting}[language=egison,numbers=none]
 \end{lstlisting}
