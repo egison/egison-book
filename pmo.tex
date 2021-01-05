@@ -461,7 +461,7 @@ graphData :=
 trips :=
   let n := length graphData in
     matchAll graphData as graph with
-    | (#"Berlin", (($s_1,$p_1) : _)) ::
+    | (#"Berlin", (($s_1,$p_1) :: _)) ::
         loop $i (2, n - 1)
           ((#s_(i - 1), ($s_i, $p_i) :: _) :: ...)
           ((#s_(n - 1), (#"Berlin" & $s_n, $p_n) :: _) :: [])

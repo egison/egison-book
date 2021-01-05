@@ -27,13 +27,21 @@ a / b + x / y
 係数には整数，因子にはシンボルなどをとることができる．
 たとえば，\lstinline{3 * x^2 * sqrt 2}という項は，係数として\lstinline{3}，因子のリストとして\lstinline{[x^2, sqrt 2]}をとる．
 因子にはシンボル以外に，$\sqrt{2}$のような項もとることもできる．
+因子のリストは，底（$x^2$の場合$x$）と冪指数（$x^2$の場合$2$）の連想リストとなっている．
+冪指数には自然数しかとれないという制限がある．
 \begin{lstlisting}[language=egison,numbers=none]
 fromMathExpr (3 * x^2 * sqrt 2)
 -- Div (Plus [Term 3 [(Symbol x [], 2), (Apply sqrt [Div (Plus [Term 2 []]) (Plus [Term 1 []])], 1)]]) (Plus [Term 1 []])
 \end{lstlisting}
 上記の例のように，因子は\lstinline{Symbol}や\lstinline{Apply}といったデータコンストラクタを使って生成される．
-その他に因子のデータコンストラクタに\lstinline{Quote}がある．
+\lstinline{Symbol}データコンストラクタは，第一引数にシンボル自身を，第二引数に添字のリストをとる．
+\lstinline{Symbol}データコンストラクタの第一引数にシンボル自身にしているのは，\lstinline{fromMathExpr}の結果を扱いやすくするためである．
+シンボルを表現するのデータ構造のなかにシンボル自身があると定義が無限に循環してしまうため，Haskellによるシンボルの内部表現は\lstinline{Symbol}データコンストラクタの第一引数は文字列をとっている．
+添字については，テンソルについて解説する第\ref{tensor}章で説明する．
+\lstinline{Apply}データコンストラクタは，第一引数に関数名のシンボルを，第二引数に引数の数式のリストをとる．
+その他に因子のデータコンストラクタに\lstinline{Quote}と\lstinline{Function}がある．
 \lstinline{Quote}データコンストラクタについては，\ref{mexpr-backquote}節で紹介する．
+\lstinline{Function}データコンストラクタについては，第\ref{funcsym}章で紹介する．
 
 \lstinline{fromMathExpr}の逆にEgison上の代数的データ型として表現された数式をEgison処理系内部の数式データに変換する\lstinline{toMathExpr}関数も用意されている．
 \lstinline{toMathExpr}関数を使うと，Egison上の代数的データ型として数式を処理したあとに，これらのデータをEgison内部の数式データに戻すことができる．
@@ -81,7 +89,7 @@ fromMathExpr (`(x + 1)^2)
 -- Div (Plus [Term 1 [(Quote (Div (Plus [Term 1 [(Symbol x [], 1)], Term 1 []]) (Plus [Term 1 []])), 2)]]) (Plus [Term 1 []])fromMathExpr `(x + 1)^2
 \end{lstlisting}
 
-\section{シングルクオート（\texttt{'}）による関数適用の制御}
+\section{シングルクオート（\texttt{'}）による関数適用の制御}\label{mexpr-squote}
 
 Egisonはシンボルを関数として適用するとシンボリックな結果を返す．
 例えば，未定義の変数\lstinline{f}についての関数適用は以下のように動作する．
@@ -112,7 +120,7 @@ fromMathExpr 'x
 -- Div (Plus [Term 1 [(Symbol x [], 1)]]) (Plus [Term 1 []])
 \end{lstlisting}
 
-\section{\texttt{withSymbols}式によるローカルシンボルの宣言}
+\section{\texttt{withSymbols}式によるローカルシンボルの宣言}\label{mexpr-withsym}
 
 未定義の変数はシンボルとして扱われるという仕様は，すでに定義済みの変数をユーザーがシンボルとして扱おうとするミスを誘発しやすい．
 この問題を解決するために，\lstinline{withSymbols}式というローカルシンボルを宣言するための構文がEgisonには用意されている．
@@ -128,4 +136,62 @@ i + withSymbols [i] i -- 10 + i
 \lstinline{withSymbols}式で宣言されたローカルなシンボルは，未定義変数から生成されるグローバルなシンボルとは独立したシンボルとして処理される．
 \begin{lstlisting}[language=egison,numbers=none]
 j + withSymbols [j] j -- j + j
+\end{lstlisting}
+
+\section{数式データに対するパターンマッチ}\label{mexpr-pattern}
+
+本節は，数式データに対して用意されているパターンを紹介する．
+数式に対するマッチャー\lstinline{mathExpr}はEgisonライブラリに実装されている．
+\lstinline{mathExpr}の定義は\texttt{lib/math/expression.egi}で確認できる．
+また数式に対するパターンを，より数式に近いかたちで記述するためにいくつかの糖衣構文が組み込みで実装されている．
+本節では，これらの糖衣構文も紹介する．
+数式に対するパターンマッチは，\ref{cas-derivative}節で実演されている．
+パターンの具体的な使用例として，\ref{cas-derivative}節のプログラムを参照してほしい．
+
+\subsection{因子に対するパターンマッチ}
+
+因子に対するパターンコンストラクタは，\lstinline{symbol}・\lstinline{apply}・\lstinline{quote}・\lstinline{func}の4つがある．
+\lstinline{symbol}はシンボルに，\lstinline{apply}は\ref{cas-symbol2}節で紹介したシンボリックな関数適用に，\lstinline{quote}は\ref{mexpr-backquote}節で紹介したバッククオートされた式に，\lstinline{func}は第\ref{funcsym}章で解説する関数シンボルと呼ばれるオブジェクトにパターンマッチするためのパターンコンストラクタである．
+
+\lstinline{symbol}パターンコンストラクタの第一引数はシンボル自身に，第二引数は添字にパターンマッチする．
+添字については，テンソルについて解説する第\ref{tensor}章で改めて紹介する．
+\begin{lstlisting}[language=egison,numbers=none]
+match x as mathExpr with
+  | symbol $s _ -> s
+-- x
+\end{lstlisting}
+シンボルに対しては\lstinline{symbol}パターンコンストラクタを使ってパターンマッチすることもできるが，実際には値パターンを使ってパターンマッチすることが多い．
+\begin{lstlisting}[language=egison,numbers=none]
+match x as mathExpr with
+  | #x -> "Matched"
+  | _ -> "Not matched"
+-- "Matched"
+\end{lstlisting}
+
+\lstinline{symbol}パターンコンストラクタの第一引数は関数名のシンボルに，第二引数は引数の数式のリストにパターンマッチする．
+引数のパターンマッチには，\lstinline{list mathExpr}マッチャーが使われるため，リストに対するパターンを使うことができる．
+\begin{lstlisting}[language=egison,numbers=none]
+match ('f x 1 y)  as mathExpr with
+  | apply $f ($x :: $xs) -> (f, x, xs)
+-- (f, x, [1, y])
+\end{lstlisting}
+
+\subsection{項に対するパターンマッチ}
+
+\begin{lstlisting}[language=egison,numbers=none]
+term 係数 因子のリスト
+
+$a * $x * $xs -- term $a ($x :: $xs)
+$a * $x * 1 -- term $a ($x :: [])
+\end{lstlisting}
+
+\subsection{多項式に対するパターンマッチ}
+
+
+\subsection{有理式に対するパターンマッチ}
+
+\begin{lstlisting}[language=egison,numbers=none]
+div 分子の多項式 分母の多項式
+
+$f / $g -- div $f $g
 \end{lstlisting}
