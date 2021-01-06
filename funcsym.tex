@@ -31,8 +31,115 @@ def f := function (x, y)
 \end{lstlisting}
 
 
-\subsection{関数シンボルの内部表現}
+\section{関数シンボルによる未定義関数の引数の省略}
+
+数学では，シンボリックな関数の引数は，多くの場合，省略される．
+たとえば，名前が$f$，引数が$x,y$と決まっているが，中身は定義されていないシンボリックな関数$f(x,y)$は，紙の上では$f$と引数を省略して表記されることが多い．
+Egisonはこの記法を\emph{関数シンボル}としてプログラミングに導入した．
+本節はこの記法の使い方について説明する．
+
+\subsection{関数シンボルの微分}
+
+関数シンボルが特に力を発揮するのは，微分を扱う計算のときである．
+以下では\texttt{x}，\texttt{y}を引数にとる関数シンボル\texttt{f}を定義している．
+そして，その関数シンボル\texttt{f}を\texttt{x}や\texttt{y}について微分している．
+\verb!f|x!は，関数\texttt{f}を\texttt{x}で偏微分した結果の関数を表す．
+\verb!f|x|y!は，関数\texttt{f}を\texttt{x}で偏微分した後，さらに\texttt{y}で偏微分した結果の関数を表す．
+``\verb!|!''は，``\verb!_!''や``\verb!~!''と同様Egison組み込みの記号である．
+以下に関数シンボルの微分を標準的なEgison出力とLaTeX形式の出力の両方の表示例を示す．
+\texttt{∂/∂}はEgisonで定義されているライブラリ関数である．
+%関数シンボルの微分は，言語に組み込みで実装されているのではなく，Egisonにより定義されている．
+
+\begin{multicols}{2}
+
+{\footnotesize
+\begin{verbatim}
+> (define $f (function [x y]))
+> f
+f
+> (∂/∂ f x)
+f|x
+> (∂/∂ (∂/∂ f x) y)
+f|x|y
+\end{verbatim}
+}
+
+\columnbreak
+
+{\footnotesize
+\begin{verbatim}
+> (define $f (function [x y]))
+> f
+#latex|f|#
+> (∂/∂ f x)
+#latex|\frac{\partial f}{\partial x}|#
+> (∂/∂ (∂/∂ f x) y)
+#latex|\frac{\partial^2 f}{\partial x \partial y}|#
+\end{verbatim}
+}
+
+\end{multicols}
+
+\texttt{f}は\texttt{x}と\texttt{y}についての関数であるので，以下のように\texttt{z}で微分すると\texttt{0}になる．
+
+{\footnotesize
+\begin{verbatim}
+> (∂/∂ f z)
+0
+\end{verbatim}
+}
+
+物理の計算では，$t,x,y,z$の4つの引数をとる関数がよく登場する．
+もし関数シンボルのような仕組みがないと，式が長くなり，読み難くなるため，関数シンボルの仕組みはプログラムの読み書きしやすくする．
+
+合成関数の微分にも対応していることが，Egisonの関数シンボルの重要な特徴である．
+たとえば，関数シンボルは，以下のように合成関数の微分にも対応できる．
+\texttt{function}式の仮引数が変数名(\verb|$x|や\verb|$y|)ではなく式をとるのは，以下のように合成関数の微分に対応するためである．
+
+{\footnotesize
+\begin{verbatim}
+> (define $f (function [x y]))
+> (define $x (* r (cos θ)))
+> (define $y (* r (sin θ)))
+> (∂/∂ f r)
+(+ (* f|x (cos θ))  (* f|y (sin θ)))
+\end{verbatim}
+}
+
+\subsection{関数シンボルを成分にもつテンソル}
+
+テンソルの成分に関数シンボルがあらわれた場合もサポートしていることも，Egisonの関数シンボルの重要な特徴である．
+以下の例のようにテンソルの成分が関数シンボルであった場合，テンソルを束縛している変数名に成分の位置の添字を付加した名前をもつ関数シンボルが生成される．
+この機能はプログラム上でベクトル場やテンソル場を表現するときに便利である．
+
+{\footnotesize
+\begin{verbatim}
+> (define $g__
+    (generate-tensor
+      (match-lambda [integer integer]
+        {[[$n ,n] (function [x y z])]
+         [[_ _] 0]})
+      {3 3}))
+> g_i_j
+[| [| g_1_1 0 0 |] [| 0 g_2_2 0 |] [| 0 0 g_3_3 |] |]_i_j
+> (∂/∂ g_i_j x)
+[| [| g_1_1|x 0 0 |] [| 0 g_2_2|x 0 |] [| 0 0 g_3_3|x |] |]_i_j
+\end{verbatim}
+}
+
+\texttt{generate-tensor}式は，テンソルを生成するのに便利な組み込み構文である．
+第一引数に成分の位置を引数にとり，その位置の成分の値を返す関数をとる．
+第二引数にテンソルのサイズをとる．
+返り値として，第二引数のサイズで，それぞれの成分が第一引数の関数により計算されたテンソルを返す．
+
+%上記のサンプルは，Egisonインタプリタ上のデモではなく，``\texttt{egison -t}''コマンドで実行可能なプログラムファイルを表示している．
+%式の評価結果を，式の後ろにつづくコメントのあとに記している．
+%``\verb|;|''はEgisonのインラインコメントデリミタである．
+%``\verb|;|''以降の同じ行の文字はコメントとして扱われる．
+
+\section{関数シンボルの内部表現}
 
 \lstinline{Function}データコンストラクタの第二引数
 
 \lstinline{func}パターンコンストラクタの第二引数
+

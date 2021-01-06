@@ -208,10 +208,16 @@ matchAll 3 * x^2 * y  as mathExpr with
 有理式に対するパターンマッチには，\lstinline{poly}パターンコンストラクタを使う．
 \lstinline{poly}パターンコンストラクタは引数に項のリストにマッチするパターンをとる．
 \begin{lstlisting}[language=egison,numbers=none]
+matchAll x + y + 1  as mathExpr with
+  | poly ($x :: $xs) -> (x, xs)
+-- [(x, [y, 1]), (y, [x, 1]), (1, [x, y])]
 \end{lstlisting}
 
 \lstinline{poly}パターンコンストラクタにも，より数式に近いパターンを記述するための糖衣構文がある．
 \begin{lstlisting}[language=egison,numbers=none]
+matchAll x + y + 1  as mathExpr with
+  | $x + $xs -> (x, xs)
+-- [(x, y + 1), (y, x + 1), (1, x + y)]
 \end{lstlisting}
 
 \subsection{有理式に対するパターンマッチ}
@@ -219,8 +225,14 @@ matchAll 3 * x^2 * y  as mathExpr with
 有理式に対するパターンマッチには，\lstinline{div}パターンコンストラクタを使う．
 \lstinline{div}パターンコンストラクタの第一引数は分子の多項式に，第二引数は分母の多項式にパターンマッチする．
 \begin{lstlisting}[language=egison,numbers=none]
+matchAll (a + b) / c  as mathExpr with
+  | div $x $y -> (x, y)
+-- [(a + b, c)]
 \end{lstlisting}
 
 \lstinline{div}パターンコンストラクタにも，より数式に近いパターンを記述するための糖衣構文がある．
 \begin{lstlisting}[language=egison,numbers=none]
+matchAll (a + b) / c  as mathExpr with
+  | $x / $y -> (x, y)
+-- [(a + b, c)]
 \end{lstlisting}

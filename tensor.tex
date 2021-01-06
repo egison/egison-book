@@ -202,6 +202,125 @@ $
 -- ([| a, b |]_i, [| x, y |]_j)
 \end{lstlisting}
 
+\begin{figure}[t]
+ \begin{subfigure}[b]{1.0\linewidth}
+  {\footnotesize
+\verb|(define $min (lambda [$x $y] (if (less-than? x y) x y)))|
+  }
+  \caption{\texttt{min}関数の定義}
+  \label{fig:minDef}
+ \end{subfigure}
+  \medskip
+ \begin{subfigure}[b]{1.0\linewidth}
+  {\small
+    $min(\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i},  \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{j}) = \begin{pmatrix} min(1,10) & min(1,20) & min(1,30) \\ min(2,10) & min(2,20) & min(2,30) \\ min(3,10) & min(3,20) & min(3,30) \\ \end{pmatrix}_{ij}
+    = \begin{pmatrix} 1 & 1 & 1 \\ 2 & 2 & 2 \\ 3 & 3 & 3 \\ \end{pmatrix}_{ij}$
+    }
+  \caption{異なる添字をもつベクトルにたいする\texttt{min}関数の適用}
+  \label{fig:minDiff}
+ \end{subfigure}
+  \medskip
+ \begin{subfigure}[b]{1.0\linewidth}
+  {\small
+    $min(\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i},  \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{i}) = \begin{pmatrix} min(1,10) & min(1,20) & min(1,30) \\ min(2,10) & min(2,20) & min(2,30) \\ min(3,10) & min(3,20) & min(3,30) \\ \end{pmatrix}_{ii}
+  = \begin{pmatrix} min(1,10) \\ min(2,20) \\ min(3,30) \end{pmatrix}_{i} = \begin{pmatrix} 1 \\ 2 \\ 3 \end{pmatrix}_{i}$ 
+    }
+  \caption{同じ添字をもつベクトルにたいする\texttt{min}関数の適用}
+  \label{fig:minSame}
+ \end{subfigure}
+ \caption{\texttt{min}関数の定義と適用例}
+ \label{fig:minFunction}
+\end{figure}
+
+\begin{figure}[t]
+ \begin{subfigure}[b]{1.0\linewidth}
+  {\footnotesize
+\verb|(define $. (lambda [%t1 %t2] (contract + (* t1 t2))))|
+  }
+  \caption{``\texttt{.}''関数の定義}
+  \label{fig:dotDef}
+ \end{subfigure}
+  \medskip
+ \begin{subfigure}[b]{1.0\linewidth}
+  {\small
+  $\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}^{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{i} = contract(+, \begin{pmatrix} 10 & 20 & 30 \\ 20 & 40 & 60 \\ 30 & 60 & 90 \\ \end{pmatrix}^{i}_{\;i})
+  = 10 + 40 + 90 = 140$
+  \\ \medskip \\
+  $\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{i} = contract(+, \begin{pmatrix} 10 \\ 40 \\ 90 \\ \end{pmatrix}_{i}) = \begin{pmatrix} 10 \\ 40 \\ 90 \\ \end{pmatrix}_{i}$
+  \\ \medskip \\
+  $\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{j} = contract(+, \begin{pmatrix} 10 & 20 & 30 \\ 20 & 40 & 60 \\ 30 & 60 & 90 \\ \end{pmatrix}_{ij})
+  = \begin{pmatrix} 10 & 20 & 30 \\ 20 & 40 & 60 \\ 30 & 60 & 90 \\ \end{pmatrix}_{ij}$ \\
+  }
+  \caption{``\texttt{.}''関数の適用}
+  \label{fig:dotApp}
+ \end{subfigure}
+ \caption{``\texttt{.}''関数の定義と適用例}
+ \label{fig:dotFunction}
+\end{figure}
+
+テンソルの添字記法のプログラミングへの導入は，(i)\emph{スカラー仮引数}と\emph{テンソル仮引数}という2種類の仮引数の概念の導入と，(ii)適切な添字の簡約ルールによってなされる．\cite{egi2017scalar}
+
+まず，スカラー仮引数とテンソル仮引数という2種類の仮引数の概念を説明する．
+スカラー仮引数とテンソル仮引数は，\emph{スカラー関数}と\emph{テンソル関数}という2種類の関数を定義するためにそれぞれ使われる．
+
+スカラー関数は，テンソルを引数にとったとき，成分ごとに処理をマップする関数のことをいう．
+たとえば，``\verb|+|''や，``\verb|-|''，``\verb|*|''，``\verb|/|''，``\verb|∂/∂|''はスカラー関数である．
+図\ref{fig:minFunction}は，スカラー関数の例として，\texttt{min}関数を定義とその適用例を紹介している．
+Egisonでは、Schemeと同様\texttt{lambda}式を用いて関数を定義する．
+``\verb|$|''が先頭に付加されている仮引数はスカラー仮引数となり，テンソルが引数として渡された場合，自動で成分ごとに関数がマップされる．
+成分ごとに関数の処理がマップされた結果，図\ref{fig:minDiff}のように関数はテンソル積と同じ形で適用される．
+テンソルの添字の簡約ルールはシンプルである．
+図\ref{fig:minSame}のようにスカラー関数を適用した結果，同じシンボルの添字が2つ以上付加されたテンソルが生成された場合，その対角成分からなるテンソルに簡約されるというルールだけである．
+
+テンソル関数は，テンソルを引数にとったとき，テンソルをテンソルとしてそのまま処理する関数のことをいう．
+たとえば，行列式を計算する関数や，テンソル同士のかけ算のための関数は，テンソルの成分ごとに自動でマップされては記述できないため，テンソル関数として定義する必要がある．
+図\ref{fig:dotFunction}は，テンソル関数の例として，テンソルのかけ算をする``\texttt{.}''関数の定義と適用例を紹介している．
+``\verb|%|''が先頭に付加されている仮引数はテンソル仮引数となり，テンソルが引数として渡された場合，テンソルとしてそのまま渡される．
+図\ref{fig:dotApp}のように，Egisonは上添字と下添字の両方を組み込みでサポートしている．
+上下添字で同じシンボルが使われていた場合は，組み込み関数\texttt{contract}を使って縮約することができる．
+
+上添字は``\verb|~|''，下添字は``\verb|_|''を使ってプログラム上で表現される．
+たとえば，図\ref{fig:dotApp}の一つ目の計算例は以下のようにインタプリタ上で実行できる．
+
+{\footnotesize
+\begin{verbatim}
+> (. [| 1 2 3 |]~i [| 10 20 30 |]_i)
+140
+\end{verbatim}
+}
+
+\subsection{省略された添字の補完}\label{completion}
+
+添字が省略された場合の添字補完のルールを適切に設定すると，微分形式のための演算子を簡潔に定義できる．
+本節では，添字補完のルールだけを説明する．
+微分形式の演算子の定義の具体例は，\ref{differential-form}節で紹介する．
+
+以下，\texttt{A}，\texttt{B}を$2$階のテンソル，つまり行列であるとする．
+添字を省略した状態でスカラー関数に\texttt{A}，\texttt{B}を同時に適用すると，下記左のように同じ組み合わせの添字が補完される．
+関数適用の前に``\verb|!|''が付加されていた場合は，下記右のように違う添字が補完される．
+
+\begin{multicols}{2}
+
+{\footnotesize
+\begin{verbatim}
+(+ A B) ; (+ A_t1_t2 B_t1_t2)
+\end{verbatim}
+}
+
+\columnbreak
+
+{\footnotesize
+\begin{verbatim}
+!(+ A B) ; (+ A_t1_t2 B_t3_t4)
+\end{verbatim}
+}
+
+\end{multicols}
+
+あとで\ref{differential-form}節で紹介するように，適切にプログラミングすれば，``\verb|!|''が使われるのは，微分形式の演算子の定義の中だけになる．
+そのため，基本的には，ユーザーは上記左のルールだけを意識すればよい．
+
+
 \section{\texttt{generateTensor}式によるテンソルの生成}
 
 \lstinline{generateTensor}式は第一引数にリストを引数にとる関数，第二引数に生成したいテンソルのサイズをとる．

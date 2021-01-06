@@ -226,3 +226,38 @@ foldl . 1 (map (\x -> g_[i_x]_[j_x]) [1..n])
 \end{lstlisting}
 
 添字記法はEgisonの重要な言語機能であるため，第\ref{tensor}章と第\ref{diffgeo}章で詳しく紹介する．
+
+\section{数式の出力形式}
+
+``\texttt{-M}''オプションで出力形式を指定することができる．
+``\texttt{egison -M latex}''を実行すると，LaTeX形式で結果を出力する．
+\begin{lstlisting}[language=egison,numbers=none]
+$ egison -M latex
+Egison Version 3.7.14 (C) 2011-2018 Satoshi Egi
+https://www.egison.org
+Welcome to Egison Interpreter!
+> (+ (sqrt a) b)
+#latex|\sqrt{a} + b|#
+\end{lstlisting}
+``\texttt{egison -M mathematica}''を実行すると，Mathematica形式で結果を出力する．
+\begin{lstlisting}[language=egison,numbers=none]
+$ egison -M mathematica
+Egison Version 3.7.14 (C) 2011-2018 Satoshi Egi
+https://www.egison.org
+Welcome to Egison Interpreter!
+> (+ (sqrt a) b)
+#mathematica|Sqrt[a] + b|#
+\end{lstlisting}
+
+LaTeX出力はJupyter Notebook\cite{jupyter2}とも連携している．
+Jupyter NotebookのEgisonプラグイン\cite{egisonJupyter2}を利用すれば，図\ref{fig:riemann-curavture-of-S2}，図\ref{fig:hodge-laplacian}のようにインタラクティブに計算結果が数式として表示される．
+
+\section{Jupyter Notebookとの連携}\label{cas-jupyter}
+
+\begin{figure}[t]
+  \centering
+  \todo{}
+  \caption{Jupyter Notebook上でEgisonを実行する様子}
+  \label{fig:cas-jupyter}
+\end{figure}
+
