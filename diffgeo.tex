@@ -230,8 +230,7 @@ euler-form ; [| [| 0 (/ (cos θ) (* 2 π)) |] [| (/ (* -1 (cos θ)) (* 2 π)) 0 
 内部積やリー微分も，Egisonで簡潔に定義できることを紹介しておく．
 これらの演算子は，たとえば，流体力学の質量保存の法則やナビエ・ストークス方程式の微分形式による表現をするときに使う．
 
-{\footnotesize
-\begin{verbatim}
+\begin{lstlisting}[language=egison,numbers=none]
 (define $ι
   (lambda [%X %Y]
     (with-symbols {i} (* (df-order Y) (. X...~i (antisymmetrize Y..._i))))))
@@ -240,5 +239,6 @@ euler-form ; [| [| 0 (/ (cos θ) (* 2 π)) |] [| (/ (* -1 (cos θ)) (* 2 π)) 0 
   (lambda [%X %Y]
     (match (df-order Y) integer
       {[,0 (ι X (d Y))] [,N (d (ι X Y))] [_ (+ (ι X (d Y)) (d (ι X Y)))]})))
-\end{verbatim}
+\end{lstlisting}
+
 
