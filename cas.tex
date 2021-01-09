@@ -157,7 +157,7 @@ d/d (1 / log x) x -- -1 / (x * (log x)^2)
 
 \lstinline{d/d}は以下のように定義される．
 \begin{lstlisting}[language=egison]
-def d/d $f $x :=
+def d/d f x :=
   match f as mathExpr with
     -- `シンボルの微分`
     | #x -> 1
