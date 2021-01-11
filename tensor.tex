@@ -194,16 +194,14 @@ a_{21} b_{11} + a_{22} b_{21} & a_{21} b_{12} + a_{22} b_{22}
 \end{pmatrix}^{i}_{\ k}
 $$
 
-\section{添字記法を導入する手法}\label{tensor-method}
+\section{スカラー仮引数とテンソル仮引数}\label{tensor-params}
 
 テンソルの添字記法のプログラミングへの導入は，(i)スカラー仮引数とテンソル仮引数という2種類の仮引数の概念の導入と，(ii)適切な添字の簡約ルールによってなされる．
-本節はこれらの概念を解説する．
-
-\subsection{スカラー仮引数とテンソル仮引数}\label{tensor-method-params}
+本節からこれらの概念を解説を始める．
 
 まず，\emph{スカラー仮引数}（\emph{scalar parameter}）\index{すからーかりひきすう@スカラー仮引数}と\emph{テンソル仮引数}（\emph{tensor parameter}）\index{てんそるかりひきすう@テンソル仮引数}という2種類の仮引数の概念を説明する．
 Egisonにはスカラー仮引数とテンソル仮引数という二種類の仮引数があり，これらは仮引数の先頭に\lstinline{$}と\lstinline{%}を付加することで区別する．
-仮引数の名前の先頭に\lstinline{$}が付いていればスカラー仮引数，\lstinline{%}が付いていればテンソル仮引数となる．
+仮引数の名前の先頭に\lstinline{$}\index{$@\lstinline{$}}が付いていればスカラー仮引数，\lstinline{%}\index{\%@\lstinline{%}}が付いていればテンソル仮引数となる．
 スカラー仮引数とテンソル仮引数は，引数としてテンソルが与えられたとき動作が異なる．
 スカラー仮引数にテンソルが引数として与えられると，テンソルの成分ごとに関数の処理がマップされ，スカラー仮引数にはテンソルの成分が渡される．
 たいして，テンソル仮引数にテンソルが引数として与えられると，通常の仮引数とどうようにテンソルがそのまま仮引数に渡される．
@@ -264,7 +262,7 @@ def min $x $y := if x < y then x else y
 \begin{figure}[t]
  \begin{subfigure}[b]{1.0\linewidth}
 \begin{lstlisting}[language=egison,numbers=none]
-def (.) %t1 %t2 := contract (+) (t1 * t2)
+def (.) %t1 %t2 := contractWith (+) (t1 * t2)
 \end{lstlisting}
   \caption{``\lstinline{.}''関数の定義}
   \label{fig:dotDef}
@@ -272,12 +270,12 @@ def (.) %t1 %t2 := contract (+) (t1 * t2)
   \medskip
  \begin{subfigure}[b]{1.0\linewidth}
   {\small
-  $\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}^{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{i} = contract(+, \begin{pmatrix} 10 & 20 & 30 \\ 20 & 40 & 60 \\ 30 & 60 & 90 \\ \end{pmatrix}^{i}_{\;i})
+  $\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}^{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{i} = contractWith(+, \begin{pmatrix} 10 & 20 & 30 \\ 20 & 40 & 60 \\ 30 & 60 & 90 \\ \end{pmatrix}^{i}_{\;i})
   = 10 + 40 + 90 = 140$
   \\ \medskip \\
-  $\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{i} = contract(+, \begin{pmatrix} 10 \\ 40 \\ 90 \\ \end{pmatrix}_{i}) = \begin{pmatrix} 10 \\ 40 \\ 90 \\ \end{pmatrix}_{i}$
+  $\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{i} = contractWith(+, \begin{pmatrix} 10 \\ 40 \\ 90 \\ \end{pmatrix}_{i}) = \begin{pmatrix} 10 \\ 40 \\ 90 \\ \end{pmatrix}_{i}$
   \\ \medskip \\
-  $\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{j} = contract(+, \begin{pmatrix} 10 & 20 & 30 \\ 20 & 40 & 60 \\ 30 & 60 & 90 \\ \end{pmatrix}_{ij})
+  $\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{j} = contractWith(+, \begin{pmatrix} 10 & 20 & 30 \\ 20 & 40 & 60 \\ 30 & 60 & 90 \\ \end{pmatrix}_{ij})
   = \begin{pmatrix} 10 & 20 & 30 \\ 20 & 40 & 60 \\ 30 & 60 & 90 \\ \end{pmatrix}_{ij}$ \\
   }
   \caption{``\lstinline{.}''関数の適用}
@@ -287,20 +285,48 @@ def (.) %t1 %t2 := contract (+) (t1 * t2)
  \label{fig:dotFunction}
 \end{figure}
 
-図\ref{fig:dotFunction}は，テンソル関数の例として，テンソルのかけ算をする``\lstinline{.}''関数の定義と適用例を紹介している．
+図\ref{fig:dotFunction}は，テンソル関数の例として，テンソルのかけ算をする``\lstinline{.}''関数\index{.@\lstinline{.}}の定義と適用例を紹介している．
 ``\verb|%|''が先頭に付加されている仮引数はテンソル仮引数となり，テンソルが引数として渡された場合，テンソルとしてそのまま渡される．
 図\ref{fig:dotApp}のように，Egisonは上添字と下添字の両方を組み込みでサポートしている．
-上添字と下添字で同じシンボルが使われていた場合は，組み込み関数\lstinline{contract}を使って縮約することができる．
+上添字と下添字で同じシンボルが使われていた場合は，関数\lstinline{contractWith}を使って縮約することができる．
 
-上添字は``\verb|~|''，下添字は``\verb|_|''を使ってプログラム上で表現される．
+上添字は``\lstinline|~|''，下添字は``\lstinline|_|''を使ってプログラム上で表現される．
 たとえば，図\ref{fig:dotApp}の一つ目の計算例は以下のようにEgisonで表現される．
 \begin{lstlisting}[language=egison,numbers=none]
-[| 1 2 3 |]~i . [| 10 20 30 |]_i
+[| 1, 2, 3 |]~i . [| 10, 20, 30 |]_i
 -- 140
 \end{lstlisting}
 
-\subsection{添字の簡約適用}\label{tensor-method-rules}
+\section{三種類の添字}\label{tensor-index}
 
+テンソルの添字記法を扱うためにEgisonには三種類の添字が導入されている．
+最初の二つは前節で紹介した上添字と下添字で\lstinline{~}と\lstinline{_}で表現される．
+三つ目は上下添字と呼ばれる添字で\lstinline{~_}\index{~_@\lstinline{~_}}で表現される．
+上下添字は，同一のシンボルをもつ上添字と下添字をもつテンソルに対してスカラー関数を適用した際に現れる．
+\begin{lstlisting}[language=egison,numbers=none]
+[| 1 2 3 |]_i * [| 10 20 30 |]_i -- [| 10, 40, 90 |]_i
+[| 1 2 3 |]~i * [| 10 20 30 |]~i -- [| 10, 40, 90 |]~i
+[| 1 2 3 |]~i * [| 10 20 30 |]_i -- [| 10, 40, 90 |]~_i
+\end{lstlisting}
+
+前節でも登場した\lstinline{contractWith}関数は上下添字について対角成分をリストに変換し第一引数の関数で畳み込む．
+\begin{lstlisting}[language=egison,numbers=none]
+contractWith (+) [| 10, 40, 90 |]_i -- [| 10, 40, 90 |]_i
+contractWith (+) [| 10, 40, 90 |]~i -- [| 10, 40, 90 |]~i
+contractWith (+) [| 10, 40, 90 |]~_i -- 130
+\end{lstlisting}
+
+\lstinline{contractWith}関数は組み込み関数\lstinline{contract}\index{contract@\lstinline{contract}}を使って定義されたライブラリ関数である．
+組み込み関数\lstinline{contract}は上下添字の付加されたスロットの成分のリストを返す．
+\todo{debug egison}
+\begin{lstlisting}[language=egison,numbers=none]
+contract [| 1, 2, 3 |]~_i -- [1, 2, 3]
+contract [| [| 11, 12 |], [| 21, 22 |] |]~_i_j -- [[| 11, 12 |]_j, [| 21, 22 |]_j]
+contract [| [| 11, 12 |], [| 21, 22 |] |]_i~_j -- ??
+contract [| [| 11, 12 |], [| 21, 22 |] |]~_i~_j -- [11, 12, 21, 22]
+\end{lstlisting}
+
+\section{添字の簡約規則}\label{tensor-rules}
 
 \begin{figure}
   \begin{center}
@@ -319,7 +345,7 @@ E({A, xs}) =
 \end{figure}
 
 本節は，添字の簡約ルールを擬似コードを使って説明する．
-\ref{tensor-params}節で説明したように，テンソルをスカラー関数を適用したときは常にテンソル積のかたちで成分ごとに処理がマップされるため，ひとつのテンソルについての簡約ルールのみを定義すればよい．
+\ref{tensor-method-params}節で説明したように，テンソルをスカラー関数を適用したときは常にテンソル積のかたちで成分ごとに処理がマップされるため，ひとつのテンソルについての簡約ルールのみを定義すればよい．
 
 図\ref{fig:semanticsRules}は添字簡約をする擬似コードである．
 \lstinline{E(A,xs)}は添字付きテンソルの簡約をする関数である．
@@ -347,12 +373,12 @@ remove(2, [{i, 1}, {j, -1}])        = [{i, 1}]
 update(2, 0, [{i, 1}, {j, -1}])     = [{i, 1}, {j, 0}]
 \end{lstlisting}
 
-\subsection{テンソル関数の適用}
+\section{テンソル関数の適用}
 
 添字付きのテンソルがテンソル関数に渡されるとき，そのテンソルの添字ごとテンソル関数に適用される．
 図\ref{fig:dotDef}で定義した``\lstinline{.}''関数でこの挙動を確認する．
 図\ref{fig:dotApp}では，``\lstinline{.}''関数を適用をしたときなされる展開が段階的に表示されている．
-\lstinline{contract}の内側に添字付きのテンソルがあらわれるが，これはテンソルの添字ごとテンソル関数に渡されることで可能になっている．
+\lstinline{contractWith}の内側に添字付きのテンソルがあらわれるが，これはテンソルの添字ごとテンソル関数に渡されることで可能になっている．
 この挙動のおかげで以下のようにテンソル関数についてテンソルの添字記法を使って関数適用できるようになっている．
 \begin{lstlisting}[language=egison,numbers=none]
 [|1,2,3|]~i . [|10,20,30|]_i -- 140
@@ -360,29 +386,30 @@ update(2, 0, [{i, 1}, {j, -1}])     = [{i, 1}, {j, 0}]
 [|1,2,3|]_i . [|10,20,30|]_i -- [|10,40,90|]_i
 \end{lstlisting}
 
-\subsection{省略された添字の補完}
+\section{省略された添字の補完}\label{tensor-completion}
 
-\todo{編集}
-添字が省略された場合の添字補完のルールを適切に設定すると，微分形式のための演算子を簡潔に定義できる．
-本節では，添字補完のルールだけを説明する．
-微分形式の演算子の定義の具体例は，\ref{differential-form}節で紹介する．
+添字が省略されたテンソルが関数に適用された場合，Egisonは自動で添字を補完する．
+本節はこの補完の規則を説明する．
 
 以下，\lstinline{A}，\lstinline{B}を$2$階のテンソル，つまり行列であるとする．
-添字を省略した状態でスカラー関数に\lstinline{A}，\lstinline{B}を同時に適用すると，下記左のように同じ組み合わせの添字が補完される．
-関数適用の前に``\verb|!|''が付加されていた場合は，下記右のように違う添字が補完される．
+添字を省略した状態でスカラー関数に\lstinline{A}，\lstinline{B}を同時に適用すると，下記のように同じ組み合わせの添字が補完される．
 \begin{lstlisting}[language=egison,numbers=none]
 A + B -- A_t1_t2 + B_t1_t2
 \end{lstlisting}
-
+関数適用の前に``\lstinline|!|''が付加されていた場合は，下記のように違う添字が補完される．
 \begin{lstlisting}[language=egison,numbers=none]
 A !+ B -- A_t1_t2 + B_t3_t4
 \end{lstlisting}
 
-あとで\ref{differential-form}節で紹介するように，適切にプログラミングすれば，``\verb|!|''が使われるのは，微分形式の演算子の定義の中だけになる．
-そのため，基本的には，ユーザーは上記左のルールだけを意識すればよい．
+添字が省略されたテンソルが，テンソル関数に適用された場合は，補完はおこなわれない．
 
+上記の添字の補完規則には実は必然性がある．
+添字が省略された場合の添字補完規則を上記のように設定すると，微分形式のための演算子を簡潔に定義できる．
+微分形式の演算子の定義の具体例は，\ref{diffgeo-form}節で紹介する．
+あとで\ref{diffgeo-form}節でも述べるように，``\verb|!|''が使われる必要があるのは，微分形式の演算子の定義の中だけになる．
+そのため，基本的にユーザーは``\verb|!|''については意識しなくてよい．
 
-\subsection{スカラー仮引数とテンソル仮引数の実装}
+\section{スカラー仮引数とテンソル仮引数の実装}
 
 本節はスカラー仮引数とテンソル仮引数の実装方法について説明する．
 テンソル仮引数は，テンソルをテンソルとしてそのまま扱うため，通常の仮引数として実装できる．
@@ -407,6 +434,8 @@ min [|1,2,3|]_i [|10,20,30|]_i -- [|1,2,3|]_i
 しかし，上で説明したとおり，\lstinline{tensorMap}は内側のテンソルの添字を外側のテンソルの最後に移動する．
 このために結果のテンソルの添字が``\lstinline|_i_j|''となる．
 この仕組みがテンソルの添字記法を使ってスカラー関数を適用することを可能にしている．
+
+\todo{tensorMap2による最適化}
 
 \section{反転スカラー仮引数}
 
@@ -597,7 +626,7 @@ def R'{[_i_j][_k_l]} :=
 \end{lstlisting}
 
 
-\subsection{テンソル関連の内部表現}
+\section{テンソル関連の内部表現}
 
 \lstinline{Symbol}データコンストラクタの第二引数
 

@@ -406,7 +406,7 @@ graph := multiset (integer, integer)
 adjacencyGraph := multiset (integer, multiset integer)
 \end{lstlisting}
 
-代数的データ型に対するマッチャーは\lstinline{matcher}式によっても定義できるが，代数的データ型に対するマッチャーを簡単な記述で定義できる特別な構文\lstinline{algebraicDataMatcher}式\index{algebraicDataMatcherしき@\lstinline{algebraicDataMatcher}式}をEgisonは提供している．
+代数的データ型に対するマッチャーは\lstinline{matcher}式によっても定義できるが，代数的データ型に対するマッチャーを簡単な記述で定義できる特別な構文\lstinline{algebraicDataMatcher}式\index{algebraicDataMatcher@\lstinline{algebraicDataMatcher}}をEgisonは提供している．
 \lstinline{algebraicDataMatcher}式は糖衣構文で，\lstinline{matcher}式に脱糖される．
 \lstinline{algebraicDataMatcher}式を使えば，たとえば二分木に対するマッチャーは以下のように定義できる．
 \begin{lstlisting}[language=egison,numbers=none]
