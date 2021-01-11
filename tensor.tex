@@ -109,8 +109,7 @@ b_{1} & b_{2}
 a_{1} b_{1} + a_{2} b_{2}
 $$
 
-
-たとえば，行列同士の掛け算は，Aの行とBの列についてはテンソル積，Aの列とBの行については内積をとる演算と解釈できる．
+たとえば，行列$A$と行列$B$の掛け算は，$A$の行と$B$の列についてはテンソル積，$A$の列と$B$の行については内積をとる演算と解釈できる．
 
 $$
 \begin{pmatrix}
@@ -413,14 +412,14 @@ A !+ B -- A_t1_t2 + B_t3_t4
 
 本節はスカラー仮引数とテンソル仮引数の実装方法について説明する．
 テンソル仮引数は，テンソルをテンソルとしてそのまま扱うため，通常の仮引数として実装できる．
-たいして，スカラー仮引数は\lstinline{tensorMap}という組み込み関数を使ったテンソル仮引数しかあらわれない以下のようなプログラムに変換される．
+たいして，スカラー仮引数は\lstinline{tensorMap}という組み込み関数を使ったテンソル仮引数しかあらわれない以下のようなプログラムに変換できる．
 \begin{lstlisting}[language=egison,numbers=none]
 \ $x $y -> ...
 -- => \ %x %y ->
 --      tensorMap (\ %x -> tensorMap (\ %y -> ...) y))
 --                x
 \end{lstlisting}
-名前が示すとおり，\lstinline{tensorMap}は第一引数の関数を第二引数のテンソルの成分ごとに適用する関数である．
+名前が示すとおり，\lstinline{tensorMap}は第一引数の関数を第二引数のテンソルの成分ごとに適用してテンソルを返す関数である．
 ただ，第一引数の関数に第二引数のテンソルの成分を適用した結果がテンソルである場合，その結果のテンソルの添字は，\lstinline{tensorMap}全体の結果のテンソルの添字の末端に移動するというテンソル特有の仕様がある．
 
 図\ref{fig:minFunction}で定義した\lstinline{min}関数を使って上記の挙動を確認する．
@@ -435,7 +434,18 @@ min [|1,2,3|]_i [|10,20,30|]_i -- [|1,2,3|]_i
 このために結果のテンソルの添字が``\lstinline|_i_j|''となる．
 この仕組みがテンソルの添字記法を使ってスカラー関数を適用することを可能にしている．
 
-\todo{tensorMap2による最適化}
+スカラー仮引数は上記のように実装できるが，実際は効率化のための工夫を施した変換がなされる．
+上記の方法だと，対角化するために対角成分しか必要ない場合でも対角成分以外の成分ももつテンソルを生成してしまう．
+Egisonはテンソルの成分の評価も遅延するため，計算コストはそれほどかからないが，無駄にメモリを確保してしまうため，これはあまりよくない．
+そのために，$2$引数のスカラー関数は\lstinline{tensorMap2}という組み込み関数を使った式に変換する．
+\begin{lstlisting}[language=egison,numbers=none]
+\ $x $y -> ...
+-- => \ %x %y ->
+--      tensorMap2 (\ (%x, %y) -> ...)
+--                x y
+\end{lstlisting}
+\lstinline{tensorMap2}は$2$引数関数と二つのテンソルを引数にとり，それぞれの成分について第一引数の関数を適用しテンソルを返す．
+\lstinline{tensorMap2}は，結果のテンソルに必要な成分だけを計算するように実装されている．
 
 \section{反転スカラー仮引数}
 
@@ -486,8 +496,6 @@ generateTensor (\match as list integer with
 
 \section{テンソルの対称性・歪対称性の宣言}
 
-\subsection{動機}
-
 \begin{figure}[t]
  \begin{subfigure}[b]{1.0\linewidth}
 $$
@@ -517,29 +525,27 @@ $$
 \end{figure}
 
 
-テンソルが対称性をもつとは，下記の例のように，上三角の成分と下三角の成分が一致することをいう．
+テンソルが\emph{対称}であるとは，図\ref{fig:symmtensor}の例のように，上三角の成分と下三角の成分が一致することをいう．
+テンソルが\emph{歪対称}であるとは，図\ref{fig:antisymmtensor}の例のように，上三角の成分と下三角の成分の符号が反転することをいう．
+テンソルが歪対称であるとき，対角成分は0となる．
 
-テンソルが歪対称性をもつとは，下記の例のように，上三角の成分と下三角の成分の符号が反転することをいう．
-テンソルが歪対称性をもつとき，対角成分は0となる．
-
-数学や物理で現れるテンソルの多くは対称性をもつ．
-たとえばリーマン曲率テンソル$R_{abcd}$は$R_{abcd} = -R_{abdc}$，$R_{abcd} = -R_{bacd}$，$R_{abcd} = R_{cdab}$という対称性をもつ．
+数学や物理で現れるテンソルの多くが対称性をもつ．
+たとえば，\ref{diffgeo-riemann}節で計算するリーマン曲率テンソル$R_{abcd}$は$R_{abcd} = -R_{abdc}$，$R_{abcd} = -R_{bacd}$，$R_{abcd} = R_{cdab}$という複数の対称性をもつ．
 数学者や物理学者はこれらの対称性を意識しながら適宜計算を省略する．
-コンピュータ・プログラムでも対称性による計算の省略をエレガントに表現したい．
+Egisonでも対称性を意識した計算の最適化を実装したいが，プログラミング言語でこの最適化をするには，明示的にテンソルの対称性を宣言する必要がある．
+Egisonはテンソルの対称性を宣言するための記法が実装されている．
+本節は，この記法の使い方と実装を解説する．
 
-$$
-R_{abcd} = g_{ai} \left( \frac{\partial \Gamma^{i}_{\ bd}}{\partial x_{c}} -  \frac{\partial \Gamma^{i}_{\ bc}}{\partial x_{d}} + \Gamma^{j}_{\ bd} \Gamma^{i}_{\ jc} - \Gamma^{j}_{\ bc} \Gamma^{i}_{\ jd} \right)
-$$
-
-
-\subsection{設計}
+\subsection{テンソルの対称性を宣言する記法}
 
 リーマン曲率テンソルには，上記の対称性に加えて第一ビアンキ恒等式$R_{abcd} + R_{acdb} + R_{adbc} = 0$とよばれる対称性もある．
 この第一ビアンキ恒等式の表現として，$R_{a[bcd]} = 0$という表記がある．
-この表記を拡張してプログラムに導入するというアイデアを得た．
+Egisonに実装されているテンソルの対称性を宣言する記法は，この表記法に触発されて得られたものである．
 
-具体例をみせながら，その表記を紹介する．
-リーマン曲率テンソル$R_{abcd}$は以下のように定義できる．
+具体例をみせながら，その記法を紹介する．
+Egisonでリーマン曲率テンソル$R_{abcd}$は下記のように定義できる．
+右辺に複雑な式があるが，本節では無視していただいて問題ない．
+左辺だけに注目してほしい．
 \begin{lstlisting}[language=egison,numbers=none]
 def R_a_b_c_d := withSymbols [i, j]
   g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
@@ -564,16 +570,12 @@ def R[_a_b][_c_d] := withSymbols [i, j]
 $R_{abcd} = R_{cdab}$のような複雑な対称性も記述できる．
 この対称性を記述するためには添字\lstinline{_a_b}と\lstinline{_c_d}をそれぞれひとまとまりで扱うために丸括弧\lstinline{()}で囲む．
 そして，これらを波括弧\lstinline|{}|で囲む．
+角括弧\lstinline|[]|が歪対称性を宣言するために使われていたのに対し，波括弧\lstinline|{}|は対称性を宣言するために使われる．
 \begin{lstlisting}[language=egison,numbers=none]
 def R{(_a_b)(_c_d)} := withSymbols [i, j]
   g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
            `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
 \end{lstlisting}
-
-対称性の宣言には三種類の括弧を使い分ける．
-波括弧\lstinline|{}|は対称性を宣言するために使う．
-角括弧\lstinline|[]|は歪対称性を宣言するために使う．
-丸括弧\lstinline|()|は複数の添字をひとまとまりにするために使う．
 
 三つの対称性$R_{abcd} = -R_{abdc}$，$R_{abcd} = -R_{bacd}$，$R_{abcd} = R_{cdab}$を同時に宣言することもできる．
 \begin{lstlisting}[language=egison,numbers=none]
@@ -582,10 +584,16 @@ def R{[_a_b][_c_d]} := withSymbols [i, j]
            `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
 \end{lstlisting}
 
-この表記法の良いところは，\lstinline{:=}の右辺のプログラムを全く変更せずに対称性を宣言できるところである．
-%Wolfram言語(Mathematica)にもテンソルの対称テンソルを定義するための機能があるのですが，対称性を考慮したデータ構造をもつテンソルを生成するために右辺のプログラムは複雑化してしまう．
+まとめると，Egisonは対称性の宣言には三種類の括弧を使い分ける．
+波括弧\lstinline|{}|は対称性を宣言するために使う．
+角括弧\lstinline|[]|は歪対称性を宣言するために使う．
+丸括弧\lstinline|()|は複数の添字をひとまとまりにするために使う．
 
-\subsection{さらに具体例}
+対称なテンソルの添字は隣り合っていることが多いため，数学や物理で現れるテンソルの対称性は，この記法でほぼ宣言することができる．
+\lstinline{:=}の右辺のプログラムを全く変更せずに対称性を宣言できるところはこの記法のよいところである．
+
+
+\subsection{対称性の宣言によってテンソルの定義が短くなる例}
 
 さきほど，この手法の利点として，\lstinline{:=}の右辺のプログラムを全く変更する必要がないと述べたが，\lstinline{:=}の右辺のプログラムが簡略化できるケースもある．
 たとえば，下記のようにテンソルの各ブロックごとに異なる式を使って値が定義されるテンソルがそのようなケースに該当する．
@@ -623,6 +631,39 @@ def R'{[_i_j][_k_l]} :=
                              +      p^2 * J_(a - 1)_(c - 1) * J_(b - 1)~(d - 1)
                              +  2 * p^2 * J_(a - 1)_(b - 1) * J_(c - 1)~(d - 1))
     [5, 5, 5, 5]
+\end{lstlisting}
+
+
+\subsection{実装}
+
+テンソルの対称性を宣言する記法の実装方法について解説する．
+この記法は\lstinline{generateTensor}式を使う糖衣構文として実装されている．
+本節では，この変換を具体例をいくつか紹介することによって説明する．
+\begin{lstlisting}[language=egison,numbers=none]
+def X{_i_j} := ...
+\end{lstlisting}
+
+\begin{lstlisting}[language=egison,numbers=none]
+def X_i_j :=
+ let tmpX_i_j := ...
+   generateTensor
+     (\i j -> if i > j then tmpX_j_i
+              else          tmpX_i_j)
+     (tensorShape tmpX_#_#)
+\end{lstlisting}
+
+\begin{lstlisting}[language=egison,numbers=none]
+def X[_i_j] := ...
+\end{lstlisting}
+
+\begin{lstlisting}[language=egison,numbers=none]
+def X_i_j :=
+  let tmpX_i_j := ...
+    generateTensor
+      (\i j -> if i > j then -tmpX_j_i
+               else if i = j then 0
+               else           tmpX_i_j)
+      (tensorShape tmpX_#_#)
 \end{lstlisting}
 
 
