@@ -493,6 +493,50 @@ generateTensor (\match as list integer with
 -- [| [| 1, 0, 0 |], [| 0, 1, 0 |], [| 0, 0, 1 |] |]
 \end{lstlisting}
 
+\section{テンソルの宣言}
+
+テンソルを変数に束縛する方法を解説する．
+まずテンソルは通常の値と同様に\lstinline{def}式や\lstinline{let}式で定義することができる．
+\begin{lstlisting}[language=egison,numbers=none]
+def A := [| [| 11, 12 |], [| 21, 22 |] |]
+
+A -- [| [| 11, 12 |], [| 21, 22 |] |]
+\end{lstlisting}
+
+数学や物理では同じ変数名で添字の上下の型が違うテンソルにそれぞれ別の値を入れることがよくある．
+Egisonでもその慣習に対応するために，添字の上下の型ごとに違うテンソルを定義できるようにしている．
+Egisonは，変数を参照するとき，変数名と添字の型の両方を使う．
+変数定義のときに，変数名の後ろに添字の型を続けて記述することによって添字の型を指定する．
+\begin{lstlisting}[language=egison,numbers=none]
+def g__ := [| [| 2, 2 |], [| 2, 2 |] |]
+def g~~ := [| [| 1 / 2, 1 / 2 |], [| 1 / 2, 1 / 2 |] |]
+
+g_1_1 -- 2
+g~1~1 -- 1 / 2
+\end{lstlisting}
+
+\emph{ダミーシンボル}\index{だみーしんぼる@ダミーシンボル}を使うのが便利である．
+\begin{lstlisting}[language=egison,numbers=none]
+g_#_# -- [| [| 2, 2 |], [| 2, 2 |] |]
+g~#~# -- [| [| 1 / 2, 1 / 2 |], [| 1 / 2, 1 / 2 |] |]
+\end{lstlisting}
+
+ダミーシンボルは，すべてユニークなシンボルとして扱われる．
+たとえば，二つのダミーシンボルを足し合わせると，以下のようにまとめられないが，これはこの二つのダミーシンボルがそれぞれ異なるシンボルとして扱われるからである．
+\begin{lstlisting}[language=egison,numbers=none]
+# + # -- # + #
+\end{lstlisting}
+
+
+\begin{lstlisting}[language=egison,numbers=none]
+def A_i_j := [| [| 11, 12 |], [| 21, 22 |] |]_i_j
+def B_i_j := [| [| 11, 12 |], [| 21, 22 |] |]_j_i
+
+A_#_# -- [| [| 11, 12 |], [| 21, 22 |] |]_i_j
+B_#_# -- [| [| 11, 21 |], [| 12, 22 |] |]_#_#
+\end{lstlisting}
+
+
 
 \section{テンソルの対称性・歪対称性の宣言}
 
@@ -639,10 +683,13 @@ def R'{[_i_j][_k_l]} :=
 テンソルの対称性を宣言する記法の実装方法について解説する．
 この記法は\lstinline{generateTensor}式を使う糖衣構文として実装されている．
 本節では，この変換を具体例をいくつか紹介することによって説明する．
+
+まず対称性を宣言する波括弧\lstinline|{}|がどう展開されるか説明する．
+以下のプログラムの\lstinline{...}の箇所にはなにか適当なテンソルを返すプログラムがはいる．
 \begin{lstlisting}[language=egison,numbers=none]
 def X{_i_j} := ...
 \end{lstlisting}
-
+上記の形のプログラムは，以下のようなプログラムに展開される．
 \begin{lstlisting}[language=egison,numbers=none]
 def X_i_j :=
  let tmpX_i_j := ...
@@ -651,24 +698,23 @@ def X_i_j :=
               else          tmpX_i_j)
      (tensorShape tmpX_#_#)
 \end{lstlisting}
+\lstinline{tmpX}という新たな変数を導入し，定義したいテンソルを代入する．
+\lstinline{X}自体は\lstinline{generateTensor}式を使って定義する．
+この\lstinline{generateTensor}式は，下半分の成分については，上半分の成分を参照するように定義されている．
+Egisonはテンソルの成分の評価を遅延するため，\lstinline{tmpX}の下半分の成分は計算されることはない．
+そのため，テンソル成分の計算コストが半分になる．
 
+歪対称性を宣言する角括弧\lstinline|[]|も同じように展開される．
 \begin{lstlisting}[language=egison,numbers=none]
 def X[_i_j] := ...
 \end{lstlisting}
-
+下半分の成分の符号が上半分の成分に対して反転していることと，対角成分が$0$になるように\lstinline{generateTensor}式の内部が変更されている．
 \begin{lstlisting}[language=egison,numbers=none]
 def X_i_j :=
   let tmpX_i_j := ...
     generateTensor
-      (\i j -> if i > j then -tmpX_j_i
+      (\i j -> if i > j      then -tmpX_j_i
                else if i = j then 0
-               else           tmpX_i_j)
+               else               tmpX_i_j)
       (tensorShape tmpX_#_#)
 \end{lstlisting}
-
-
-\section{テンソル関連の内部表現}
-
-\lstinline{Symbol}データコンストラクタの第二引数
-
-\lstinline{symbol}パターンコンストラクタの第二引数

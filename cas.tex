@@ -18,12 +18,18 @@ x -- x
 そのため，たとえば，$x + x \rightarrow 2x$や$(x + y)^2 \rightarrow x^2 + 2 x y + y^2$のような計算ができる．
 \begin{lstlisting}[language=egison,numbers=none]
 x + x -- 2x
-(x + y)^2 -- x^2 + 2 * y * x + y^2
+(x + y)^2 -- x^2 + 2 * x * y + y^2
 \end{lstlisting}
 
 Egisonは数式を自動で積和標準形に展開する．
 積和標準形とは，掛け算が内側に，足し算が外側になるような形の数式のことである．
 そのため，$(x + y)^2$は$x^2 + 2 x y + y^2$のように展開される．
+
+出力の数式の項の因子として現れるシンボルの順番は，ユーザーが入力した数式に現れる順番と同じになるように実装されている．
+たとえば，上記の$(x + y)^2$の$x$と$y$を入れ替えて$(y + x)^2$を計算すると$2$項目は$2 y x$となる．
+\begin{lstlisting}[language=egison,numbers=none]
+(y + x)^2 -- y^2 + 2 * y * x + x^2
+\end{lstlisting}
 
 \section{関数適用のシンボル化}\label{cas-symbol2}
 
