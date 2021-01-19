@@ -121,17 +121,60 @@ def g_i_j := [| [| `(c^2 * r - 2 * G * M) / c^2 * r, 0, 0, 0 |]
                 [| 0, 0, 0, -1 * r^2 * (sin θ)^2 |] |]
 \end{lstlisting}
 
-\section{微分形式を使った計算}\label{diffgeo-form}
+\section{曲率形式の計算 - 微分形式を使った計算（1）}\label{diffgeo-curvature}
 
-\ref{completion}節で言及したように，Egisonは微分形式を使った計算を簡潔に表現する機能を持っている．
-本節では，この機能を使って微分形式を使った計算をプログラムした例を紹介する．
-図\ref{fig:hodge-laplacian}は，極座標のラプラシアンをホッジ・ラプラシアンの公式を使って計算するEgisonプログラムとその実行結果である．
-本節の前半は，このプログラムの解説をしながら進む．
-微分形式の理論については，\cite{kobayashi1995,morita2005}の説明がわかりやすい．
+\ref{tensor-tensorfunc}節や，\ref{tensor-completion}節，\ref{tensor-refs}節で言及したように，Egisonのテンソル関連の機能は微分形式を使った計算を簡潔に表現できるように設計されている．
+微分形式を使うと，テンソルに関する演算をより抽象的に記述できるようになる．
+
+本節では，微分形式の計算の例として，曲率形式の計算を紹介する．
+曲率形式は，リーマン曲率テンソルを一般化したもので，曲率形式の公式$\Omega^{i}_{\;j} = d \omega^{i}_{\;j} + \omega^{i}_{\;k} \wedge \omega^{k}_{\;j}$というリーマン曲率テンソルの公式よりも簡潔な形の式を使って計算できる．
+上記の公式にあらわれる$\omega$は接続形式と呼ばれ，微分形式において第二種クリストッフェル記号に対応するものである．
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=14.0cm,bb=0 0 1789 1331]{laplacian.png}
+  \includegraphics[width=14.0cm,bb=0 0 1787 1314]{curvature-form.png}
+  \caption{曲率形式の計算}
+  \label{fig:curvature-form}
+\end{figure}
+
+\subsection{ウェッジ積・曲率形式}
+
+図\ref{fig:curvature-form}は$S^2$の曲率形式をEgisonで計算したプログラムである．
+\texttt{[1]}-\texttt{[5]}で球面座標系のパラメータと，リーマン計量，クリストッフェル記号を設定している．
+\texttt{[6]}で接続形式$\omega$を第二種クリストッフェル記号を使って定義している．
+\texttt{[7]}で外微分演算子を定義している．
+\texttt{[8]}-\texttt{[9]}でウェッジ積を定義している．
+ウェッジ積は中置演算子として定義されている．
+\texttt{[10]}-\texttt{[12]}で曲率形式を計算して出力している．
+\todo{}
+
+\subsection{オイラー形式とオイラー数}
+
+オイラー類は，積分したらオイラー数が得られる特性類として有名な特性類である．
+以下のプログラムは，トーラス$T^2$のオイラー形式を計算している．
+
+\begin{lstlisting}[language=egison,numbers=none]
+def eulerForm := (1 / (2 * π)) * (Ω~1_2 - Ω~2_1)
+
+eulerForm -- [| [| 0, (cos θ) / (* 2 π)) |], [| ((-1 * (cos θ)) / (* 2 π)), 0 |] |]
+\end{lstlisting}
+
+積分のための関数がEgisonには実装されていないため，手計算でこれを積分した結果を記す．
+積分すると$T^2$のオイラー数である$0$が得られる．
+
+\[\chi(T^2) = \int_{T^2} d \theta d \phi \frac{\cos \theta}{2 \pi} = \int_{0}^{2 \pi} d \theta \cos \theta = \left[\sin \theta \right]_{0}^{2 \pi} = \sin 2 \pi - \sin 0 = 0\]
+
+\section{ホッジ・ラプラシアンの計算 - 微分形式を使った計算（2）}\label{diffgeo-hodge}
+
+
+本節では，微分形式を使った計算をプログラムする例を紹介する．
+
+図\ref{fig:hodge-laplacian}は，極座標のラプラシアンをホッジ・ラプラシアンの公式$\Delta = d \delta + \delta d$を使って計算するEgisonプログラムとその実行結果である．
+本節の前半は，このプログラムの解説をしながら進む．
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=14.0cm,bb=0 0 1759 1341]{laplacian.png}
   \caption{極座標のホッジ・ラプラシアンの計算}
   \label{fig:hodge-laplacian}
 \end{figure}
@@ -145,7 +188,7 @@ def g_i_j := [| [| `(c^2 * r - 2 * G * M) / c^2 * r, 0, 0, 0 |]
 
 \[*A = \sqrt{\det|g|} \cdot \epsilon_{i_{1}...i_{n}} \cdot A_{j_{1}...j_{k}} \cdot g^{i_{1}j_{1}} \cdots g^{i_{k}j_{k}} \cdot e^{i_{k+1}} \wedge ... \wedge e^{i_{n}} \]
 
-\subsection{ホッジ・ラプラシアン}\label{hodge-laplacian}
+\subsection{ホッジ・ラプラシアン}
 
 微分形式を使うと，ラプラシアンは$\Delta = d \delta + \delta d$と座標系に依存しないように定義できる．
 この公式を使って表現されるラプラシアンはホッジ・ラプラシアンと呼ばれる．
@@ -156,49 +199,22 @@ def g_i_j := [| [| `(c^2 * r - 2 * G * M) / c^2 * r, 0, 0, 0 |]
 \texttt{[9]}で定義した関数シンボルに，\texttt{[10]}でホッジ・ラプラシアンを適用している．
 \ref{riemann}節で解説したリーマン曲率テンソルと同様，ホッジ・ラプラシアンについても計量を変えるだけで，いろいろな座標系のラプラシアンを計算できる．
 
-\subsection{ウェッジ積・曲率形式}
-
-曲率形式の公式$\Omega^{i}_{\;j} = d \omega^{i}_{\;j} + \omega^{i}_{\;k} \wedge \omega^{k}_{\;j}$は，微分形式を使った座標系に依存しないリーマン曲率テンソルの公式である．
-微分形式による第二種クリストッフェル記号の表現は，接続形式と呼ばれ，上記の公式に$\omega$としてあらわれている．
-曲率形式の公式もEgisonで簡潔に表現できる．
-以下のプログラム中に，ウェッジ積も定義されている．
-
-\begin{lstlisting}[language=egison,numbers=none]
-(define $ω Γ~#_#_#)
-(define $wedge (lambda [%X %Y] !(. X Y)))
-(define $Ω (with-symbols {i j} (antisymmetrize (+ (d ω~i_j) (wedge ω~i_k ω~k_j)))))
-\end{lstlisting}
-
-\subsection{オイラー形式とオイラー数}
-
-オイラー類は，積分したらオイラー数が得られる特性類として有名な特性類である．
-以下のプログラムは，トーラス$T^2$のオイラー形式を計算している．
-
-\begin{lstlisting}[language=egison,numbers=none]
-(define $euler-form (* (/ 1 (* 2 π)) (- Ω~1_2 Ω~2_1)))
-
-euler-form ; [| [| 0 (/ (cos θ) (* 2 π)) |] [| (/ (* -1 (cos θ)) (* 2 π)) 0 |] |]
-\end{lstlisting}
-
-積分のための関数がEgisonには実装されていないため，手計算でこれを積分した結果を記す．
-積分すると$T^2$のオイラー数である$0$が得られる．
-
-\[\chi(T^2) = \int_{T^2} d \theta d \phi \frac{\cos \theta}{2 \pi} = \int_{0}^{2 \pi} d \theta \cos \theta = \left[\sin \theta \right]_{0}^{2 \pi} = \sin 2 \pi - \sin 0 = 0\]
-
-\subsection{内部積・リー微分}
+\section{その他の微分形式についての演算子 - 内部積・リー微分}
 
 内部積やリー微分も，Egisonで簡潔に定義できることを紹介しておく．
 これらの演算子は，たとえば，流体力学の質量保存の法則やナビエ・ストークス方程式の微分形式による表現をするときに使う．
-
+内部積は以下のように定義できる．
 \begin{lstlisting}[language=egison,numbers=none]
-(define $ι
-  (lambda [%X %Y]
-    (with-symbols {i} (* (df-order Y) (. X...~i (antisymmetrize Y..._i))))))
-
-(define $Lie
-  (lambda [%X %Y]
-    (match (df-order Y) integer
-      {[,0 (ι X (d Y))] [,N (d (ι X Y))] [_ (+ (ι X (d Y)) (d (ι X Y)))]})))
+def `$\iota$` %X %Y :=
+  withSymbols [i] dfOrder Y * X...~i . (antisymmetrize Y..._i)
+\end{lstlisting}
+リー微分は以下のように定義できる．
+\begin{lstlisting}[language=egison,numbers=none]
+Lie %X %Y :=
+  match dfOrder Y as integer with
+    | #0 -> `$\iota$` X (d Y)
+    | #N -> d (`$\iota$` X Y)
+    | _  -> `$\iota$` X (d Y) + d (`$\iota$` X Y)
 \end{lstlisting}
 
 

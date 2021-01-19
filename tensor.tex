@@ -372,7 +372,7 @@ remove(2, [{i, 1}, {j, -1}])        = [{i, 1}]
 update(2, 0, [{i, 1}, {j, -1}])     = [{i, 1}, {j, 0}]
 \end{lstlisting}
 
-\section{テンソル関数の適用}
+\section{テンソル関数の適用}\label{tensor-tensorfunc}
 
 添字付きのテンソルがテンソル関数に渡されるとき，そのテンソルの添字ごとテンソル関数に適用される．
 図\ref{fig:dotDef}で定義した``\lstinline{.}''関数でこの挙動を確認する．
@@ -565,16 +565,19 @@ def A_i_j := ...
 階数がパラメーター$n$によって変わるテンソル$A$について，$A_{i_{1}...i_{n}}$のように添字を付加したいことがある．
 このために\lstinline{subrefs}と\lstinline{subrefs!}という組み込み関数がEgisonには用意されている．
 これらの関数は第一引数にテンソルに第二引数に添字のリストを付加する．
-\lstinline{subrefs}は第一引数のテンソルの既存の添字に追加で第二引数に添字のリストを付加するのに対して，\lstinline{subrefs}は既存の添字を消して新たに添字を付加し直す．
+\lstinline{subrefs}は第一引数のテンソルの既存の添字に追加で第二引数に添字のリストを付加するのに対して，\lstinline{subrefs!}は既存の添字を消して新たに添字を付加し直す．
 \begin{lstlisting}[language=egison,numbers=none]
-subrefs A (map 1#i_%1 [1..n])
+subrefs! A (map 1#i_%1 [1..n])
+subrefs  A (map 1#i_%1 [1..n])
 \end{lstlisting}
-$A_{i_{1}...i_{n}}$のような形のテンソルは数式でよく現れるため，上記の\lstinline{subrefs}を使ったプログラムについては以下のような糖衣構文が用意されている．
+$A_{i_{1}...i_{n}}$のような形のテンソルは数式でよく現れるため，上記の\lstinline{subrefs!}と\lstinline{subrefs}を使ったプログラムについては以下のような糖衣構文が用意されている．
 \begin{lstlisting}[language=egison,numbers=none]
 A_(i_1)...(i_n)
+A..._(i_1)...(i_n)
 \end{lstlisting}
-
 上記の内容は$A^{i_{1}...i_{n}}$のような上添字をもつテンソルにも用意されており，このために\lstinline{suprefs}と\lstinline{suprefs!}という組み込み関数がEgisonには用意されている．
+
+\lstinline{subrefs}や\lstinline{suprefs}のように既存の添字に追加で添字を付加する機能は，\ref{diffgeo-form}節で紹介する微分形式についての関数を定義するときに使われる．
 
 \section{テンソルの対称性・歪対称性の宣言}\label{tensor-symm}
 
