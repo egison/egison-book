@@ -385,6 +385,14 @@ update(2, 0, [{i, 1}, {j, -1}])     = [{i, 1}, {j, 0}]
 [|1,2,3|]_i . [|10,20,30|]_i -- [|10,40,90|]_i
 \end{lstlisting}
 
+テンソル関数の中で引数として渡されたテンソルに追加で添字を付加したいことがある．
+追加で新しい添字を付加するためには，以下のように\lstinline{...}をテンソルと添字の間に挟めば良い．
+この機能は，\ref{tensor-refs}節で紹介する\lstinline{subrefs}と\lstinline{suprefs}という組み込み関数を使った糖衣構文として実装されている．
+この機能の使用例は\ref{diffgeo-form}節で紹介する．
+\begin{lstlisting}[language=egison,numbers=none]
+A..._i_j
+\end{lstlisting}
+
 \section{省略された添字の補完}\label{tensor-completion}
 
 添字が省略されたテンソルが関数に適用された場合，Egisonは自動で添字を補完する．
@@ -550,9 +558,25 @@ def A_i_j := ...
 -- => def A__ := withSymbols [i, j]
 --                 transpose [i, j] ...
 \end{lstlisting}
+\lstinline{transpose}関数は，テンソルの成分を第一引数で指定された順番に転置する組み込み関数である．
 
+\section{添字付加のために便利な構文}\label{tensor-refs}
 
-\section{テンソルの対称性・歪対称性の宣言}
+階数がパラメーター$n$によって変わるテンソル$A$について，$A_{i_{1}...i_{n}}$のように添字を付加したいことがある．
+このために\lstinline{subrefs}と\lstinline{subrefs!}という組み込み関数がEgisonには用意されている．
+これらの関数は第一引数にテンソルに第二引数に添字のリストを付加する．
+\lstinline{subrefs}は第一引数のテンソルの既存の添字に追加で第二引数に添字のリストを付加するのに対して，\lstinline{subrefs}は既存の添字を消して新たに添字を付加し直す．
+\begin{lstlisting}[language=egison,numbers=none]
+subrefs A (map 1#i_%1 [1..n])
+\end{lstlisting}
+$A_{i_{1}...i_{n}}$のような形のテンソルは数式でよく現れるため，上記の\lstinline{subrefs}を使ったプログラムについては以下のような糖衣構文が用意されている．
+\begin{lstlisting}[language=egison,numbers=none]
+A_(i_1)...(i_n)
+\end{lstlisting}
+
+上記の内容は$A^{i_{1}...i_{n}}$のような上添字をもつテンソルにも用意されており，このために\lstinline{suprefs}と\lstinline{suprefs!}という組み込み関数がEgisonには用意されている．
+
+\section{テンソルの対称性・歪対称性の宣言}\label{tensor-symm}
 
 \begin{figure}[t]
  \begin{subfigure}[b]{1.0\linewidth}
