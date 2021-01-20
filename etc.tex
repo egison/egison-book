@@ -52,13 +52,178 @@
 
 \section{中置演算子の定義}
 
-\todo{書く}
+Egisonはユーザーが新しく中置演算子を定義する機能を提供している．
+中置演算子を宣言するには，\lstinline{infix}，または\lstinline{infixl}，\lstinline{infixr}を使う．
+\lstinline{infix}，\lstinline{infixl}，\lstinline{infixr}はそれぞれ結合性のない演算子，左結合の演算子，右結合の演算子を定義するのに使う．
+\lstinline{infix}，\lstinline{infixl}，\lstinline{infixr}は共通して三つの引数をとる．
+第一引数には，これから定義する中置演算子が関数であるのか，パターンコンストラクタであるのか指定するために，\lstinline{expression}か\lstinline{pattern}というキーワードをとる．
+第二引数には，これから定義する中置演算子の優先度を整数値でとる．
+第三引数には，これから定義する中置演算子の名前をとる．
 
-\section{\texttt{do}式}
+中置演算子として使う関数を定義する例として論理積\lstinline{&&}を定義すると以下のようになる．
+\begin{lstlisting}[language=egison,numbers=none]
+infixr expression 5 &&
 
-\todo{書く}
+def (&&) a b := match (a, b) as (eq, eq) with
+  | (#True, #True) -> True
+  | _              -> False
+\end{lstlisting}
+
+中置演算子として使うパターンコンストラクタを定義する例としてジョイン・パターン\lstinline{++}を定義すると以下のようになる．
+\begin{lstlisting}[language=egison,numbers=none]
+infixl pattern 7 <>
+
+def list a := matcher
+  | $ ++ $ as (list a, list a) with
+    ...
+\end{lstlisting}
+
+\begin{center}
+    \begin{tabular}{ | l | p{9cm} |}
+    \hline
+    関数名 & 関数の優先度 \\ \hline
+    \texttt{} & \\ \hline
+    \end{tabular}
+\end{center}
+
+\section{\texttt{IO}入出力}
+
+遅延評価を基本の評価戦略とするEgisonは，副作用をもつプログラムを記述するための特別な構文をもつ．
+Egisonは静的型システムを持つ言語ではないが，Haskellと同じような方法で副作用をもつプログラムを記述する．
+
+\subsection{\texttt{main}関数}
+
+たとえば，''Hello world!''という文字列を出力するプログラムは以下のように書ける．
+\begin{lstlisting}[language=egison,numbers=none]
+def main args := write "Hello world!\n"
+\end{lstlisting}
+コマンドラインオプション\lstinline{-t}がない場合は，Egisonは\lstinline{main}関数を実行する．
+上記のプログラムは以下のように実行できる．
+\begin{lstlisting}[language=egison,numbers=none]
+$ cat hello.egi
+def main args := write "Hello world!\n"
+$ egison hello.egi
+Hello world!
+\end{lstlisting}
+\lstinline{write}はEgisonに組み込みで実装されているIO関数である．
+\lstinline{write}は第一引数に文字列をとり，その文字列を標準出力に印字する．
+
+\lstinline{main}の第一引数にはコマンドライン引数がはいる．
+コマンドライン引数は文字列として\lstinline{main}の第一引数に渡される．
+\begin{lstlisting}[language=egison,numbers=none]
+$ cat args.egi
+def main args := write (show args)
+$ egison args.egi hello world 1
+["hello", "world", "1"]
+\end{lstlisting}
+
+Egisonでつくったスクリプトをコマンドにしたい場合はシェバン（shebang）を使えばよい．
+\begin{lstlisting}[language=egison,numbers=none]
+$ cat args
+#!/usr/local/egison
+  
+def main args := write (show args)
+$ args hello world 1
+["hello", "world", "1"]
+\end{lstlisting}
+
+\subsection{IO関数}
+
+IO関数には\lstinline{write}以外にもいくつもある．
+図\ref{}にその一覧をまとめた．
+
+\todo{IO組み込み関数一覧}
+
+\begin{center}
+    \begin{tabular}{ | l | p{9cm} |}
+    \hline
+    関数名 & 関数の内容 \\ \hline
+    \texttt{return} & \\ \hline
+    \texttt{openInputFile} &  \\ \hline
+    \texttt{openOutputFile} &  \\ \hline
+    \texttt{closeInputPort} &  \\ \hline
+    \texttt{closeOutputPort} &  \\ \hline
+    \texttt{readChar} &  \\ \hline
+    \texttt{readLine} &  \\ \hline
+    \texttt{writeChar} &  \\ \hline
+    \texttt{write} &  \\ \hline
+    \texttt{readCharFromPort} &  \\ \hline
+    \texttt{readLineFromPort} &  \\ \hline
+    \texttt{writeCharToPort} &  \\ \hline
+    \texttt{writeToPort} &  \\ \hline
+    \texttt{isEof} &  \\ \hline
+    \texttt{flush} &  \\ \hline
+    \texttt{isEofPort} &  \\ \hline
+    \texttt{flushPort} &  \\ \hline
+    \texttt{readFile} &  \\ \hline
+    \texttt{rand} &  \\ \hline
+    \texttt{f.rand} &  \\ \hline
+    \texttt{newIORef} &  \\ \hline
+    \texttt{writeIORef} &  \\ \hline
+    \texttt{readIORef} &  \\ \hline
+    \texttt{readProcess} &  \\ \hline
+    \end{tabular}
+\end{center}
+
+\subsection{\texttt{do}式}
+
+\lstinline{do}式を使うと，複数のIO関数を一つにまとめ，順番に実行することができる．
+\lstinline{do}式はHaskellの\lstinline{do}記法に対応している．
+たとえば，以下のプログラムはユーザーの入力を一行読み取り，それを出力する．
+\begin{lstlisting}[language=egison,numbers=none]
+def main arg := do
+  let line := readLine ()
+  write line
+\end{lstlisting}
+
+\lstinline{do}式と再帰関数を組み合わせることができる．
+以下はインタプリタのREPL（Read-Eval-Print Loop）のEvalをぬいたプログラムである．
+\begin{lstlisting}[language=egison,numbers=none]
+def main arg := repl
+
+def repl := do
+  write "> "
+  flush ()
+  let line := readLine ()
+  write line
+  flush ()
+  repl
+\end{lstlisting}
+
+Haskellと同様に，オフサイドルールを使わない\lstinline{do}記法の構文もサポートしている．
+\begin{lstlisting}[language=egison,numbers=none]
+do { print "foo" ; print "bar" ; print "baz" }
+\end{lstlisting}
 
 Egisonは静的型システムを持つ言語ではないため，\lstinline{do}式は多相的ではない．
 Haskellの\lstinline{do}式は，リストモナドやMaybeモナド，Stateモナド，IOモナドなどさまざまなモナドに対して使うことができるが，Egisonの\lstinline{do}式はIOモナドに対してしか使うことができない．
 
-\todo{IO組み込み関数一覧}
+\subsection{\texttt{io}関数}
+
+\lstinline{io}関数はHaskellの\lstinline{unsafePerformanceIO}関数に対応する組み込み関数である．
+\lstinline{io}関数を使うとIO関数でない通常の関数のなかでIO関数を呼び出せるようになる．
+これはprintfデバッグをしたりするのに便利である．
+
+以下のプログラムは二つのサイコロをふりそれらの目の合計値を返す．
+\begin{lstlisting}[language=egison,numbers=none]
+def dice := io (rand 1 6)
+
+dice + dice
+\end{lstlisting}
+
+\section{\texttt{seq}式}
+
+\lstinline{seq}式は，プログラムを部分的に遅延評価ではなく正格評価したいときに使う．
+遅延評価は便利であるが，ときに，メモリを無駄に確保し効率が悪いことがある．
+部分的にプログラムを正格評価することで，プログラムの効率が向上することがある．
+\lstinline{seq}式は第一引数のプログラムを正格評価したあと，第二引数のプログラムを評価する．
+たとえば，\lstinline{foldl}は以下のように\lstinline{seq}式を使うと効率が向上することが知られている．
+\begin{lstlisting}[language=egison,numbers=none]
+def foldl $fn $init $ls :=
+  match ls as list something with
+    | [] -> init
+    | $x :: $xs ->
+      let z := fn init x
+        in seq z (foldl fn z xs)
+\end{lstlisting}
+      
