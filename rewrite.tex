@@ -1,3 +1,23 @@
 \chapter{新しい簡約規則の追加方法}\label{rewrite}
 
 \texttt{hs-src/Language/Egison/Math/Rewrite.hs}
+
+\begin{lstlisting}[language=egison,numbers=none]
+rewriteW :: ScalarData -> ScalarData
+rewriteW = mapPolys g . mapTerms f
+ where
+  f term@(Term a xs) =
+    match dfs xs (Multiset (Pair SymbolM Eql))
+      [ [mc| (symbol #"w", $k & ?(>= 3)) : $xss ->
+               Term a ((Symbol "" "w" [], k `mod` 3) : xss) |]
+      , [mc| _ -> term |]
+      ]
+  g poly@(Plus ts) =
+    match dfs ts (Multiset TermM)
+      [ [mc| term $a ((symbol #"w", #2) : $mr) :
+             term $b ((symbol #"w", #1) : #mr) : $pr ->
+               g (Plus (Term (-a) mr :
+                        Term (b - a) ((Symbol "" "w" [], 1) : mr) : pr)) |]
+      , [mc| _ -> poly |]
+      ]
+\end{lstlisting}

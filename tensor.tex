@@ -560,6 +560,16 @@ def A_i_j := ...
 \end{lstlisting}
 \lstinline{transpose}関数は，テンソルの成分を第一引数で指定された順番に転置する組み込み関数である．
 
+同じ変数名と添字の型のテンソルが環境にない場合は，添字の型を末尾から順に取り除いて参照をおこなう．
+たとえば，下記の例のように\lstinline{T~}と\lstinline{T_}が定義されている状態で，\lstinline{T~#_#}を参照すると，\lstinline{T~_}が環境にないため，末尾の添字の型をひとつ取り除いて\lstinline{T~}を参照する．
+\lstinline{T~}は定義済みであるため，その値が参照される．
+\begin{lstlisting}[language=egison,numbers=none]
+def T~ := [| [| 11, 12 |], [| 21, 22 |] |]
+def T_ := [| [| -11, -12 |], [| -21, -22 |] |]
+
+T~#_# -- [| [| 11, 12 |], [| 21, 22 |] |]
+\end{lstlisting}
+
 \section{添字付加のために便利な構文}\label{tensor-refs}
 
 階数がパラメーター$n$によって変わるテンソル$A$について，$A_{i_{1}...i_{n}}$のように添字を付加したいことがある．

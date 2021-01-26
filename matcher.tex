@@ -223,9 +223,18 @@ sortedList a := matcher
   ...
 \end{lstlisting}
 
-\section{\texttt{assocMultiset}マッチャー}\label{matcher-assoc}
+\section{連想リストに対するマッチャー}\label{matcher-assoc}
 
-\todo{説明}
+Egisonには連想リストに対するマッチャー\lstinline{assocMultiset}が定義されている．
+その使い方と定義を紹介する．
+\begin{lstlisting}[language=egison]
+matchAll [(1, 4), (2, 3), (3, 2), (4, 1)] as assocMultiset eq with
+  | $x ^ #3 :: $rs -> (x, rs)
+-- [(1, [(1, 1), (2, 3), (3, 2), (4, 1)]), (2, [(1, 4), (3, 2), (4, 1)])]
+\end{lstlisting}
 
 \begin{lstlisting}[language=egison]
+matchAll [(1, 3), (2, 3), (3, 2), (4, 1)] as assocMultiset eq with
+  | #3 ^ $n :: $rs -> (n, rs)
+-- [(2, [(1, 3), (2, 3), (4, 1)])]
 \end{lstlisting}
