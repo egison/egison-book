@@ -164,6 +164,7 @@ matchAll [1, 2, 3] as multiset something with
 多重集合に対する非線形パターンの応用例としてポーカーの役判定を紹介する．
 多重集合に対する非線形パターンにより，ポーカーのすべての役はそれぞれ1つのパターンとして表現できる．
 \footnote{著者がEgisonのマッチ式を設計したとき，ポーカーの役判定をするプログラムを簡潔に記述できることを必要条件として設計した．}
+``\lstinline{[}$p_1$\lstinline{,} $p_2$\lstinline{,} $...$\lstinline{,} $p_n$\lstinline{]}''というパターンは，``$p1$ \lstinline{:} $p_2$ \lstinline{:} $...$ \lstinline{:} $p_n$ \lstinline{: []}''に展開される糖衣構文である．
 \begin{lstlisting}[language=egison,numbers=none]
 poker cs :=
   match cs as multiset card with

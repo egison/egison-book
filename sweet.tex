@@ -1,0 +1,148 @@
+\chapter{Sweet Egison - EgisonパターンマッチのHaskellライブラリ}\label{sweet}
+
+Egisonパターンマッチの実装には，本書でここまで紹介してきたEgisonの言語実装のほかに，既存言語上のDomain Specific Language（DSL）として実装したライブラリ実装もある．
+既存言語のライブラリ実装には，deep embedding（インタプリタを埋め込むによりDSLを実現する手法）による実装であるminiEgison系と，shallow embedding（コンパイラを埋め込むことによりDSLを実現する手法）による実装であるSweet Egison系の二種類がある．
+本章は，これらの実装のなかでもっとも高速なSweet EgisonのHaskell実装の使い方を紹介する．
+Egisonと異なりHaskellは静的型システムをもつ．
+そのため，Sweet Egisonを使ったパターンマッチはコンパイル時に型検査がなされる．
+
+\section{Sweet Egisonの使い方}\label{sweet-match}
+
+Sweet EgisonはHackageを通してHaskellライブラリとして公開されている．
+本節はSweet Egisonをすでにインストールしているものとして使い方を解説する．
+
+Sweet EgisonにはEgisonと同様に\lstinline{matchAll}式がある．
+\lstinline{matchAll}は引数として探索戦略とターゲットマッチャー，マッチ節のリストをとる．
+Sweet Egisonでは\lstinline{matchAll}はHaskellの関数として実装されており，\lstinline{as}や\lstinline{with}のようなキーワードは挟まない．
+\begin{lstlisting}[language=haskell,numbers=none]
+matchAll dfs [1, 2, 3] (List Something)
+  [[mc| $x : $xs -> (x, xs) |]]
+-- [(1, [2, 3])]
+\end{lstlisting}
+上記の\lstinline{matchAll}式は探索戦略として深さ優先探索\lstinline{dfs}が指定されている．
+Sweet Egisonではユーザが新しい評価戦略を定義できる．
+これはEgisonにはないSweet Egisonの機能である．
+探索戦略の定義の方法は\ref{sweet-strategy}節で解説する．
+上記の\lstinline{matchAll}式のマッチャーは\lstinline{(List Something)}である．
+\ref{sweet-matcher}節で改めて解説するように，Sweet EgisonではマッチャーはHaskellのデータとして表現される．
+マッチ節は\lstinline{mc}クアジ・クォーター（quasi-quoter）を使って表現される．
+クアジ・クォーターはTemplate Haskellが提供する機能のひとつで，\lstinline{[mc|}と\lstinline{|]}で囲まれた部分を文字列として受け取り，Haskellプログラムを返す関数を定義することで，ユーザはHaskellメタプログラミングすることができる．
+マッチ節がどのようなHaskellプログラムに展開されるのかは，\ref{sweet-mechanism}節で紹介する．
+コンス・パターンはHaskellと同様にコロンひとつで表現する．
+
+ライブラリに最初から定義されている探索戦略には，深さ優先探索\lstinline{dfs}と幅優先探索\lstinline{bfs}がある．
+深さ優先探索\lstinline{dfs}は，無限にあるパターンマッチの結果をすべて列挙できないことがあるが，高速である．
+\begin{lstlisting}[language=haskell,numbers=none]
+take 10 (matchAll dfs [1..] (Set Something)
+  [[mc| $x : $y : _ -> (x, y) |]])
+-- [(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7), (1, 8), (1, 9), (1, 10)]
+\end{lstlisting}
+幅優先探索\lstinline{bfs}は，無限にあるパターンマッチの結果をすべて列挙できるが，深さ優先探索\lstinline{dfs}にくらべて実行効率がよくない．
+\begin{lstlisting}[language=haskell,numbers=none]
+take 10 (matchAll bfs [1..] (Set Something)
+  [[mc| $x : $y : _ -> (x, y) |]])
+-- [(1, 1), (1, 2), (2, 1), (1, 3), (2, 2), (3, 1), (1, 4), (2, 3), (3, 2), (4, 1)]
+\end{lstlisting}
+
+\lstinline{matchAll}式がマッチ節のリストを引数にとるのは，複数のマッチ節を扱うためである．
+Egisonと同様に``\lstinline[postbreak={}]{matchAll} $t$ $m$ [$c_1$,$c_2$,$...$]''というプログラムは，``\lstinline[postbreak={}]{matchAll} $t$ $m$ [$c_1$] \lstinline[postbreak={}]{++} \lstinline[postbreak={}]{matchAll} $t$ $m$ [$c_2$] \lstinline[postbreak={}]{++} $...$''と同値である．
+\begin{lstlisting}[language=haskell,numbers=none]
+matchAll [1, 2, 3] (List Something)
+  [[mc| $x : $xs -> (x, xs) |]
+  ,[mc| _ : $x : $xs -> (x, xs) |]]
+-- [(1, [2, 3]), (2, [3])]
+\end{lstlisting}
+
+Sweet Egisonでは，Egisonと同様に\lstinline[postbreak={}]{#}を使って値パターンを表現する．
+値パターンを使って非線形パターンを表現できる．
+\begin{lstlisting}[language=haskell,numbers=none]
+matchAll [1, 5, 2, 4] (Multiset Eql)
+  [[mc| $x : #(x + 1) : _ -> (x, x + 1) |]]
+-- [(1, 2), (4, 5)]
+\end{lstlisting}
+
+最初のパターンマッチの結果だけを返す\lstinline{match}もSweet Egisonには実装されている．
+\lstinline{matchAll}を使って\lstinline{match}は以下のように定義される．
+\begin{lstlisting}[language=haskell,numbers=none]
+match s tgt m cs = head (matchAll s tgt m cs)
+\end{lstlisting}
+\lstinline{match}を使ってポーカーの役判定は図\ref{fig:pokerProgram}のように記述できる．
+Sweet Egisonでは，ターゲットのデータ型とマッチャーの両方でデータコンストラクタを使うために，データコンストラクタの名前がかぶりやすい．
+そのため，マッチャーのほうに\lstinline{CardM}のように末尾にマッチャーの\lstinline{M}をつけて，名前の衝突を回避することがある．
+\begin{figure*}[t]
+\begin{lstlisting}[language=haskell,numbers=none]
+data Suit = Spade | Heart | Club | Diamond deriving (Eq)
+data Card = Card Suit Integer
+
+poker :: [Card] -> String
+poker cs =
+  matchDFS cs (Multiset CardM)
+    [[mc| [card $s $n, card #s #(n-1), card #s #(n-2), card #s #(n-3), card #s #(n-4)] -> "Straight flush" |],
+     [mc| [card _ $n, card _ #n, card _ #n, card _ #n, _] -> "Four of a kind" |],
+     [mc| [card _ $m, card _ #m, card _ #m, card _ $n, card _ #n] -> "Full house" |],
+     [mc| [card $s _, card #s _, card #s _, card #s _, card #s _] -> "Flush" |],
+     [mc| [card _ $n, card _ #(n-1), card _ #(n-2), card _ #(n-3), card _ #(n-4)] -> "Straight" |],
+     [mc| [card _ $n, card _ #n, card _ #n, _, _] -> "Three of a kind" |],
+     [mc| [card _ $m, card _ #m, card _ $n, card _ #n, _] -> "Two pair" |],
+     [mc| [card _ $n, card _ #n, _, _, _] -> "One pair" |],
+     [mc| _ -> "Nothing" |]]
+\end{lstlisting}
+  \caption{ポーカーの役判定をするHaskellプログラム}
+  \label{fig:pokerProgram}
+\end{figure*}
+
+\section{Sweet Egisonの仕組み}\label{sweet-mechanism}
+
+Sweet Egisonの実装のアイデアを説明するために，まず以下の\lstinline{matchAll}式がどのようなHaskellプログラムに変換されるのかみる．
+\lstinline{cons $x _}は\lstinline{$x : _}と同値のパターンである．
+Sweet Egisonでは中置演算子は組み込みで\lstinline{:}と\lstinline{++}のみが実装されている．
+\begin{lstlisting}[language=haskell,numbers=none]
+matchAll dfs [1, 2, 3] (Multiset Something) [[mc| cons $x _ -> x |]]
+\end{lstlisting}
+上記のプログラムは以下のようなリスト・モナドについての\lstinline{do}式に展開される．
+\begin{lstlisting}[language=haskell,numbers=none]
+(\ (matcher, target) -> do
+  (x, _) <- cons matcher target -- [(1, [2, 3]), (2, [1, 3]), (3, [1, 2])]
+  let (_, _) = consM matcher target -- (Something, Multiset Something) return x)
+  (Multiset Something, [1, 2, 3]) -- [1, 2, 3]
+\end{lstlisting}
+
+\begin{lstlisting}[language=haskell,numbers=none]
+cons (Multiset Something) [1, 2, 3] -- [(1, [2, 3]), (2, [1, 3]), (3, [1, 2])]
+consM (Multiset Something) [1, 2, 3] -- (Something, Multiset Something)
+\end{lstlisting}
+
+\begin{lstlisting}[language=haskell,numbers=none]
+matchAll dfs [1, 2, 3] (Multiset Something) [[mc| cons $x (cons $y _) -> (x, y) |]]
+-- [(1, 2), (1, 3), (2, 1), (2, 3), (3, 1), (3,2)]
+\end{lstlisting}
+
+\begin{lstlisting}[language=haskell,numbers=none]
+(\ (matcher, target) -> do
+  (x, target') <- cons matcher target
+  let (_, matcher') = consM matcher target (y, _) <- cons matcher' target'
+  let (_, _) = consM matcher' target'
+  return (x, y))
+  (Multiset Something, [1, 2, 3])
+\end{lstlisting}
+
+\begin{lstlisting}[language=haskell,numbers=none]
+matchAll dfs [1, 2, 3] (Multiset Eql)
+  [[mc| cons $x (cons #(x * 2) _) -> (x, y) |]]
+-- [(1, 2), (1, 3), (2, 1), (2, 3), (3, 1), (3,2)]
+\end{lstlisting}
+
+\begin{lstlisting}[language=haskell,numbers=none]
+(\ (matcher, target) -> do
+  (x, target') <- cons matcher target
+  let (_, matcher') = consM matcher target (target'', _) <- cons matcher' target'
+  let (matcher'', _) = consM matcher' target' valuePat (x * 2) matcher'' target''
+  return (x, y))
+  (Multiset Something, [1, 2, 3])
+\end{lstlisting}
+
+
+\section{Sweet Egisonのマッチャー定義}\label{sweet-matcher}
+
+\section{ユーザによる探索戦略の追加}\label{sweet-strategy}
+

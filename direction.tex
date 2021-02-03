@@ -96,6 +96,19 @@ R~i_j_k_l := withSymbols [m]
 
 シーケンシャル・パターン
 
+\todo{変種について}
+
+Egisonインタプリタ\cite{egisonGitHub}は，本書で紹介したループ・パターンやパターン関数を含むEgisonのパターンマッチの全機能が実装された唯一の処理系である．
+このインタプリタはHaskellで実装されている．
+このインタプリタへのEgisonパターンマッチ実装の方法については，第\ref{mechanism}章で紹介した．
+このインタプリタには，パターンマッチ以外に数式処理システムとしての機能も実装されている．
+
+そのほかのEgisonのインタプリタ実装には，河田旺さんによるTyped Egison~\cite{typedEgison}とFormalized Egison~\cite{formalizedEgison}がある．
+Typed Egisonは，Egisonインタプリタからパターンマッチに関する最小限の機能を切り出し，静的型システムを実装したものである．
+Typed EgisonはEgison version 3をベースにしている．
+Formalized Egisonは，Typed Egisonの型安全性を証明するためにCoqで実装されたインタプリタである．
+
+
 \subsection{他のプログラミングへのEgison言語機能の移植}\label{direction-interpreter-library}
 
 2019年からは既存のメジャーなプログラミング言語にEgisonの機能を実装することにも取り組み始めた．

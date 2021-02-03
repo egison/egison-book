@@ -152,6 +152,42 @@
 
 \newcommand{\todo}[1]{\textcolor{red}{(TODO: #1)}}
 
+%\newcommand{\G}{\Gamma}
+\newcommand{\D}{\Delta}
+\newcommand{\V}{\vdash}
+%\newcommand{\Vp}{\vdash^{p}}
+\newcommand{\Vp}{\vdash}
+\newcommand{\TW}{\triangleright}
+\newcommand{\TWL}{\triangleleft}
+\newcommand{\F}{\forall}
+\newcommand{\TB}{\blacktriangleright}
+\newcommand{\TBL}{\blacktriangleleft}
+\newcommand{\E}{\equiv}
+\newcommand{\FV}{\text{FV}}
+\newcommand{\FTV}{\text{FTV}}
+
+\newcommand{\bt}[1]{{\texttt{#1}}}
+
+\newcommand{\eif}[1]{\bt{(if}#1\bt{)}}
+\newcommand{\elam}[2]{\bt{(lambda [}#1\bt{]} #2\bt{)}}
+\newcommand{\eapp}[1]{\bt{(}#1\bt{)}}
+\newcommand{\etup}[1]{\bt{[}#1\bt{]}}
+\newcommand{\ecol}[1]{\bt{\{}#1\bt{\}}}
+\newcommand{\eadt}[1]{{\bf{(}}#1{\bf{)}}}
+
+\newcommand{\ematchall}[4]{\bt{matchAll}\ #1\ \bt{as}\ #2\ \bt{with}\ #3\ \bt{->}\ #4}
+
+\newcommand{\tfun}[2]{#1\to#2}
+\newcommand{\ttup}[1]{\bt{[}#1\bt{]}}
+\newcommand{\ttupstart}{\bt{(}}
+\newcommand{\ttupend}{\bt{)}}
+\newcommand{\tcol}[1]{\bt{[}#1\bt{]}}
+\newcommand{\tpat}[1]{\bt{Pattern}\ #1}
+
+\newcommand{\tmatcher}[1]{\bt{Matcher}\ #1}
+\newcommand{\tmatcherclause}[1]{\bt{(MatcherClause }#1\bt{)}}
+
+
 \begin{document}
 \frontmatter
 
@@ -184,7 +220,7 @@
 
 \include{etc}
 
-\include{implementation}
+\include{sweet}
 
 \part{数式処理システムとしてのEgison}\label{part-cas}
 
