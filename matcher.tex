@@ -106,7 +106,7 @@ eq := matcher
 \begin{lstlisting}[language=egison,numbers=none]
 `原始パターンパターン` ::= $ | c `原始パターンパターン`* | #$`ID` | _
 \end{lstlisting}
-原始ワイルドカードについては，\ref{matcher-primitive-wildcard}節で用例を紹介する．
+原始ワイルドカードについては，\ref{matcher-wildcard}節で用例を紹介する．
 
 原始データパターンは，ワイルドカード，パターン変数，原始データパターンコンストラクタの適用からなる．
 \begin{lstlisting}[language=egison,numbers=none]
@@ -152,7 +152,7 @@ multiset a := matcher
 そして，\lstinline{val}と\lstinline{tgt}から同じ要素を1つ抜いたコレクションを\lstinline{$xs}と\lstinline{#xs}というパターンを使って再帰的にパターンマッチしている．
 \lstinline{#xs}のパターンマッチに，このマッチャー節自身が再帰的に呼び出されるが，コレクションの長さが1つずつ短くなっていくため，最終的に1つ目か3つ目のマッチ節どちらかにいきつく．
 
-\section{\texttt{soretedList}マッチャーの定義}\label{matcher-sorted-list}
+\section{\texttt{soretedList}マッチャーの定義}\label{matcher-sorted}
 
 二重にネストしたジョイン・コンス・パターンを使って$(p,p+6)$という形の素数のペアを列挙するプログラムは，後方の素数のペアになるほど列挙に時間がかかるようになる．
 その理由は，二重にネストしたジョイン・コンス・パターンは，すべての素数の組み合わせを検査するためである．
@@ -177,11 +177,14 @@ sortedList a := matcher
                  -> (map (\i -> h_i) [1..n], ts)
   ...
 \end{lstlisting}
+このようにネストしたパターンに対して直接パターンマッチのアルゴリズムを定義することによる最適化のことを，\emph{パターン・フュージョン}（\emph{pattern fusion}）\index{ぱたーんふゅーじょん@パターン・フュージョン}と呼ぶ．
 
-\section{原始ワイルドカードによる最適化}\label{matcher-primitive-wildcard}
+\section{原始ワイルドカードによる最適化}\label{matcher-wildcard}
 
-原始パターンパターン中で，原始ワイルドカードを使うことにより，ワイルドカードを特別扱いすることによって，ワイルドカードがパターン中に現れる特定のパターンの処理を高速化できる．
+パターンがワイルドカードを含む場合，ワイルドカードにマッチするターゲットの計算を省くことにより，パターンマッチの処理を高速化できる．
+原始パターンパターン中で，原始ワイルドカードを使うことにより，Egisonではこの最適化をおこなえる．
 本節は，\ref{matcher-multiset}節で紹介した\lstinline{multiset}マッチャーについて，そのような最適化を紹介する．
+このような最適化のことを，\emph{ワイルドカード最適化}（\emph{wildcard optimization}）\index{わいるどかーどさいてきか＠ワイルドカード最適化}と呼ぶ．
 
 本節で紹介する最適化の対象は，以下のようなコンス・パターンの第二引数がワイルドカードである場合である．
 この場合，対象のコレクションから要素を1つ除いた残りのコレクションを計算する必要はない．
@@ -204,7 +207,7 @@ multiset a := matcher
   ...
 \end{lstlisting}
 
-\ref{matcher-sorted-list}節の\lstinline{sortedList}マッチャーも同様の最適化ができる．
+\ref{matcher-sorted}節の\lstinline{sortedList}マッチャーも同様の最適化ができる．
 下記の2-7行目のマッチャー節は，ジョイン・パターンの第一引数を計算することを省略する役割を果たす．
 \begin{lstlisting}[language=egison]
 sortedList a := matcher
