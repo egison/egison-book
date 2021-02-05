@@ -103,9 +103,10 @@ matchAll dfs [1, 2, 3] (Multiset Something) [[mc| cons $x _ -> x |]]
 上記のプログラムは以下のようなリスト・モナドについての\lstinline{do}式に展開される．
 \begin{lstlisting}[language=haskell,numbers=none]
 (\ (matcher, target) -> do
-  (x, _) <- cons matcher target
-  let (_, _) = consM matcher target
-  (Multiset Something, [1, 2, 3]) -- [1, 2, 3]
+   (x, _) <- cons matcher target
+   let (_, _) = consM matcher target
+   return x)
+ (Multiset Something, [1, 2, 3]) -- [1, 2, 3]
 \end{lstlisting}
 展開後のプログラムにあらわれる\lstinline{cons}と\lstinline{consM}はそれぞれネクスト・ターゲット，ネクスト・マッチャーを計算するための関数である．
 \lstinline{cons}と\lstinline{consM}はHaskellで定義された関数である．
@@ -137,7 +138,7 @@ matchAll dfs [1, 2, 3] (Multiset Eql)
   [[mc| cons $x (cons #(x * 2) _) -> (x, y) |]]
 -- [(1, 2), (1, 3), (2, 1), (2, 3), (3, 1), (3,2)]
 \end{lstlisting}
-\lstinline{valuePat}はHaskellで定義された関数であり，\todo{}
+\lstinline{valuePat}はHaskellで定義された関数であり，さきほど登場した\lstinline{cons}関数と同様にHaskellで定義された関数である．
 \begin{lstlisting}[language=haskell,numbers=none]
 (\ (matcher, target) -> do
    (x, target') <- cons matcher target
@@ -151,29 +152,42 @@ matchAll dfs [1, 2, 3] (Multiset Eql)
 
 \section{Sweet Egisonの最適化}\label{sweet-optimize}
 
+実際のSweet Egisonは\label{sweet-mechanism}節で解説した展開よりも，最適化のために，もうすこし複雑な展開をする．
+特にワイルドカード最適化のために特別な工夫がある．
+本節ではこれらの工夫を紹介する．
+
 \subsection{ワイルドカードのパターンマッチの最適化}
 
 \ref{matcher-wildcard}節で述べたワイルドカード最適化をSweet Egisonでもおこなうことができる．
 ワイルドカード最適化とは，ワイルドカードを含むパターンについて，ワイルドカードにマッチするターゲットの計算を省くことにより，パターンマッチの処理を高速化することであった．
 本節は，\ref{matcher-wildcard}節と同様に，多重集合に対するコンス・パターンの第二引数がワイルドカードであった場合の最適化の例を使ってSweet Egisonでこの最適化を使う方法を説明する．
-
-\begin{lstlisting}[language=haskell,numbers=none]
-matchAll dfs [1, 2, 3] (Multiset Something) [[mc| $x : $xs -> (x, xs) |]]
--- [(1, [2, 3]), (2, [1, 3]), (3, [1, 2])]
-\end{lstlisting}
-
 \begin{lstlisting}[language=haskell,numbers=none]
 matchAll dfs [1, 2, 3] (Multiset Something) [[mc| $x : _ -> x |]]
 -- [1, 2, 3]
 \end{lstlisting}
-
+上記の\lstinline{matchAll}式はワイルドカード最適化のために以下のように展開される．
 \begin{lstlisting}[language=haskell,numbers=none]
-cons (GeneralPat, Wildcard) (Multiset Something) [1, 2, 3]
+(\ (matcher, target) -> do
+   (x, _) <- cons (GP, WC) matcher target
+   let (_, _) = consM matcher target
+   return x)
+ (Multiset Something, [1, 2, 3])
+\end{lstlisting}
+$2$行目の\lstinline{cons}関数が第一引数にパターンに対するパターンを追加で引数にとっている．
+パターンに対するパターンは，ワイルドカードとそれ以外のパターンを区別する．
+以下，\lstinline{PP}はパターンに対するパターン（Patterns for Patterns），\lstinline{WC}はワイルドカード（Wildcard），\lstinline{GP}は一般のパターン（General Patterns）の略である．
+\begin{lstlisting}[language=haskell,numbers=none]
+data PP a = WC | GP
+\end{lstlisting}
+\lstinline{cons}関数は第一引数として追加でこのパターンに対するパターンを追加で引数にとる．
+以下のように\lstinline{cons}パターンの第二引数がワイルドカードである場合は，その第二引数に対するネクスト・ターゲットとして\lstinline{undefined}を返す．
+\begin{lstlisting}[language=haskell,numbers=none]
+cons (GP, WC) (Multiset Something) [1, 2, 3]
 -- [(1, undefined), (2, undefined), (3, undefined)]
 \end{lstlisting}
-
+\lstinline{cons}パターンの第二引数がワイルドカード以外である場合は，ネクスト・ターゲットとしてコレクションを計算して返す．
 \begin{lstlisting}[language=haskell,numbers=none]
-cons (GeneralPat, GeneralPat) (Multiset Something) [1, 2, 3]
+cons (GP, GP) (Multiset Something) [1, 2, 3]
 -- [(1, [2, 3]), (2, [1, 3]), (3, [1, 2])]
 \end{lstlisting}
 
@@ -182,6 +196,17 @@ cons (GeneralPat, GeneralPat) (Multiset Something) [1, 2, 3]
 \ref{matcher-sorted}節で解説した最適化であるパターン・フュージョンは，パターンのパターンマッチがでいないSweet Egisonではユーザーが追加することができない．
 リストに対するパターンマッチで頻出するジョイン・コンス・パターンについてのみ組み込みでパターン・フュージョンが定義されている．
 Sweet Egisonはジョイン・コンス・パターン$p_{1}$ \lstinline{++} $p_{2}$ \lstinline{:} $p_{3}$を\lstinline{joinCons} $p_{1}$ $p_{2}$ $p_{3}$に変換する．
+\begin{lstlisting}[language=haskell,numbers=none]
+matchAll dfs [1, 2, 3] (List Something) [[mc| _ ++ $x : _ -> x |]]
+-- [1, 2, 3]
+\end{lstlisting}
+たとえば，上記の\lstinline{matchAll}式は以下のように展開される．
+\begin{lstlisting}[language=haskell,numbers=none]
+(\ (matcher, target) -> do
+  (_, x, _) <- joinCons (WC, GP, WC) matcher target
+  let (_, _, _) = joinConsM matcher target
+  (List Something, [1, 2, 3])
+\end{lstlisting}
 
 \section{Sweet Egisonのマッチャー定義}\label{sweet-matcher}
 
@@ -209,7 +234,7 @@ class CollectionPattern m t where
   joinM :: m -> t -> (m, m)
   joinCons :: Pattern (PP t, PP (ElemT t), PP t) m t (t, ElemT t, t)
   joinConsM :: m -> t -> (m, ElemM m, m)
-x\end{lstlisting}
+\end{lstlisting}
 
 \begin{lstlisting}[language=haskell,numbers=none]
 newtype Multiset m = Multiset m
