@@ -208,20 +208,27 @@ matchAll dfs [1, 2, 3] (List Something) [[mc| _ ++ $x : _ -> x |]]
   (List Something, [1, 2, 3])
 \end{lstlisting}
 
-\section{Sweet Egisonのマッチャー定義}\label{sweet-matcher}
+\section{マッチャーとパターンの型}\label{sweet-type}
 
+マッチャーの型はクラスメソッドのない型クラスを使って表現される．
 \begin{lstlisting}[language=haskell,numbers=none]
 class Matcher m tgt
-
+\end{lstlisting}
+この型クラスを使って，たとえば\lstinline{Something}マッチャーは下記のように定義される．
+データ\lstinline{Something}をもつ型\lstinline{Something}を定義し，型\lstinline{Something}のデータは型\lstinline{a}のマッチャーであるという関係をインスタンス宣言で表現している．
+本来は，データ\lstinline{Something}に\lstinline{Matcher a}のような型を直接つけることが理想であるが，これはHaskellの型システムの制約のためできない．
+\begin{lstlisting}[language=haskell,numbers=none]
 data Something = Something
 
 instance Matcher Something a
 \end{lstlisting}
 
+パターンは，\ref{sweet-optimize}節で述べたように，パターンに対するパターンと，マッチャー，ターゲットを引数にとり，ネクスト・ターゲットを返す関数として定義される．
 \begin{lstlisting}[language=haskell,numbers=none]
 type Pattern ps im it ot = ps -> im -> it -> [ot]
 \end{lstlisting}
-
+パターンの多相性を実現するためには，パターンを型クラスに属する関数として定義する．
+たとえば，コレクションに対するパターンは以下のような型クラスを使って定義される．
 \begin{lstlisting}[language=haskell,numbers=none]
 class CollectionPattern m t where
   type ElemM m
@@ -236,6 +243,9 @@ class CollectionPattern m t where
   joinConsM :: m -> t -> (m, ElemM m, m)
 \end{lstlisting}
 
+\section{Sweet Egisonのマッチャー定義}\label{sweet-matcher}
+
+多重集合のマッチャーは以下のように定義される．
 \begin{lstlisting}[language=haskell,numbers=none]
 newtype Multiset m = Multiset m
 
@@ -250,8 +260,35 @@ instance Matcher m t => CollectionPattern (Multiset m) [t] where
   consM (Multiset m) _ = (m, Multiset m)
 \end{lstlisting}
 
-
 \section{ユーザによる探索戦略の追加}\label{sweet-strategy}
+
+\section{Spiveyのバックトラッキング・モナド}
+
+バックトラッキングによる探索アルゴリズムを記述することに使えるモナドをバックトラッキング・モナドという．
+代表的なバックトラッキング・モナドとしてリスト・モナドが知られている．
+リスト・モナドは以下のようにバックトラッキングを記述することに使える．
+リスト・モナドを使って$1$から$3$の整数のペアを列挙している．
+\begin{lstlisting}[language=haskell,numbers=none]
+[1..3] >>= \ns -> ns >>= \x -> ns >>= \y -> return (x, y)
+-- [(1,1),(1,2),(1,3),(2,1),(2,2),(2,3),(3,1),(3,2),(3,3)]
+\end{lstlisting}
+
+\begin{lstlisting}[language=haskell,numbers=none]
+take 10 (toList (dfs [1..] >>= \ns -> fromList ns >>= \x -> fromList ns >>= \y -> pure (x, y)))
+-- [(1,1),(1,2),(1,3),(1,4),(1,5),(1,6),(1,7),(1,8),(1,9),(1,10)]
+\end{lstlisting}
+
+\begin{lstlisting}[language=haskell,numbers=none]
+take 10 (toList (bfs [1..] >>= \ns -> fromList ns >>= \x -> fromList ns >>= \y -> pure (x, y)))
+-- [(1,1),(1,2),(2,1),(1,3),(2,2),(3,1),(1,4),(2,3),(3,2),(4,1)]
+\end{lstlisting}
+
+\begin{lstlisting}[language=haskell,numbers=none]
+
+\end{lstlisting}
+
+
+\section{Sweet Egisonでの探索戦略の制御}
 
 \begin{lstlisting}[language=haskell,numbers=none]
 matchAll strategy [1..] (Set Something) [[mc| $x : $y : _ -> (x, y) |]]
