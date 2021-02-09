@@ -262,38 +262,65 @@ instance Matcher m t => CollectionPattern (Multiset m) [t] where
 
 \section{ユーザによる探索戦略の追加}\label{sweet-strategy}
 
-\section{Spiveyのバックトラッキング・モナド}
-
 バックトラッキングによる探索アルゴリズムを記述することに使えるモナドをバックトラッキング・モナドという．
 代表的なバックトラッキング・モナドとしてリスト・モナドが知られている．
 リスト・モナドは以下のようにバックトラッキングを記述することに使える．
 リスト・モナドを使って$1$から$3$の整数のペアを列挙している．
 \begin{lstlisting}[language=haskell,numbers=none]
-[1..3] >>= \ns -> ns >>= \x -> ns >>= \y -> return (x, y)
+do ns <- [1..3]
+   x <- ns
+   y <- ns
+   return (x, y)
 -- [(1,1),(1,2),(1,3),(2,1),(2,2),(2,3),(3,1),(3,2),(3,3)]
 \end{lstlisting}
 
+リスト・モナドは探索木を深さ優先探索の順番で探索する．
+そのため，探索木が無限に大きい場合，すべての結果を列挙できないことがある．
 \begin{lstlisting}[language=haskell,numbers=none]
-take 10 (toList (dfs [1..] >>= \ns -> fromList ns >>= \x -> fromList ns >>= \y -> pure (x, y)))
--- [(1,1),(1,2),(1,3),(1,4),(1,5),(1,6),(1,7),(1,8),(1,9),(1,10)]
+do ns <- [1..]
+   x <- ns
+   y <- ns
+   return (x, y)
+-- [(1,1),(1,2),(1,3),(1,4),(1,5),...]
 \end{lstlisting}
 
+ここで，深さ優先探索に対するリスト・モナドのように，深さ優先探索以外の探索戦略についても対応するモナドが存在するのかという疑問が生じる．
+Spiveyによって幅優先探索について，リストのリストをベースのデータ構造にするモナドが対応することが発見されている．
+\todo{参照: Algebras for combinatorial search}
+このモナドは$n$要素目のリストに，探索木の深さ$n$の場所にあるノードを保持する．
+
+バックトラッキング・モナドは，\lstinline{fromList}と\lstinline{toList}という関数をもつ．
+これらはモナドのベースとなるデータ構造とリストとの間の変換関数である．
+深さ優先探索のモナドの場合は，ベースとなるデータ構造がリストであるため，どちらも\lstinline{id}関数として実装できる．
+幅優先探索のモナドの場合は，ベースとなるデータ構造がリストのリストであるため，\lstinline{toList}関数が\lstinline{concat}になったりする．
+バックトラッキング・モナドの実装の詳細は，\texttt{backtracking}という名前のHaskellライブラリとしてHackageで公開されているのでそちらを参照してほしい．
+\todo{参照: https://github.com/egison/backtracking}
+
+バックトラッキング・モナドを使うと探索戦略を多相的に切り替えることができる．
+以下\lstinline{dfs}と\lstinline{bfs}はそれぞれ深さ優先探索と幅優先探索のモナドのベースとなるデータ構造を初期化するための関数である．
+\lstinline{dfs}と\lstinline{bfs}を置き換えるだけで，探索戦略を制御できる．
 \begin{lstlisting}[language=haskell,numbers=none]
-take 10 (toList (bfs [1..] >>= \ns -> fromList ns >>= \x -> fromList ns >>= \y -> pure (x, y)))
--- [(1,1),(1,2),(2,1),(1,3),(2,2),(3,1),(1,4),(2,3),(3,2),(4,1)]
+toList (do
+  ns <- dfs [1..]
+  x <- fromList ns
+  y <- fromList ns
+  return (x, y))
+-- [(1,1),(1,2),(1,3),(1,4),...]
+\end{lstlisting}
+\begin{lstlisting}[language=haskell,numbers=none]
+toList (do
+  ns <- bfs [1..]
+  x <- fromList ns
+  y <- fromList ns
+  return (x, y))
+-- [(1,1),(1,2),(2,1),(1,3),...]
 \end{lstlisting}
 
-\begin{lstlisting}[language=haskell,numbers=none]
-
-\end{lstlisting}
-
-
-\section{Sweet Egisonでの探索戦略の制御}
-
+\lstinline{matchAll}の第一引数に渡されるのはこの探索戦略ごとのモナドを初期化するための関数である．
 \begin{lstlisting}[language=haskell,numbers=none]
 matchAll strategy [1..] (Set Something) [[mc| $x : $y : _ -> (x, y) |]]
 \end{lstlisting}
-
+\lstinline{matchAll}の変換結果に適切に，この初期化関数と\lstinline{fromList}と\lstinline{toList}を挿入すれば，探索戦略を制御することができる．
 \begin{lstlisting}[language=haskell,numbers=none]
 toList
   ((\ (matcher, target) -> do
@@ -304,3 +331,8 @@ toList
      return (x, y))
    (strategy (Set Something, [1..])))
 \end{lstlisting}
+
+深さ優先探索や幅優先探索のためのモナドはHaskellで定義されている．
+ユーザーが新しく別の探索戦略のためのモナドを追加することも可能である．
+この機能はEgison本体にはないSweet Egisonならではの機能である．
+
