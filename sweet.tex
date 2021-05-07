@@ -285,16 +285,14 @@ do ns <- [1..]
 \end{lstlisting}
 
 ここで，深さ優先探索に対するリスト・モナドのように，深さ優先探索以外の探索戦略についても対応するモナドが存在するのかという疑問が生じる．
-Spiveyによって幅優先探索について，リストのリストをベースのデータ構造にするモナドが対応することが発見されている．
-\todo{参照: Algebras for combinatorial search}
+Spiveyによって幅優先探索について，リストのリストをベースのデータ構造にするモナドが対応することが発見されている\cite{spivey2009algebras}．
 このモナドは$n$要素目のリストに，探索木の深さ$n$の場所にあるノードを保持する．
 
 バックトラッキング・モナドは，\lstinline{fromList}と\lstinline{toList}という関数をもつ．
 これらはモナドのベースとなるデータ構造とリストとの間の変換関数である．
 深さ優先探索のモナドの場合は，ベースとなるデータ構造がリストであるため，どちらも\lstinline{id}関数として実装できる．
 幅優先探索のモナドの場合は，ベースとなるデータ構造がリストのリストであるため，\lstinline{toList}関数が\lstinline{concat}になったりする．
-バックトラッキング・モナドの実装の詳細は，\texttt{backtracking}という名前のHaskellライブラリとしてHackageで公開されているのでそちらを参照してほしい．
-\todo{参照: https://github.com/egison/backtracking}
+バックトラッキング・モナドの実装の詳細は，\texttt{backtracking}という名前のHaskellライブラリとしてHackageで公開されているのでそちらを参照してほしい\cite{backtrackingGitHub}．
 
 バックトラッキング・モナドを使うと探索戦略を多相的に切り替えることができる．
 以下\lstinline{dfs}と\lstinline{bfs}はそれぞれ深さ優先探索と幅優先探索のモナドのベースとなるデータ構造を初期化するための関数である．
