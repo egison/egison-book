@@ -168,7 +168,7 @@ match x as mathExpr with
 -- "Matched"
 \end{lstlisting}
 
-\lstinline{symbol}パターンコンストラクタの第一引数は関数名のシンボルに，第二引数は引数の数式のリストにパターンマッチする．
+\lstinline{apply}パターンコンストラクタの第一引数は関数名のシンボルに，第二引数は引数の数式のリストにパターンマッチする．
 引数のパターンマッチには，\lstinline{list mathExpr}マッチャーが使われるため，リストに対するパターンを使うことができる．
 \begin{lstlisting}[language=egison,numbers=none]
 match ('f x 1 y)  as mathExpr with
@@ -176,13 +176,20 @@ match ('f x 1 y)  as mathExpr with
 -- (f, x, [1, y])
 \end{lstlisting}
 
-\todo{quoteパターン}
+\lstinline{quote}パターンコンストラクタは引数に数式に対するパターンをとる．
+このパターンは\lstinline{mathExpr}マッチャーを使ってクオートの中身の式とパターンマッチされる．
+\begin{lstlisting}[language=egison,numbers=none,escapechar=']
+match `(x + 1) as mathExpr with
+  | quote $e -> e
+-- x + 1
+\end{lstlisting}
+
 
 \subsection{項に対するパターンマッチ}
 
 項に対するパターンマッチには，\lstinline{term}パターンコンストラクタを使う．
 \lstinline{term}パターンコンストラクタの第一引数は係数に，第二引数は因子の連想リストにパターンマッチする．
-因子の連想リストのパターンマッチには，assocMultisetマッチャーが使われる．\todo{assocMultisetマッチャーの説明}
+因子の連想リストのパターンマッチには，\ref{matcher-assoc}節で紹介したassocMultisetマッチャーが使われる．
 \begin{lstlisting}[language=egison,numbers=none]
 matchAll 3 * x^2 * y  as mathExpr with
   | term $a ($x :: $xs) -> (a, x, xs)
@@ -194,10 +201,7 @@ matchAll 3 * x^2 * y  as mathExpr with
 matchAll 3 * x^2 * y  as mathExpr with
   | $a * $x * $xs -> (a, x, xs)
 -- [(3, x, x * y), (3, y, x^2)]
-\end{lstlisting}
 
-\todo{べき乗パターンの説明}
-\begin{lstlisting}[language=egison,numbers=none]
 matchAll 3 * x^2 * y  as mathExpr with
   | $a * $x^#2 * $xs -> (a, x, xs)
 -- [(3, x, y)]

@@ -226,18 +226,17 @@ sortedList a := matcher
   ...
 \end{lstlisting}
 
-\section{連想リストに対するマッチャー}\label{matcher-assoc}
+\section{\texttt{assocMultiset}マッチャー}\label{matcher-assoc}
 
-Egisonには連想リストに対するマッチャー\lstinline{assocMultiset}が定義されている．
-その使い方と定義を紹介する．
+Egisonには，多重集合に対するマッチャーとして，\lstinline{assocMultiset}が用意されている．
+本節はその使い方と定義を紹介する．
+
+多重集合は，要素のその個数の連想リストとして表現できる．
+\lstinline{assocMultiset}マッチャーは，このように連想リストとして表現された多重集合に対するマッチャーである．
+たとえば，以下のプログラムは$1$を$4$個，$2$を$3$個，$3$を$1$個もつ多重集合に対してパターンマッチをしている．
+ターゲットの多重集合に$3$個以上現れる要素を取り出すパターンが表現されている．
 \begin{lstlisting}[language=egison]
-matchAll [(1, 4), (2, 3), (3, 2), (4, 1)] as assocMultiset eq with
+matchAll [(1, 4), (2, 3), (3, 1)] as assocMultiset eq with
   | $x ^ #3 :: $rs -> (x, rs)
--- [(1, [(1, 1), (2, 3), (3, 2), (4, 1)]), (2, [(1, 4), (3, 2), (4, 1)])]
-\end{lstlisting}
-
-\begin{lstlisting}[language=egison]
-matchAll [(1, 3), (2, 3), (3, 2), (4, 1)] as assocMultiset eq with
-  | #3 ^ $n :: $rs -> (n, rs)
--- [(2, [(1, 3), (2, 3), (4, 1)])]
+-- [(1, [(1, 1), (2, 3), (3, 2)]), (2, [(1, 4), (3, 2)])]
 \end{lstlisting}
