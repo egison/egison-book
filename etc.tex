@@ -78,6 +78,8 @@ def list a := matcher
     ...
 \end{lstlisting}
 
+\todo{}
+\begin{table}[h]
 \begin{center}
     \begin{tabular}{ | l | p{9cm} |}
     \hline
@@ -85,6 +87,9 @@ def list a := matcher
     \texttt{} & \\ \hline
     \end{tabular}
 \end{center}
+    \caption{中置演算子一覧}
+    \label{tab:infixFunctions}
+\end{table}
 
 \section{\texttt{IO}入出力}
 
@@ -107,6 +112,43 @@ Hello world!
 \end{lstlisting}
 \lstinline{write}はEgisonに組み込みで実装されているIO関数である．
 \lstinline{write}は第一引数に文字列をとり，その文字列を標準出力に印字する．
+IO関数には\lstinline{write}以外にもいくつもある．
+図\ref{tab:ioFunctions}にその一覧をまとめた．
+
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{ | l | p{9.5cm} |}
+    \hline
+    関数名 & 関数の内容 \\ \hline
+    \texttt{return} $x$ & $x$をIO関数の結果として返す． \\ \hline
+    \texttt{openInputFile} $path$ & パス$path$のファイルを開き，そのファイルへの入力ポートを返す． \\ \hline
+    \texttt{openOutputFile} $path$ & パス$path$のファイルを開き，そのファイルへの出力ポートを返す． \\ \hline
+    \texttt{closeInputPort} $port$ & 入力ポート$port$を閉じる． \\ \hline
+    \texttt{closeOutputPort} $port$ & 出力ポート$port$を閉じる． \\ \hline
+    \texttt{readChar} & 標準入力から一文字読み取り，その文字を返す． \\ \hline
+    \texttt{readLine} & 標準入力から一行読み取り，その文字列を返す． \\ \hline
+    \texttt{writeChar} $c$ & 標準出力に文字$c$を書き込む． \\ \hline
+    \texttt{write} $s$ & 標準出力に文字列$s$を書き込む． \\ \hline
+    \texttt{readCharFromPort} $port$ & 入力ポート$port$から一文字読み取り，その文字を返す． \\ \hline
+    \texttt{readLineFromPort} $port$ & 入力ポート$port$から一行読み取り，文字列として返す． \\ \hline
+    \texttt{writeCharToPort} $c$ $port$ & 文字$c$を出力ポート$port$に書き込む． \\ \hline
+    \texttt{writeToPort} $s$ $port$ & 文字列$s$を出力ポート$port$に書き込む． \\ \hline
+    \texttt{isEof} & 標準入力の一文字目がEOFであったら\texttt{True}，それ以外の場合は\texttt{False}を返す． \\ \hline
+    \texttt{isEofPort} $port$ & 入力ポート$port$の一文字目がEOFであったら\texttt{True}，それ以外の場合は\texttt{False}を返す． \\ \hline
+    \texttt{flush} & 標準出力に書き込み命令はされているもののバッファリングされている内容を即座に標準出力に出力する． \\ \hline
+    \texttt{flushPort} $port$ & 出力ポート$port$に対して書き込み命令はされているもののバッファリングされている内容を即座に$port$に出力する． \\ \hline
+    \texttt{readFile} $path$ & パス$path$のファイルの内容を文字列として返す． \\ \hline
+    \texttt{rand} $n_1$ $n_2$ & 整数$n_1$から$n_2$までの整数のどれかをランダムで返す． \\ \hline
+    \texttt{f.rand} $f_1$ $f_2$ & 浮動小数点数$n_1$と$n_2$の間の浮動小数点数をランダムで返す． \\ \hline
+    \texttt{newIORef} & 変更可能な変数への参照を生成して返す． \\ \hline
+    \texttt{writeIORef} $ref$ $x$ & 参照$ref$が参照する変更可能な変数の値を$x$にする． \\ \hline
+    \texttt{readIORef} $ref$ & 参照$ref$が参照する変更可能な変数の値を返す． \\ \hline
+    \texttt{readProcess} $path$ $args$ $s$ & パス$path$の実行ファイルに文字列のリスト$args$を引数，標準入力に文字列$s$を与えて実行し，その標準出力を文字列として返す． \\ \hline
+    \end{tabular}
+\end{center}
+    \caption{IO関数一覧}
+    \label{tab:ioFunctions}
+\end{table}
 
 \lstinline{main}の第一引数にはコマンドライン引数がはいる．
 コマンドライン引数は文字列として\lstinline{main}の第一引数に渡される．
@@ -126,44 +168,6 @@ def main args := write (show args)
 $ args hello world 1
 ["hello", "world", "1"]
 \end{lstlisting}
-
-\subsection{IO関数}
-
-IO関数には\lstinline{write}以外にもいくつもある．
-図\ref{}にその一覧をまとめた．
-
-\todo{IO組み込み関数一覧}
-
-\begin{center}
-    \begin{tabular}{ | l | p{9cm} |}
-    \hline
-    関数名 & 関数の内容 \\ \hline
-    \texttt{return} & \\ \hline
-    \texttt{openInputFile} &  \\ \hline
-    \texttt{openOutputFile} &  \\ \hline
-    \texttt{closeInputPort} &  \\ \hline
-    \texttt{closeOutputPort} &  \\ \hline
-    \texttt{readChar} &  \\ \hline
-    \texttt{readLine} &  \\ \hline
-    \texttt{writeChar} &  \\ \hline
-    \texttt{write} &  \\ \hline
-    \texttt{readCharFromPort} &  \\ \hline
-    \texttt{readLineFromPort} &  \\ \hline
-    \texttt{writeCharToPort} &  \\ \hline
-    \texttt{writeToPort} &  \\ \hline
-    \texttt{isEof} &  \\ \hline
-    \texttt{flush} &  \\ \hline
-    \texttt{isEofPort} &  \\ \hline
-    \texttt{flushPort} &  \\ \hline
-    \texttt{readFile} &  \\ \hline
-    \texttt{rand} &  \\ \hline
-    \texttt{f.rand} &  \\ \hline
-    \texttt{newIORef} &  \\ \hline
-    \texttt{writeIORef} &  \\ \hline
-    \texttt{readIORef} &  \\ \hline
-    \texttt{readProcess} &  \\ \hline
-    \end{tabular}
-\end{center}
 
 \subsection{\texttt{do}式}
 
