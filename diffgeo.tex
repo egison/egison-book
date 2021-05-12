@@ -219,7 +219,7 @@ def `$\iota$` %X %Y :=
 \end{lstlisting}
 リー微分は以下のように定義できる．
 \begin{lstlisting}[language=egison,numbers=none]
-Lie %X %Y :=
+def Lie %X %Y :=
   match dfOrder Y as integer with
     | #0 -> `$\iota$` X (d Y)
     | #N -> d (`$\iota$` X Y)

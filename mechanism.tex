@@ -207,7 +207,7 @@ MState [($rs, [2, 2], multiset integer)]
 本節は，パターン関数の実装を解説する．
 以下のようなパターン関数の適用を含むパターンマッチを考える．
 \begin{lstlisting}[language=egison,numbers=none]
-twin := \p1 p2 => (~p1 & $x) :: #x :: ~p2
+def twin := \p1 p2 => (~p1 & $x) :: #x :: ~p2
 
 matchAll [1, 2, 1, 3] as multiset integer with
 | $m :: twin $n _ -> (m, n)

@@ -5,13 +5,13 @@
 卒業研究で，整数論の定理を自動で予想するプログラムを書いている最中に，Egisonのパターンマッチのアイデアを得る．
 \lstinline{mapWithBothSides}関数を実装している最中に，もっと強力なパターンマッチがあれば，同じ関数がより簡潔に書けることに気づく．
 \begin{lstlisting}[language=egison,numbers=none]
-mapWithBothSides f xs := helper f [] xs
+def mapWithBothSides f xs := helper f [] xs
  where
   helper f xs [] := []
   helper f xs (y :: ys) := f xs y ys :: helper f (xs ++ [y]) ys
 \end{lstlisting}
 \begin{lstlisting}[language=egison,numbers=none]
-mapWithBothSides f xs := matchAll xs as list something with
+def mapWithBothSides f xs := matchAll xs as list something with
   | $hs ++ $x :: $ts -> f hs x ts
 \end{lstlisting}
 
@@ -63,7 +63,7 @@ Egison Version 3.6.0 をリリースする．
 
 テンソルの添字記法をプログラミングに導入する簡潔な手法の実装に成功する．
 \begin{lstlisting}[language=egison,numbers=none]
-R~i_j_k_l := withSymbols [m]
+def R~i_j_k_l := withSymbols [m]
   `$\partial$/$\partial$` `$\Gamma$`~i_j_l x~k - `$\partial$/$\partial$` `$\Gamma$`~i_j_k x~l + `$\Gamma$`~m_j_l . `$\Gamma$`~i_m_k - `$\Gamma$`~m_j_k . `$\Gamma$`~i_m_l
 \end{lstlisting}
 
@@ -77,7 +77,7 @@ R~i_j_k_l := withSymbols [m]
 Egison Version 3.7.0をリリース．
 テンソルの添字記法に加えて，微分形式に対する演算子を簡潔に定義できる仕組みまで実装した．
 \begin{lstlisting}[language=egison,numbers=none]
-`$\Omega$` := withSymbols [i, j]
+def `$\Omega$` := withSymbols [i, j]
        antisymmetrize (d `$\omega$`~i_j + `$\omega$`~i_k ∧ `$\omega$`~k_j)
 \end{lstlisting}
 
@@ -91,7 +91,7 @@ Egison Version 3.7.0をリリース．
 
 楽天技術研究所でアルバイトしていた郡さんの協力で，関数シンボル（\emph{function symbol}）の機能をEgisonに実装する．
 \begin{lstlisting}[language=egison,numbers=none]
-f := function (x, y)
+def f := function (x, y)
 `$\partial$`/`$\partial$` f x -- f|x
 `$\partial$`/`$\partial$` (`$\partial$`/`$\partial$` f x) y -- f|x|y
 `$\partial$`/`$\partial$` f z -- 0

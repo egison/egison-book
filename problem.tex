@@ -5,7 +5,7 @@
 下記の空白をうめて\lstinline{member}関数を完成させよ．
 
 \begin{lstlisting}[language=egison]
-member x xs :=
+def member x xs :=
   match xs as list eq with
   | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` -> True
   | _ -> False
@@ -22,7 +22,7 @@ member 5 [1,2,3,4]
 下記の空白をうめて\lstinline{concat}関数を完成させよ．
 
 \begin{lstlisting}[language=egison]
-concat xss :=
+def concat xss :=
   matchAllDFS xss as `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` with
   | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}2\vphantom{0}\hspace{5em}}` -> `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}3\vphantom{0}\hspace{5em}}`
 
@@ -56,7 +56,7 @@ take 6 (matchAll primes as list integer with
 下記の空白をうめて，2つのコレクションの共通部分を抽出する\lstinline{intersect}関数を完成させよ．
 
 \begin{lstlisting}[language=egison]
-intersect xs ys :=
+def intersect xs ys :=
   matchAllDFS (xs, ys) as `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` with
   | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}2\vphantom{0}\hspace{5em}}` -> `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}3\vphantom{0}\hspace{5em}}`
 
@@ -69,7 +69,7 @@ intersect [1,2,3,4] [2,4,5]
 下記の空白をうめて，第二引数のコレクションに含まれていない第一引数のコレクションの要素のみを抽出する\lstinline{difference}関数を完成させよ．
 
 \begin{lstlisting}[language=egison]
-difference xs ys :=
+def difference xs ys :=
   matchAllDFS (xs, ys) as `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` with
   | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}2\vphantom{0}\hspace{5em}}` -> `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}3\vphantom{0}\hspace{5em}}`
 
@@ -82,7 +82,7 @@ difference [1,2,3,4] [2,4,5]
 コレクション中にちょうど$2$回現れる要素のみを抽出する\lstinline{doubles}関数を完成させよ．
 
 \begin{lstlisting}[language=egison]
-doubles xs :=
+def doubles xs :=
   matchAllDFS xs as `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` with
   | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}2\vphantom{0}\hspace{5em}}` -> `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}3\vphantom{0}\hspace{5em}}`
 
@@ -96,7 +96,7 @@ doubles [1,2,3,2,1,1,4,5,3]
 ループ・パターンを使う回答とそうでない回答の2つを考えてみよ．
 
 \begin{lstlisting}[language=egison]
-tails xs :=
+def tails xs :=
   matchAll xs as list something with
   | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}`
   -> ts
@@ -110,7 +110,7 @@ tails [1,2,3,4]
 多重集合の同値性をチェックする2引数述語\lstinline{equalMultiset}をパターンマッチを使って定義してみよ．
 
 \begin{lstlisting}[language=egison]
-equalMultiset xs ys :=
+def equalMultiset xs ys :=
   match (xs, ys) as (list eq, multiset eq) with
   | ([], [])
   -> True
@@ -129,7 +129,7 @@ equalMultiset [1,1,2] [1,2,2]
 ループ・パターンを使って再帰関数を使わずに書いてみよ．
 
 \begin{lstlisting}[language=egison]
-equalMultiset xs ys :=
+def equalMultiset xs ys :=
   match (xs, ys) as (list eq, multiset eq) with
   | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}2\vphantom{0}\hspace{5em}}`
   -> True
@@ -141,7 +141,7 @@ equalMultiset xs ys :=
 
 \ref{pmo}章\ref{pmo-poker}節のポーカーの役判定のためのパターンマッチ（\lstinline{poker}関数）の実装を一切変更せずに，\lstinline{card}マッチャーの定義だけを変更して，ジョーカーの存在を考慮するポーカーの役判定をできるようにせよ．
 \begin{lstlisting}[language=egison]
-card := matcher
+def card := matcher
   | card $ $ as (suit, mod 13) with 
     | Card $s $n -> [(s, n)]
     | Joker -> `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}`
