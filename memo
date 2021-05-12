@@ -1,3 +1,11 @@
+Egison開発の目標は，以下の2つにまとめられる．
+\begin{enumerate}
+\item コンピュータ・プログラムを簡潔に表現するための革新的な機能を設計・開発する．
+\item それらの機能の応用事例を提示・開発し，ユーザー数を増やす．
+\end{enumerate}
+
+
+
 \section{Egisonについての執筆}\label{direction-writing}
 
 \subsection{論文}\label{direction-writing-paper}
