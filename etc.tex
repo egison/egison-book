@@ -71,28 +71,54 @@ def (&&) a b := match (a, b) as (eq, eq) with
 
 中置演算子として使うパターンコンストラクタを定義する例としてジョイン・パターン\lstinline{++}を定義すると以下のようになる．
 \begin{lstlisting}[language=egison,numbers=none]
-infixl pattern 7 <>
+infixl pattern 7 ++
 
 def list a := matcher
   | $ ++ $ as (list a, list a) with
     ...
 \end{lstlisting}
 
-\todo{}
 \begin{table}[h]
 \begin{center}
-    \begin{tabular}{ | l | p{9cm} |}
+    \begin{tabular}{ | l | l | l |}
     \hline
-    関数名 & 関数の優先度 \\ \hline
-    \texttt{+} & \\ \hline
-    \texttt{-} & \\ \hline
-    \texttt{*} & \\ \hline
-    \texttt{/} & \\ \hline
-    \texttt{++} & \\ \hline
+    演算子 & 演算子の内容 & 優先度 \\ \hline
+    \texttt{\^} & べき乗 & 8 \\ \hline
+    \texttt{*} & 掛け算 & 7 \\ \hline
+    \texttt{/} & 割り算 & 7 \\ \hline
+    \texttt{\%} & 割り算の余り & 7 \\ \hline
+    \texttt{.} & テンソルの掛け算 & 7 \\ \hline
+    \texttt{+} & 足し算 & 6 \\ \hline
+    \texttt{-} & 引き算 & 6 \\ \hline
+    \texttt{::} & コンス & 5 \\ \hline
+    \texttt{++} & アペンド & 5 \\ \hline
+    \texttt{=}, \texttt{<=} \texttt{>=}, \texttt{<}, \texttt{>} & 比較 & 4 \\ \hline
+    \texttt{\&\&} & 論理積 & 3 \\ \hline
+    \texttt{||} & 論理和 & 2 \\ \hline
+    \texttt{\$} & 関数適用 & 0 \\ \hline
     \end{tabular}
 \end{center}
-    \caption{中置演算子一覧}
+    \caption{中置演算子一覧（関数）}
     \label{tab:infixFunctions}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+    \begin{tabular}{ | l | l | l |}
+    \hline
+    演算子 & 演算子の内容 & 優先度 \\ \hline
+    \texttt{\^} & べき乗 & 8 \\ \hline
+    \texttt{*} & 掛け算 & 7 \\ \hline
+    \texttt{/} & 割り算 & 7 \\ \hline
+    \texttt{+} & 足し算 & 6 \\ \hline
+    \texttt{::} & コンス & 5 \\ \hline
+    \texttt{++} & アペンド & 5 \\ \hline
+    \texttt{\&} & andパターン & 3 \\ \hline
+    \texttt{|} & orパターン & 2 \\ \hline
+    \end{tabular}
+\end{center}
+    \caption{中置演算子一覧（パターン）}
+    \label{tab:infixPatterns}
 \end{table}
 
 \section{\texttt{IO}入出力}

@@ -6,39 +6,42 @@
 
 Egison処理系の開発については，
 \begin{enumerate}
-\item 独立したプログラミング言語としてのEgisonの開発
+\item 独立したプログラミング言語としてのEgison処理系の開発
 \item Egisonの機能の他言語への移植
 \end{enumerate}
-の2つが考えられる．
+の2つを進めている．
 \ref{direction-language-egison}節で，Egison本体の実装について，\ref{direction-language-library}節で多言語への移植について述べる．
 
 \subsection{Egison本体}\label{direction-language-egison}
 
-Egisonコミュニティで発明された言語機能をフルに実装した唯一の言語処理系であるEgison本体の開発は，これらの言語機能を世に広めるためにもっとも重要である．
-親しみやすいインターフェースと実用に耐えうる実行速度をかねそなえたプログラミング言語が理想であるが，現在のところは特に前者のみに重点をおいて開発を進めている．
+Egison本体には，Egisonコミュニティで発明された言語機能をフルに実装されている．
+言語機能は豊富であるが，実行速度に関してはあまり気にせず実装されており，インタプリタ実装しかもたない．
+これは，新しい言語機能をスムーズに実装できるようにするためである．
+インタプリタはHaskellで実装されている．
 
 \subsubsection{独自の新機能の追求}\label{direction-language-egison-new}
 
-\todo{書く}
-パターンマッチ・テンソル記法のようなEgisonによりすでに提示された機能だけでなく，新しい機能を開発することも重要である．
-
-微分形式
-
-シーケンシャル・パターン
-
-\todo{変種について}
-
-Egisonインタプリタ\cite{egisonGitHub}は，本書で紹介したループ・パターンやパターン関数を含むEgisonのパターンマッチの全機能が実装された唯一の処理系である．
-このインタプリタはHaskellで実装されている．
-このインタプリタへのEgisonパターンマッチ実装の方法については，第\ref{mechanism}章で紹介した．
-このインタプリタには，パターンマッチ以外に数式処理システムとしての機能も実装されている．
+プログラミング言語に今まで実装されたことがない新しい機能をEgisonに実装し動いたときが，Egison開発で一番楽しい瞬間である．
+新しい言語機能のアイデアは実際に現実的な問題について手を動かしてプログラムを書いているときに生まれる．
+ループ・パターンや，シーケンシャル・パターン，テンソルの対称性の宣言，関数シンボルなどの機能はそのようにして生まれた．
+今後もどんどん新しい言語機能を発案・実装していきたいと考えている．
 
 \subsubsection{静的型システムやコンパイラの実装}\label{direction-language-egison-existing}
 
-そのほかのEgisonのインタプリタ実装には，河田旺さんによるTyped Egison~\cite{typedEgison}とFormalized Egison~\cite{formalizedEgison}がある．
+静的型システムやコンパイラのような既存の言語機能をEgisonに組み込むことも重要な課題である．
+既存の言語機能をEgisonに組み込むためには，新しい工夫が必要になることが多い．
+たとえば，静的型システムをEgisonに組み込むには，パターンやマッチャーについて適切な型規則を設計する必要がある．
+
+Egisonに静的型システムを導入する研究は進んでおり，河田旺さんによるTyped Egison~\cite{typedEgison}とFormalized Egison~\cite{formalizedEgison}がある．
 Typed Egisonは，Egisonインタプリタからパターンマッチに関する最小限の機能を切り出し，静的型システムを実装したものである．
 Typed EgisonはEgison version 3をベースにしている．
 Formalized Egisonは，Typed Egisonの型安全性を証明するためにCoqで実装されたインタプリタである．
+Egison本体に静的型システムを導入するには，比較的大きな手間がかかるため，まだ着手されていない．
+Egison Version 5の課題である．
+
+Egisonパターンマッチをコンパイル手法についても研究は進んでいる．
+2020年3月に小川広水さんによってEgisonパターンマッチをバックトラッキング・モナドを使ったHaskellプログラムに変換する手法が発案され，Sweet Egison\todo{ref}というHaskellライブラリとして実装された．
+ただ，Egison本体については，新機能をすばやく実装できるproof of conceptのプログラミング言語ということもあり，コンパイラを実装することはまだ先になりそうである．
 
 \begin{oframed}
   \paragraph{Egison Version 4のリリース}
@@ -81,19 +84,19 @@ def R~i_j_k_l := withSymbols [m]
 
 \subsection{他のプログラミングへのEgison言語機能の移植}\label{direction-language-library}
 
-2019年からは既存のメジャーなプログラミング言語にEgisonの機能を実装することにも取り組み始めた．
-現在はEgisonのパターンマッチを他のプログラミング言語へ取り込む研究が進んでいる．
-言語機能を既存プログラミング言語へ移植することには，
+2019年からは既存のメジャーなプログラミング言語にEgisonの機能を実装することもはじまった．
+Egisonの言語機能を既存プログラミング言語へ移植することには，
 \begin{enumerate}
 \item 移植先のプログラミング言語のユーザーが気軽にEgisonの機能を試すことができるようになる．
 \item 移植先のプログラミング言語の処理系で実行されるために，ナイーブな実装のEgison本体よりも，プログラムの実行速度が格段に高速になる．
 \end{enumerate}
 というメリットがある．
 ただし，\ref{direction-language-egison}で述べたとおり，既存言語にEgisonの言語機能を移植するためには，既存言語の他の機能との兼ね合わせを考慮する必要があるために，すべての機能が移植できないことがある．
-たとえば，現在のところ，ループ・パターンの移植はまだできていない．\todo{どうして？}
+たとえば，現在のところ，ループ・パターンの移植はまだできていない．
 また，既存言語の仕様や実装に詳しくなる必要があるために，これらのメリットを享受するためには比較的大きな開発コストがかかるというデメリットもある．
+そのため，Egison本体も並行して開発されている．
 
-\subsubsection{EgisonパターンマッチのSchemeライブラリ実装}\label{direction-language-scheme}
+\subsubsection{EgisonパターンマッチのSchemeライブラリ実装（実装済み）}\label{direction-language-scheme}
 
 2018年12月にSchemeという言語自体がシンプルでかつ強力なメタプログラミング機能（言語を拡張するための言語機能）をもつ関数型プログラミング言語にEgisonのパターンマッチを提供するライブラリを実装した．
 言語の拡張機能（メタプログラミングのための機能）が強力でかつ言語仕様が簡潔な言語をほど，言語機能の移植が進めやすい．
@@ -102,22 +105,21 @@ def R~i_j_k_l := withSymbols [m]
 このライブラリ実装はScheme処理系によってコンパイルされるために，Egisonのパターンマッチを使ったプログラムを，Egison処理系よりも50倍近く高速に実行できる．
 Scheme処理系にはGaucheを選んだ．
 Deep embeddingと呼ばれる手法を用いて，このライブラリは実装されている．
-\todo{deep embeddingの説明}
 
-\subsubsection{EgisonパターンマッチのHaskellライブラリ実装その1（miniEgison）}\label{direction-language-haskell1}
+\subsubsection{EgisonパターンマッチのHaskellライブラリ実装その1（miniEgisonとして実装済み）}\label{direction-language-haskell1}
 
 上記のEgisonパターンマッチのScheme移植が完成した直後から，同様の手法でEgisonパターンマッチをHaskellに移植するためのHaskellライブラリの開発を開始した．
 Schemeが動的型付けプログラミング言語であるのにしたいして，Haskellは静的型システムをもつ言語であり，型システムを意識した移植の手法を考える必要があることが実装の難所だった．
 この実装は2019年9月頃に完成した．
 
-\subsubsection{EgisonパターンマッチのHaskellライブラリ実装その2（Sweet Egison）}\label{direction-language-haskell2}
+\subsubsection{EgisonパターンマッチのHaskellライブラリ実装その2（Sweet Egisonとして実装済み）}\label{direction-language-haskell2}
 
 miniEgisonには，miniEgisonを使って書いたプログラムと同等のプログラムをHaskellで通常の関数型プログラミングスタイルで書いたプログラムをくらべたときにminiEgisonによるプログラムのほうが数倍遅いという問題があった．
 この問題を解決するために，shallow embeddingという手法で，Sweet EgisonというHaskellライブラリを2020年3月から新しく実装しなおした．
 Sweet Egisonは，Egisonパターンマッチを使って記述されたプログラムを，同等の意味の関数型プログラミングスタイルで記述されたプログラムに変換して実行する．
 そのため，Egisonパターンマッチを用いた簡潔なプログラムの記述と通常のHaskellプログラムと同等の実行速度を併せ持つ．
 
-\subsubsection{EgisonパターンマッチをGHC拡張として実装}\label{direction-language-ghc}
+\subsubsection{EgisonパターンマッチをGHC拡張として実装（未実装）}\label{direction-language-ghc}
 
 ライブラリによりDSLとして言語機能を実装すると，冗長な記述をしないといけない箇所がでてくることが多い，
 Egisonパターンマッチを実装したHaskellライブラリであるminiEgisonやSweet Egisonにもこの問題があり，マッチ節やマッチャー定義の記述に少し冗長な記述が必要になる箇所がある．
@@ -127,13 +129,16 @@ Egisonパターンマッチを実装したHaskellライブラリであるminiEgi
 GHCに新機能を提案するための仕組みとしてGHC Proposalというものがある．
 ある程度実装がすすんだらドキュメントをまとめてそこで提案したい．
 
-\subsubsection{システム・プログラミング言語（Rust）}\label{direction-language-rust}
+\subsubsection{システム・プログラミング言語Rust（未実装）}\label{direction-language-rust}
 
-ユーザーがメモリの管理を操作できるプログラミング言語にEgisonパターンマッチを実装する．
-評価戦略として正格評価を採用したプログラミング言語にコンパイルするために特別か工夫ができるか？
-メモリを効率的に操作することにより，効率的なパターンマッチ機能が実装できるか？
-メモリを効率的に操作するために，パターンマッチ機能を制限する必要があるか？
-パターンマッチ機能を制限したとして応用はあるか？
+ユーザーがメモリの管理を操作できるプログラミング言語へのEgisonパターンマッチの実装は面白い課題である．
+現在のところ，以下のような疑問をもっている．
+\begin{itemize}
+\item メモリを効率的に操作することにより，効率的なパターンマッチ機能が実装できるか？
+\item メモリを効率的に操作するために，パターンマッチ機能を制限する必要があるか？
+\item パターンマッチ機能を制限したとして応用はあるか？
+\end{itemize}
+メタプログラミング機能が豊富といわれるRustへの実装を考えている．
 
 \section{アプリケーションの提示・開発}\label{application}
 
