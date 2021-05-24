@@ -108,7 +108,7 @@ S = g^{ij} Ric_{ij} &\qquad
 本節で解説したプログラムの計量の部分を変えるだけで，いろいろな多様体のクリストッフェル記号やリーマン曲率テンソルを計算できる．
 
 たとえば，トーラス$T^2$のリーマン曲率テンソルを計算するには，球座標系をトーラスの座標系に変更すればよい．
-トーラスの座標系はたとえば，図\ref{fig:riemann-curvature-T2}\todo{}の\texttt{1}-\texttt{2}のように設定できる．
+トーラスの座標系はたとえば，図\ref{fig:riemann-curvature-of-T2}の\texttt{[1]}-\texttt{[2]}のように設定できる．
 バッククォート(``\lstinline|`|'')が，この式の中で使われている．
 \ref{mexpr-backquote}節で解説したように，バッククォートのついた数式は，Egison処理系に一つのシンボルと同じように扱われる．
 ここでは，バッククォートを適切に挿入することより，計算プロセスや，最終的な計算結果が単純になっている．
@@ -117,12 +117,11 @@ S = g^{ij} Ric_{ij} &\qquad
   \centering
   \includegraphics[width=13.5cm,bb=0 0 1784 2133]{riemann-curvature-T2.png}
   \caption{トーラスのリーマン曲率テンソルの計算}
-  \label{fig:riemann-curavture-of-S2}
+  \label{fig:riemann-curvature-of-T2}
 \end{figure}
 
 また，計量を以下のように定義されるSchwarzschild計量に変えれば，原点を中心に一つだけ質量をもつ天体がある宇宙についての一般相対性理論の計算ができる．
-この計算結果を解釈すれば，「時空の曲がり=重力」ということが理解できる．\cite{fuji1979}
-
+この計算結果は，「時空の曲がり=重力」ということをあらわしている．
 \begin{lstlisting}[language=egison,numbers=none,escapechar=']
 def g_i_j := [| [| `(c^2 * r - 2 * G * M) / c^2 * r, 0, 0, 0 |]
                 [| 0, -1 * c^2 * r / `(c^2 * r - 2 * G * M), 0, 0 |]
@@ -155,7 +154,6 @@ def g_i_j := [| [| `(c^2 * r - 2 * G * M) / c^2 * r, 0, 0, 0 |]
 \texttt{[8]}-\texttt{[9]}でウェッジ積を定義している．
 ウェッジ積は中置演算子として定義されている．
 \texttt{[10]}-\texttt{[12]}で曲率形式を計算して出力している．
-\todo{}
 
 \subsection{オイラー形式とオイラー数}
 
