@@ -123,7 +123,7 @@ S = g^{ij} Ric_{ij} &\qquad
 また，計量を以下のように定義されるSchwarzschild計量に変えれば，原点を中心に一つだけ質量をもつ天体がある宇宙についての一般相対性理論の計算ができる．
 この計算結果は，「時空の曲がり=重力」ということをあらわしている．
 \begin{lstlisting}[language=egison,numbers=none,escapechar=']
-def g_i_j := [| [| `(c^2 * r - 2 * G * M) / c^2 * r, 0, 0, 0 |]
+def g_i_j : Tensor MathExpr := [| [| `(c^2 * r - 2 * G * M) / c^2 * r, 0, 0, 0 |]
                 [| 0, -1 * c^2 * r / `(c^2 * r - 2 * G * M), 0, 0 |]
                 [| 0, 0, -1 * r^2, 0 |]
                 [| 0, 0, 0, -1 * r^2 * (sin `$\theta$`)^2 |] |]
@@ -161,7 +161,7 @@ def g_i_j := [| [| `(c^2 * r - 2 * G * M) / c^2 * r, 0, 0, 0 |]
 以下のプログラムは，トーラス$T^2$のオイラー形式を計算している．
 
 \begin{lstlisting}[language=egison,numbers=none]
-def eulerForm := (1 / (2 * `$\pi$`)) * (`$\Omega$`~1_2 - `$\Omega$`~2_1)
+def eulerForm : Tensor MathExpr := (1 / (2 * `$\pi$`)) * (`$\Omega$`~1_2 - `$\Omega$`~2_1)
 
 eulerForm -- [| [| 0, (cos `$\theta$`) / (* 2 `$\pi$`)) |], [| ((-1 * (cos `$\theta$`)) / (* 2 `$\pi$`)), 0 |] |]
 \end{lstlisting}
@@ -212,12 +212,12 @@ eulerForm -- [| [| 0, (cos `$\theta$`) / (* 2 `$\pi$`)) |], [| ((-1 * (cos `$\th
 これらの演算子は，たとえば，流体力学の質量保存の法則やナビエ・ストークス方程式の微分形式による表現をするときに使う．
 内部積は以下のように定義できる．
 \begin{lstlisting}[language=egison,numbers=none]
-def `$\iota$` %X %Y :=
+def `$\iota$` (X: Tensor MathExpr) (Y: Tensor MathExpr) : Tensor MathExpr :=
   withSymbols [i] dfOrder Y * X...~i . (antisymmetrize Y..._i)
 \end{lstlisting}
 リー微分は以下のように定義できる．
 \begin{lstlisting}[language=egison,numbers=none]
-def Lie %X %Y :=
+def Lie (X: Tensor MathExpr) (Y: Tensor MathExpr) : Tensor MathExpr :=
   match dfOrder Y as integer with
     | #0 -> `$\iota$` X (d Y)
     | #N -> d (`$\iota$` X Y)

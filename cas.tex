@@ -6,11 +6,14 @@
 Egisonもこのようなシンボリックな計算をサポートしている．
 本章は数式処理システムを使うとどのような計算ができるのかみていく．
 
-\section{未定義変数 = シンボル}\label{cas-symbol}
+\section{シンボルの宣言}\label{cas-symbol}
 
 数式処理システムは，未束縛の変数をシンボルとして扱う．
-そのため，未定義の変数をプログラム中で使ってもエラーにならない．
+Egisonでは，シンボルを使う前に\lstinline{declare symbol}文で宣言する必要がある．
+シンボルには型を指定でき，省略した場合は\lstinline{MathExpr}型が使われる．
 \begin{lstlisting}[language=egison,numbers=none]
+declare symbol x, y, z : MathExpr
+
 x -- x
 \end{lstlisting}
 
@@ -35,6 +38,8 @@ Egisonは数式を自動で積和標準形に展開する．
 
 \lstinline{sqrt x}や\lstinline{exp x}のようにシンボルを引数にとる可能性がある関数について，関数適用を止めて，その式をシンボリックな値としてそのまま返すようにライブラリで定義されている．
 \begin{lstlisting}[language=egison,numbers=none]
+declare symbol x : MathExpr
+
 sqrt 4 -- 2
 sqrt x -- sqrt x
 exp 1 -- e
@@ -54,6 +59,8 @@ sqrt 8 -- 2 * sqrt 2
 
 $\sqrt{x} \cdot \sqrt{x} = x$や$sin^2\theta + cos^2\theta = 1$のような数式を紙の上で扱うときにおこなう簡約が，Egisonを含む多くの数式処理システムには実装されている．
 \begin{lstlisting}[language=egison,numbers=none]
+declare symbol x, `$\theta$` : MathExpr
+
 sqrt x * sqrt x -- x
 (sin `$\theta$`)^2 + (cos `$\theta$`)^2 -- 1
 \end{lstlisting}

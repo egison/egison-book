@@ -12,7 +12,7 @@
 \makeindex
 
 %\usepackage[bitstream-charter]{mathdesign}
-%\usepackage[T1]{fontenc}
+\usepackage[T1]{fontenc}
 
 \RequirePackage[varqu]{zi4}
 %\RequirePackage[libertine]{newtxmath}
@@ -57,7 +57,7 @@
 \title{プログラミング言語Egison入門}
 \author{Egison開発チーム}
 %\author{江木 聡志}
-\date{2021年5月24日}
+\date{2026年2月8日}
 
 \usepackage{bussproofs}
 \usepackage{amsmath}
@@ -149,6 +149,17 @@
   stringstyle=\color{brown},%
   commentstyle={\color{P@GrayComment}},%
 }
+
+% Hyperref for clickable links
+\usepackage[dvipdfmx,
+  colorlinks=true,
+  linkcolor=blue,
+  citecolor=blue,
+  urlcolor=blue,
+  bookmarks=true,
+  bookmarksnumbered=true
+]{hyperref}
+\usepackage{pxjahyper}  % Japanese support for hyperref
 
 \newcommand{\todo}[1]{\textcolor{red}{(TODO: #1)}}
 

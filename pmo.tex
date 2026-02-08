@@ -17,17 +17,19 @@
 \lstinline{list}マッチャーについて，パターン\lstinline|_ ++ $x :: _|は，ターゲットのそれぞれの要素にマッチする．
 その結果，下記の\lstinline{matchAll}式は，\lstinline{xs}のそれぞれの要素にマッチし，それらに関数\lstinline{f}を適用した結果を返す．
 これはまさに\lstinline{map}関数の定義である．
+型注釈により，\lstinline{map}関数が任意の型\lstinline{a}のリストを受け取り，型\lstinline{b}のリストを返すことを示している．
 
 \begin{lstlisting}[language=egison,numbers=none]
-def map f xs := matchAll xs as list something with
+def map (f: a -> b) (xs: [a]) : [b] := matchAll xs as list something with
   | _ ++ $x :: _ -> f x
 \end{lstlisting}
 
 この\lstinline{matchAll}式を変更して，さまざまな関数を定義できる．
 たとえば，\lstinline{filter}関数は述語パターンを挿入して定義できる．
+型注釈により，述語関数\lstinline{pred}が型\lstinline{a}の値を受け取り\lstinline{Bool}を返すことを示している．
 
 \begin{lstlisting}[language=egison,numbers=none]
-def filter pred xs := matchAll xs as list something with
+def filter (pred: a -> Bool) (xs: [a]) : [a] := matchAll xs as list something with
   | _ ++ (?pred & $x) :: _ -> x
 \end{lstlisting}
 
@@ -37,10 +39,11 @@ def filter pred xs := matchAll xs as list something with
 \lstinline{match}式は，\lstinline{car (matchAll ...)}\footnote{\lstinline{car}はコレクションの先頭要素を取り出す関数である．}のエイリアスとして実装されている．
 この実装が可能であるのは，Egisonが\lstinline{matchAll}式を遅延評価するためである．
 %\footnote{\lstinline{matchAll} also can handle multiple match clauses. \lstinline{matchAll} $t$ \lstinline{as} $m$ \lstinline{with} $c_1$ $c_2$ $...$ is equivalent to \lstinline{matchAll} $t$ \lstinline{as} $m$ \lstinline{with} $c_1$ \lstinline{++} \lstinline{matchAll} $t$ \lstinline{as} $m$ \lstinline{with} $c_2$ \lstinline{++} $...$.}
+型注釈により，\lstinline{member}関数が任意の型\lstinline{a}の値とリストを受け取り，\lstinline{Bool}を返すことを示している．
 
 {\footnotesize
 \begin{lstlisting}[language=egison,numbers=none]
-def member x xs := match xs as list eq with
+def member (x: a) (xs: [a]) : Bool := match xs as list eq with
   | _ ++ #x :: _ -> True
   | _            -> False
 \end{lstlisting}
@@ -51,7 +54,7 @@ def member x xs := match xs as list eq with
 
 {\footnotesize
 \begin{lstlisting}[language=egison,numbers=none]
-def delete x xs := match xs as list eq with
+def delete (x: a) (xs: [a]) : [a] := match xs as list eq with
   | $hs ++ #x :: $ts -> hs ++ ts
   | _                -> xs
 \end{lstlisting}
@@ -62,11 +65,11 @@ def delete x xs := match xs as list eq with
 \lstinline{every}は第二引数のコレクションの要素のすべてが第一引数の述語を満たすかどうか判定する述語である．
 
 \begin{lstlisting}[language=egison,numbers=none]
-def any pred xs := match xs as list something with
+def any (pred: a -> Bool) (xs: [a]) : Bool := match xs as list something with
   | _ ++ ?pred :: _ -> True
   | _               -> False
 
-def every pred xs := match xs as list something with
+def every (pred: a -> Bool) (xs: [a]) : Bool := match xs as list something with
   | _ ++ !?pred :: _ -> False
   | _                -> True
 \end{lstlisting}
@@ -76,8 +79,9 @@ def every pred xs := match xs as list something with
 複数のジョイン・コンス・パターンを組み合わせることで，さらに強力なパターンをつくることができる．
 その例として\lstinline{unique}関数を紹介する．
 \lstinline{unique}関数をパターンマッチ指向プログラミングにより定義すると以下のようになる．
+型注釈により，\lstinline{unique}関数が任意の型\lstinline{a}のリストを受け取り，同じ型のリストを返すことを示している．
 \begin{lstlisting}[language=egison,numbers=none]
-def unique xs := matchAllDFS xs as list eq with
+def unique (xs: [a]) : [a] := matchAllDFS xs as list eq with
   | _ ++ $x :: !(_ ++ #x :: _) -> x
 \end{lstlisting}
 notパターンが，\lstinline{x}が\lstinline{x}のあとにそれ以上現れ\emph{ない}ことを表現するために使われている．
@@ -90,7 +94,7 @@ unique [1,2,3,2,4] -- [1,3,2,4]
 最初の出現だけにマッチするために，その要素より前に同じ要素が出現しないときにマッチするパターンを書く必要がある．
 Egisonのパターンマッチはパターンを左から右に処理するため，そのようなパターンは，コンス・パターンとジョイン・パターンを単純に組み合わせるだけでは書けない．
 \begin{lstlisting}[language=egison,numbers=none]
-def unique2 xs := matchAllDFS xs as list eq with
+def unique2 (xs: [a]) : [a] := matchAllDFS xs as list eq with
   | $hs ++ (!?(\x -> member x hs) & $x) :: _ -> x
 
 unique2 [1,2,3,2,4] -- [1,2,3,4]
@@ -99,7 +103,7 @@ unique2 [1,2,3,2,4] -- [1,2,3,4]
 もうひとつのもっとエレガントな方法に，シーケンシャル・パターンを使う方法がある．
 同じ意味のパターンを，ジョイン・パターンの第一引数に後回しパターン変数を使うシーケンシャル・パターンにより表現できる．
 \begin{lstlisting}[language=egison,numbers=none]
-def unique xs := matchAllDFS xs as list eq with
+def unique (xs: [a]) : [a] := matchAllDFS xs as list eq with
   |  {@               ++ $x :: _,
       !(_ ++ #x :: _)}
   -> x
@@ -107,8 +111,9 @@ def unique xs := matchAllDFS xs as list eq with
 
 ネストしたジョイン・コンス・パターンのもうひとつの例に，第\ref{quick}章\ref{quick-matchalldfs}節で紹介した\lstinline{concat}関数がある．
 マッチャー合成（第\ref{quick}章\ref{quick-matcher-composition}節）とジョイン・コンス・パターンを組み合わせることにより，\lstinline{concat}をパターンマッチ指向プログラミングにより定義できる．
+型注釈により，\lstinline{concat}関数がリストのリストを受け取り，フラット化されたリストを返すことを示している．
 \begin{lstlisting}[language=egison,numbers=none]
-def concat xss := matchAllDFS xss as list (list something) with
+def concat (xss: [[a]]) : [a] := matchAllDFS xss as list (list something) with
   | _ ++ (_ ++ $x :: _) :: _ -> x
 \end{lstlisting}
 
@@ -127,8 +132,9 @@ def concat xss := matchAllDFS xss as list (list something) with
 簡単な例からはじめる．
 連想リストに対する\lstinline{lookup}関数は，単一のコンス・パターンで定義できる．
 単一の多重集合のコンス・パターンは，リストのジョイン・コンス・パターンと置き換えることもできる．
+型注釈により，\lstinline{lookup}関数がキー\lstinline{k}と連想リストを受け取り，対応する値を返すことを示している．
 \begin{lstlisting}[language=egison,numbers=none]
-def lookup k ls := match ls as multiset (eq, something) with
+def lookup (k: a) (ls: [(a, b)]) : b := match ls as multiset (eq, something) with
   | (#k, $x) :: _ -> x
 \end{lstlisting}
 ただし，ネストした多重集合のコンス・パターンは，リストのジョイン・コンス・パターンと置き換えることができない．
@@ -166,7 +172,7 @@ matchAll [1, 2, 3] as multiset something with
 \footnote{著者がEgisonのマッチ式を設計したとき，ポーカーの役判定をするプログラムを簡潔に記述できることを必要条件として設計した．}
 ``\lstinline{[}$p_1$\lstinline{,} $p_2$\lstinline{,} $...$\lstinline{,} $p_n$\lstinline{]}''というパターンは，``$p1$ \lstinline{:} $p_2$ \lstinline{:} $...$ \lstinline{:} $p_n$ \lstinline{: []}''に展開される糖衣構文である．
 \begin{lstlisting}[language=egison,numbers=none]
-def poker cs :=
+def poker (cs: [Card]) : String :=
   match cs as multiset card with
   | card $s $n :: card #s #(n-1) :: card #s #(n-2) :: card #s #(n-3) :: card #s #(n-4) :: _
     -> "Straight flush"
@@ -208,6 +214,7 @@ poker [Card Spade 5, Card Spade 6, Card Spade 7, Card Spade 8, Card Diamond 11]
 -- "Nothing"
 \end{lstlisting}
 パターンコンストラクタ（\lstinline{card}）は小文字から始まり，データコンストラクタ（\lstinline{Card}）は大文字から始まるというルールがEgisonにはある．
+\lstinline{poker}関数の型注釈により，カードのリストを受け取り，役を表す文字列を返すことを示している．
 
 なお，上の例でカードのマッチャーは以下のように代数的データマッチャーとして定義されている．
 \begin{lstlisting}[language=egison,numbers=none]
@@ -226,8 +233,9 @@ def card := algebraicDataMatcher
 複数のデータをくらべたいという場面は，プログラミングにおいて頻出する．
 このような場面で，とくにnotパターンと一緒に使われるタプル・パターンが役に立つことがおおい．
 たとえば， \lstinline{difference}関数は，第\ref{quick}章\ref{quick-matcher-composition}節に登場した\lstinline{intersect}関数の実装にnotパターンを挿入することにより定義できる．
+型注釈により，2つの集合を受け取り，差集合を返すことを示している．
 \begin{lstlisting}[language=egison,numbers=none]
-def difference xs ys := matchAll (xs, ys) as (set eq, set eq) with
+def difference (xs: [a]) (ys: [a]) : [a] := matchAll (xs, ys) as (set eq, set eq) with
   | ($x :: _, !(#x :: _)) -> x
 \end{lstlisting}
 \lstinline|!($x :: _, #x :: _)|のように，notパターンの挿入位置を変えることにより，2つのコレクションに共通要素が1つもない場合にパターンマッチに成功するパターンも記述できる．
@@ -237,8 +245,9 @@ def difference xs ys := matchAll (xs, ys) as (set eq, set eq) with
 たとえば，第\ref{quick}章\ref{quick-seq-pat}節では，2つのコレクションに共通要素が1つしかないことをチェックする\lstinline{singleCommonElem}関数をパターンマッチにより定義した．
 シーケンシャル・notパターンは，数学のアルゴリズムを記述するときに必要となることがある．
 たとえば，第\ref{essence}章\ref{essence-sat}節でで紹介するSATソルバーの実装でもシーケンシャル・notパターンは現れる．
+型注釈により，2つのリストを受け取り，真偽値を返すことを示している．
 \begin{lstlisting}[language=egison,numbers=none]
-def singleCommonElem := match (xs, ys) as (multiset eq, multiset eq) with
+def singleCommonElem (xs: [a]) (ys: [a]) : Bool := match (xs, ys) as (multiset eq, multiset eq) with
                     | [($x :: @, #x :: @),
                        !($y :: _, #y :: _)] -> True
                     | _ -> False
@@ -289,8 +298,9 @@ matchAll [1,2,3,4] as multiset integer with
 外側のループ・パターンの添字変数\lstinline|i|が，内側のループ・パターン添字範囲にて，内側のループの繰り返し回数の違いを表現するために使われている．
 また，前の繰り返しパターンで束縛された値，たとえば，\lstinline|$a_j|に束縛された値が，\lstinline|#(a_j - (i - j))|や\lstinline|#(a_j + (i - j))|のように参照されていることにも注意してほしい．
 このように，添字付きパターン変数の非線形性（パターンの左側で添字付きパターン変数に束縛した値が参照できること）がうまく機能している．
+型注釈により，\lstinline{nQueens}関数が整数\lstinline{n}を受け取り，整数のリストのリストを返すことを示している．
 \begin{lstlisting}[language=egison,numbers=none]
-def nQueens n :=
+def nQueens (n: Integer) : [[Integer]] :=
   matchAll [1..n] as multiset integer with
   | $a_1 ::
      (loop $i (2,n)
@@ -330,8 +340,9 @@ def treeData :=
 このループ・パターンの三点リーダーパターンは，繰り返しパターンの末尾でない場所に位置している．
 繰り返しの場所をユーザーが指定できることも，正規表現のクリーネスター演算子にはないループ・パターンの強みのひとつである．
 パターンコンストラクタ\lstinline{node}と\lstinline{leaf}は小文字から始まる．
+型注釈により，\lstinline{ancestors}関数が文字列\lstinline{x}とツリー\lstinline{t}を受け取り，祖先ノードのパスのリストを返すことを示している．
 \begin{lstlisting}[language=egison,numbers=none]
-def ancestors x t := matchAll t as tree string with
+def ancestors (x: String) (t: Tree String) : [[String]] := matchAll t as tree string with
   | loop $i (1,$n)
       (node $c_i (... ::  _))
       (leaf #x)
@@ -345,8 +356,9 @@ ancestors "Egison" treeData
 二重にネストしたループ・パターンを使えば，そのサブカテゴリーが任意の深さにあってもよいようにできる．
 以下のパターンは，特定のカテゴリーに属するすべての言語を列挙する．
 ツリーのなかで現れる順番と同じ順番で言語を列挙するために，\lstinline{matchAllDFS}が使われている．
+型注釈により，\lstinline{descendants}関数が文字列\lstinline{x}とツリー\lstinline{t}を受け取り，子孫ノードのリストを返すことを示している．
 \begin{lstlisting}[language=egison,numbers=none]
-def descendants x t := matchAllDFS t as tree string with
+def descendants (x: String) (t: Tree String) : [String] := matchAllDFS t as tree string with
   | loop _ (1,_)
       (node _ (... ::  _))
       (node #x ((loop _ (1,_)
@@ -458,18 +470,19 @@ def graphData :=
 以下のプログラム中のパターンは，ベルリンを出発して，すべての都市をまわって，ベルリンに戻るルートにマッチする．
 このパターンを使って，巡回セールスマン問題を解いている．
 非線形ループ・パターンを効果的に使っている．
+型注釈により，\lstinline{trips}関数がグラフデータから経路のリストを計算し，総距離と都市のリストのタプルのリストを返すことを示している．
 \begin{lstlisting}[language=egison,numbers=none]
-def trips :=
+def trips : [(Integer, [String])] :=
   let n := length graphData in
     matchAll graphData as graph with
     | (#"Berlin", (($s_1,$p_1) :: _)) ::
         loop $i (2, n - 1)
           ((#s_(i - 1), ($s_i, $p_i) :: _) :: ...)
           ((#s_(n - 1), (#"Berlin" & $s_n, $p_n) :: _) :: [])
-    -> sum (map (\i -> p_i) [1..n]), map (\i -> s_i) [1..n]
+    -> (sum (map (\i -> p_i) [1..n]), map (\i -> s_i) [1..n])
 
-head (sortBy (\(_, x), (_, y) -> compare x y)) trips)
--- (["London", "New York", "Vancouver", "Tokyo"," Berlin"], 46)
+head (sortBy (\(_, x), (_, y) -> compare x y) trips)
+-- (46, ["London", "New York", "Vancouver", "Tokyo", "Berlin"])
 \end{lstlisting}
 
 ツリー（\ref{pmo-tree}節）と同様に，グラフに対するパターンマッチのためのDSLがいくつかグラフ・データベースに対するクエリー言語として開発されている．

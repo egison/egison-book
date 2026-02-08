@@ -27,8 +27,9 @@ matchAll (1, 2) as unorderedIntegerPair with
 \end{lstlisting}
 
 上記のような動作をする\lstinline{unorderedIntegerPair}マッチャーは以下のように定義できる．
+型注釈により、整数のペアに対するマッチャーであることを示している．
 \begin{lstlisting}[language=egison]
-def unorderedIntegerPair := matcher
+def unorderedIntegerPair : Matcher (Integer, Integer) := matcher
   | pair $ $ as (integer, integer) with
     | ($x, $y) -> [(x, y), (y, x)]
   | $ as something with
@@ -76,10 +77,11 @@ matchAll (1, 2) as unorderedPair integer with
 -- [(1,2),(2,1)]
 \end{lstlisting}
 そのためには，\lstinline{unorderedPair}をマッチャーを引数にとってマッチャーを返す関数として定義すればよい．
-\lstinline{pair}パターンに対するマッチャー節のネクスト・マッチャー式で\lstinline{unorderedPair}の引数である\lstinline{a}を指定している．
+\lstinline{pair}パターンに対するマッチャー節のネクスト・マッチャー式で\lstinline{unorderedPair}の引数である\lstinline{m}を指定している．
+型注釈により、型パラメータ\lstinline|{a}|と引数のマッチャー\lstinline|(m: Matcher a)|を受け取り、ペア型\lstinline|(a, a)|に対するマッチャーを返すことを示している．
 \begin{lstlisting}[language=egison,numbers=none]
-def unorderedPair a := matcher
-  | pair $ $ as (a, a) with
+def unorderedPair {a} (m: Matcher a) : Matcher (a, a) := matcher
+  | pair $ $ as (m, m) with
     | ($x, $y) -> [(x, y), (y, x)]
   | $ as something with
     | $tgt -> [tgt]
@@ -88,8 +90,9 @@ def unorderedPair a := matcher
 \section{\texttt{eq}マッチャーの定義}\label{matcher-eq}
 
 \lstinline{eq}マッチャーも\lstinline{matcher}式でユーザーが定義することができる．
+型注釈により、型制約\lstinline|{Eq a}|を持つ型パラメータ\lstinline{a}に対するマッチャーであることを示している．
 \begin{lstlisting}[language=egison]
-def eq := matcher
+def eq {Eq a} : Matcher a := matcher
   | #$val as () with
     | $tgt -> if val == tgt then [()] else []
   | $ as something with
@@ -116,17 +119,18 @@ def eq := matcher
 \section{\texttt{multiset}マッチャーの定義}\label{matcher-multiset}
 
 本節は，\lstinline{multiset}マッチャーの定義を解説する．
+型注釈により、型パラメータ\lstinline|{a}|と引数のマッチャー\lstinline|(m: Matcher a)|を受け取り、リスト型\lstinline|[a]|に対するマッチャーを返すことを示している．
 \begin{lstlisting}[language=egison]
-def multiset a := matcher
+def multiset {a} (m: Matcher a) : Matcher [a] := matcher
   | [] as () with
-    | $tgt -> match tgt as (mutiset a) with
+    | $tgt -> match tgt as (mutiset m) with
                 | [] -> [()]
                 | _ -> []
-  | $ :: $ as (a, multiset a) with
-    | $tgt -> matchAll tgt as list a with
+  | $ :: $ as (m, multiset m) with
+    | $tgt -> matchAll tgt as list m with
                 | $hs ++ $x :: $ts -> (x, hs ++ ts)
   | #$val as () with
-    | $tgt -> match (val, tgt) as (list a, multiset a) with
+    | $tgt -> match (val, tgt) as (list m, multiset m) with
                 | ([], []) -> [()]
                 | ($x :: $xs, #x :: #xs) -> [()]
                 | (_, _) -> []
@@ -167,10 +171,11 @@ take 10 (matchAll primes as sortedList integer with
 ソート済みリストに特化したマッチャーを使うことにより，この不必要な探索は避けることができる．
 通常の\lstinline{list}マッチャーに，\lstinline|$ ++ #$px : $|を原始パターンパターンにもつマッチャー節を追加すれば，ソート済みリストに特化したマッチャーをつくることができる．
 このマッチャー節が，$(p,p+6)$という形の素数のペアにマッチする二重にネストしたジョイン・コンス・パターンの計算量を$O(n^2)$から$O(n)$に減らす．
+型注釈により、型制約\lstinline|{Ord a}|を持つ型パラメータ\lstinline{a}とマッチャー引数\lstinline|(m: Matcher a)|を受け取り、ソート済みリスト型\lstinline|[a]|に対するマッチャーを返すことを示している．
 \begin{lstlisting}[language=egison,numbers=none]
-def sortedList a := matcher
-  | $ ++ #$px :: $ as (sortedList a, sortedList a) with
-    | \$tgt -> matchAll tgt as list a with
+def sortedList {Ord a} (m: Matcher a) : Matcher [a] := matcher
+  | $ ++ #$px :: $ as (sortedList m, sortedList m) with
+    | \$tgt -> matchAll tgt as list m with
                | loop $i (1, $n)
                    ((?(\x -> x < px) & $h_i) :: ...)
                    (#px :: $ts)
@@ -196,13 +201,13 @@ matchAll [1, 2, 3, 4, 5] as multiset eq with
 \end{lstlisting}
 このような最適化は，以下の2-3行目のマッチャー節を\ref{matcher-multiset}節の\lstinline{multiset}マッチャーの定義に追加すればできる．
 このマッチャー節の原始パターンパターンで原始ワイルドカードが使われている．
-パターン・ホールはコンス・パターンの第一引数だけであるので，ネクスト・マッチャーは\lstinline{a}だけになり，ネクスト・ターゲットは\lstinline{tgt}のそれぞれの要素であるために，\lstinline{tgt}をそのまま返すようになっている．
+パターン・ホールはコンス・パターンの第一引数だけであるので，ネクスト・マッチャーは\lstinline{m}だけになり，ネクスト・ターゲットは\lstinline{tgt}のそれぞれの要素であるために，\lstinline{tgt}をそのまま返すようになっている．
 \begin{lstlisting}[language=egison]
-def multiset a := matcher
-  | $ :: _ as a with
+def multiset {a} (m: Matcher a) : Matcher [a] := matcher
+  | $ :: _ as m with
     | $tgt -> tgt
-  | $ :: $ as (a, multiset a) with
-    | $tgt -> matchAll tgt as list a with
+  | $ :: $ as (m, multiset m) with
+    | $tgt -> matchAll tgt as list m with
               | $hs ++ $x :: $ts -> (x, hs ++ ts)
   ...
 \end{lstlisting}
@@ -210,15 +215,15 @@ def multiset a := matcher
 \ref{matcher-sorted}節の\lstinline{sortedList}マッチャーも同様の最適化ができる．
 下記の2-7行目のマッチャー節は，ジョイン・パターンの第一引数を計算することを省略する役割を果たす．
 \begin{lstlisting}[language=egison]
-def sortedList a := matcher
-  | _ ++ #$px :: $ as sortedList a
-    | \tgt -> matchAll tgt as list a with
+def sortedList {Ord a} (m: Matcher a) : Matcher [a] := matcher
+  | _ ++ #$px :: $ as sortedList m
+    | \tgt -> matchAll tgt as list m with
               | loop $i (1, _)
                   (?(\x -> x < px) :: ...)
                   (#px :: $ts)
                 -> ts
-  | $ ++ #$px :: $ as (sortedList a, sortedList a)
-    | \tgt -> matchAll tgt as list a with
+  | $ ++ #$px :: $ as (sortedList m, sortedList m)
+    | \tgt -> matchAll tgt as list m with
               | loop $i (1, $n)
                   ((?(\x -> x < px) & $h_i) :: ...)
                   (#px :: $ts)

@@ -86,6 +86,8 @@ matchAll [1,2,3,2,4,3] as list integer with
 双子素数とは，差が2であるような素数のペアのことをいう．
 \lstinline{primes}\index{primes@\lstinline{primes}}には素数の無限列が束縛されている．\footnote{\lstinline{primes}はEgisonの組み込みライブラリで定義されている．}
 この\lstinline{matchAll}式は，素数の無限列からすべての双子素数を順番に抜き出す．
+Egisonは静的型付けシステムを備えているが，型推論により型アノテーションを省略できる．
+必要に応じて\lstinline{def twinPrimes : [(Integer, Integer)] := ...}のように型を明示的に指定することもできる．
 \begin{lstlisting}[language=egison,numbers=none]
 def twinPrimes := matchAll primes as list integer with
   | _ ++ $p :: #(p + 2) :: _ -> (p, p + 2)

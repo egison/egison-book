@@ -106,7 +106,7 @@ sqrt 5 -- sqrt 5
 シングルクオートには変数が続き，たとえその変数が定義済みであったとしても，その変数の名前のシンボルを返す．
 シングルクオートを関数の前に付加すれば，定義済みの関数に対してもシンボリックな関数適用を表現できる．
 \begin{lstlisting}[language=egison,numbers=none]
-def f x := x + 1
+def f (x: MathExpr) : MathExpr := x + 1
 
 f a -- a + 1
 'f a -- f a
@@ -126,7 +126,7 @@ fromMathExpr 'x
 この問題を解決するために，\lstinline{withSymbols}式というローカルシンボルを宣言するための構文がEgisonには用意されている．
 \lstinline{withSymbols}式は，第一引数に変数のリストをとり，これらの変数は第二引数の式の評価時にシンボルとして扱われる．
 \begin{lstlisting}[language=egison,numbers=none]
-def i := 10
+def i : Integer := 10
 
 i -- 10
 withSymbols [i] i -- i
