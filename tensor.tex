@@ -842,17 +842,17 @@ def R_a_b_c_d : Tensor MathExpr := withSymbols [i, j]
   g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
            `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
 \end{lstlisting}
-$R_{abcd} = -R_{abdc}$という歪対称性を宣言するには，以下のように添字\lstinline{_a_b}を角括弧\lstinline{[]}で囲む．
+$R_{abcd} = -R_{abdc}$という歪対称性を宣言するには，以下のように添字\lstinline{_a_b}を波括弧\lstinline|{}|で囲む．
 \begin{lstlisting}[language=egison,numbers=none]
-def R[_a_b]_c_d : Tensor MathExpr := withSymbols [i, j]
+def R{_a_b}_c_d : Tensor MathExpr := withSymbols [i, j]
   g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
            `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
 \end{lstlisting}
 上記のように$R_{abcd}$を定義すると，たとえば$R_{21cd}$を参照したとき，$R_{12cd}$の計算結果の符号を反転した値を返すようになる．
 対称性を複数同時に宣言することもできる．
-$R_{abcd} = -R_{abdc}$と$R_{abcd} = -R_{bacd}$を同時に宣言するには，以下のように添字\lstinline{_a_b}と\lstinline{_c_d}の両方を角括弧\lstinline{[]}で囲む．
+$R_{abcd} = -R_{abdc}$と$R_{abcd} = -R_{bacd}$を同時に宣言するには，以下のように添字\lstinline{_a_b}と\lstinline{_c_d}の両方を波括弧\lstinline|{}|で囲む．
 \begin{lstlisting}[language=egison,numbers=none]
-def R[_a_b][_c_d] : Tensor MathExpr := withSymbols [i, j]
+def R{_a_b}{_c_d} : Tensor MathExpr := withSymbols [i, j]
   g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
            `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
 \end{lstlisting}
@@ -860,24 +860,24 @@ def R[_a_b][_c_d] : Tensor MathExpr := withSymbols [i, j]
 
 $R_{abcd} = R_{cdab}$のような複雑な対称性も記述できる．
 この対称性を記述するためには添字\lstinline{_a_b}と\lstinline{_c_d}をそれぞれひとまとまりで扱うために丸括弧\lstinline{()}で囲む．
-そして，これらを波括弧\lstinline|{}|で囲む．
-角括弧\lstinline|[]|が歪対称性を宣言するために使われていたのに対し，波括弧\lstinline|{}|は対称性を宣言するために使われる．
+そして，これらを角括弧\lstinline|[]|で囲む．
+波括弧\lstinline|{}|が歪対称性を宣言するために使われるのに対し，角括弧\lstinline|[]|は対称性を宣言するために使われる．
 \begin{lstlisting}[language=egison,numbers=none]
-def R{(_a_b)(_c_d)} : Tensor MathExpr := withSymbols [i, j]
+def R[(_a_b)(_c_d)] : Tensor MathExpr := withSymbols [i, j]
   g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
            `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
 \end{lstlisting}
 
 三つの対称性$R_{abcd} = -R_{abdc}$，$R_{abcd} = -R_{bacd}$，$R_{abcd} = R_{cdab}$を同時に宣言することもできる．
 \begin{lstlisting}[language=egison,numbers=none]
-def R{[_a_b][_c_d]} : Tensor MathExpr := withSymbols [i, j]
+def R[{_a_b}{_c_d}] : Tensor MathExpr := withSymbols [i, j]
   g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
            `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
 \end{lstlisting}
 
 まとめると，Egisonは対称性の宣言には三種類の括弧を使い分ける．
-波括弧\lstinline|{}|は対称性を宣言するために使う．
-角括弧\lstinline|[]|は歪対称性を宣言するために使う．
+角括弧\lstinline|[]|は対称性を宣言するために使う．
+波括弧\lstinline|{}|は歪対称性を宣言するために使う．
 丸括弧\lstinline|()|は複数の添字をひとまとまりにするために使う．
 
 対称なテンソルの添字は隣り合っていることが多いため，数学や物理で現れるテンソルの対称性は，この記法でほぼ宣言することができる．
@@ -910,7 +910,7 @@ def R'_i_j_k_l : Tensor MathExpr :=
 \end{lstlisting}
 対称性により条件分岐を大きく減らすことができる．
 \begin{lstlisting}[language=egison,numbers=none]
-def R'{[_i_j][_k_l]} : Tensor MathExpr :=
+def R'[{_i_j}{_k_l}] : Tensor MathExpr :=
   generateTensor
     (\match as list integer with
        | [#1, #1, _, _] -> 0
@@ -930,10 +930,10 @@ def R'{[_i_j][_k_l]} : Tensor MathExpr :=
 この記法は\lstinline{generateTensor}式を使う糖衣構文として実装されている．
 本節では，この変換を具体例をいくつか紹介することによって説明する．
 
-まず対称性を宣言する波括弧\lstinline|{}|がどう展開されるか説明する．
+まず対称性を宣言する角括弧\lstinline|[]|がどう展開されるか説明する．
 以下のプログラムの\lstinline{...}の箇所にはなにか適当なテンソルを返すプログラムがはいる．
 \begin{lstlisting}[language=egison,numbers=none]
-def X{_i_j} := ...
+def X[_i_j] := ...
 \end{lstlisting}
 上記の形のプログラムは，以下のようなプログラムに展開される．
 \begin{lstlisting}[language=egison,numbers=none]
@@ -950,9 +950,9 @@ def X_i_j : Tensor a :=
 Egisonはテンソルの成分の評価を遅延するため，\lstinline{tmpX}の下半分の成分は計算されることはない．
 そのため，テンソル成分の計算コストが半分になる．
 
-歪対称性を宣言する角括弧\lstinline|[]|も同じように展開される．
+歪対称性を宣言する波括弧\lstinline|{}|も同じように展開される．
 \begin{lstlisting}[language=egison,numbers=none]
-def X[_i_j] := ...
+def X{_i_j} := ...
 \end{lstlisting}
 下半分の成分の符号が上半分の成分に対して反転していることと，対角成分が$0$になるように\lstinline{generateTensor}式の内部が変更されている．
 \begin{lstlisting}[language=egison,numbers=none]
