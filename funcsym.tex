@@ -4,50 +4,94 @@
 このシンボリックな関数の引数を省略する表記をプログラミングにも導入するための機能が\emph{関数シンボル}（\emph{function symbol}）\index{かんすうしんぼる@関数シンボル}である．
 関数シンボル自体の動機はシンプルであるが，関数シンボルはEgison特有の言語機能であるため，一つの独立した章を使ってその実装方法も含め紹介する．
 
-\section{関数シンボルによるシンボリックな関数の引数の省略}\label{funcsym-intro}
+\section{関数シンボルの基本的な使い方}\label{funcsym-intro}
 
 関数シンボルが特に力を発揮するのは，微分を扱う計算のときである．
 以下では\lstinline{x}，\lstinline{y}を引数にとる関数シンボル\lstinline{f}を定義している．
 関数シンボルは\lstinline{MathExpr}型をもつ数式として扱われる．
-型アノテーションを使って\lstinline{f}の型を明示的に指定できる．
-そして，その関数シンボル\lstinline{f}を\lstinline{x}や\lstinline{y}について微分している．
-\lstinline{f|x}は，関数\lstinline{f}を\lstinline{x}で偏微分した結果の関数を表す．
-\verb!f|x|y!は，関数\lstinline{f}を\lstinline{x}で偏微分した後，さらに\lstinline{y}で偏微分した結果の関数を表す．
-``\verb!|!''は，``\verb!_!''や``\verb!~!''と同様Egison組み込みの記号である．
-以下に関数シンボルの微分を標準的なEgison出力とLaTeX形式の出力の両方の表示例を示す．
-``\lstinline[mathescape]{$\partial$/$\partial$}''はEgisonで定義されているライブラリ関数である．
+
 \begin{lstlisting}[language=egison,numbers=none]
 declare symbol x, y : MathExpr
 
 def f : MathExpr := function (x, y)
-
-`$\partial$`/`$\partial$` f x -- f|x
-`$\partial$`/`$\partial$` (`$\partial$`/`$\partial$` f x) y -- f|x|y
 \end{lstlisting}
-\lstinline{f}は\lstinline{x}と\lstinline{y}についての関数であるので，以下のように\lstinline{z}で微分すると\lstinline{0}になる．
+
+関数シンボルを\lstinline{show}で表示すると，引数の値が常に表示される．
+
 \begin{lstlisting}[language=egison,numbers=none]
-`$\partial$`/`$\partial$` f z -- 0
+show f  -- "f x y"
+\end{lstlisting}
+
+以下のように，関数シンボル\lstinline{f}を\lstinline{x}や\lstinline{y}について微分できる．
+偏微分の結果の関数は，引数の番号を\verb!|!記号で付加した表示になる．
+\verb!f|1!は「$f$の第1引数に関する偏微分」，\verb!f|1|2!は「第1引数で偏微分した後さらに第2引数で偏微分した結果」を表す．
+``\verb!|!''は，``\verb!_!''や``\verb!~!''と同様Egison組み込みの記号である．
+以下に関数シンボルの微分を標準的なEgison出力とLaTeX形式の出力の両方の表示例を示す．
+``\lstinline[mathescape]{$\partial$/$\partial$}''はEgisonで定義されているライブラリ関数である．
+
+\begin{lstlisting}[language=egison,numbers=none]
+show (`$\partial$`/`$\partial$` f x)          -- "f|1 x y"
+show (`$\partial$`/`$\partial$` (`$\partial$`/`$\partial$` f x) y) -- "f|1|2 x y"
+\end{lstlisting}
+
+\lstinline{f}は\lstinline{x}と\lstinline{y}についての関数であるので，以下のように\lstinline{z}で微分すると\lstinline{0}になる．
+
+\begin{lstlisting}[language=egison,numbers=none]
+show (`$\partial$`/`$\partial$` f z) -- "0"
 \end{lstlisting}
 
 物理の計算では，$t,x,y,z$の4つの引数をとる関数がよく登場する．
 もし関数シンボルのような仕組みがないと，式が長くなり，読み難くなるため，関数シンボルの仕組みはプログラムの読み書きしやすくする．
 
+\section{引数への値の代入}\label{funcsym-apply}
+
+関数シンボルには，通常の関数適用と同じ構文で引数を代入できる．
+\lstinline{f 0 1}と書くと，\lstinline{f}の第1引数に\lstinline{0}，第2引数に\lstinline{1}を代入した数式が得られる．
+引数の個数が合わない場合はエラーになる．
+
+\begin{lstlisting}[language=egison,numbers=none]
+show (f 0 1)   -- "f 0 1"
+show (f x 0)   -- "f x 0"
+\end{lstlisting}
+
+引数を代入した結果も\lstinline{MathExpr}型の数式であるため，さらに微分できる．
+引数に具体的な数値が入った場合，その引数に対する微分は\lstinline{0}になる．
+
+\begin{lstlisting}[language=egison,numbers=none]
+`$\partial$`/`$\partial$` (f 0 1) x -- 0
+\end{lstlisting}
+
+\lstinline{V.substitute}関数を使っても引数を置き換えられる．
+
+\begin{lstlisting}[language=egison,numbers=none]
+V.substitute [|x, y|] [|0, 0|] f
+-- f 0 0
+\end{lstlisting}
+
+\section{合成関数の微分（連鎖律）}\label{funcsym-chain}
+
 合成関数の微分にも対応していることが，Egisonの関数シンボルの重要な特徴である．
-たとえば，関数シンボルは，下記の例のように合成関数の微分にも対応できる．
-\lstinline{function}式の仮引数が変数名(\verb|$x|や\verb|$y|)ではなく式をとるのは，成関数の微分に対応するためである．
-さきほどと同様に$f$を，$f(x,y)$の省略であるとする．
+\lstinline{function}式の仮引数が変数名ではなく式をとるのは，合成関数の微分に対応するためである．
+さきほどと同様に$g$を，$g(x,y)$の省略であるとする．
 また，$x=r \cos \theta, y= r \sin \theta$という関係式もあるとする．
-このとき，$f$を$r$で微分すると，$\frac{\partial f}{\partial x} \cos \theta + \frac{\partial f}{\partial y} \sin \theta$という結果を返している．
+このとき，$g$を$r$で微分すると，連鎖律により$\frac{\partial g}{\partial x_1} \cos \theta + \frac{\partial g}{\partial x_2} \sin \theta$という結果を返している．
+
 \begin{lstlisting}[language=egison,numbers=none]
 declare symbol r, `$\theta$` : MathExpr
 
 def x : MathExpr := r * cos `$\theta$`
 def y : MathExpr := r * sin `$\theta$`
-def f : MathExpr := function (x, y)
+def g : MathExpr := function (x, y)
 
-`$\partial$`/`$\partial$` f r
--- f|x * cos `$\theta$` + f|y * sin `$\theta$`
+show g
+-- "g (r * 'cos θ) (r * 'sin θ)"
+
+show (`$\partial$`/`$\partial$` g r)
+-- "g|1 (r * 'cos θ) (r * 'sin θ) * 'cos θ + g|2 (r * 'cos θ) (r * 'sin θ) * 'sin θ"
 \end{lstlisting}
+
+偏微分の結果に含まれる\verb!g|1!，\verb!g|2!は，それぞれ$\frac{\partial g}{\partial x_1}$，$\frac{\partial g}{\partial x_2}$を表す記号である（引数の番号を\verb!|!記号で付加する）．
+この表示には引数の値が常に含まれるため，どの点での偏微分係数であるかが明示される．
 
 \section{関数シンボルを成分にもつテンソル}\label{funcsym-tensor}
 
@@ -55,58 +99,62 @@ def f : MathExpr := function (x, y)
 たとえば，ベクトル場やテンソル場を表現するときにそのような場面がある．
 このような場面に対応するため，テンソルの成分として関数シンボルを使うことをEgisonは許している．
 以下の例のようにテンソルの成分が関数シンボルであった場合，テンソルを束縛している変数名に成分の位置の添字を付加した名前をもつ関数シンボルが生成される．
+
 \begin{lstlisting}[language=egison,numbers=none]
+declare symbol x, y, z : MathExpr
+
 def g_i_j : Tensor MathExpr := generateTensor
-      (\match as list eq with
+      (\match as list integer with
          | [$n, #n] -> function (x, y, z)
          | _ -> 0)
       [3, 3]
 
-g_i_j
--- [| [| g_1_1, 0, 0 |], [| 0, g_2_2, 0 |], [| 0, 0, g_3_3 |] |]_i_j
+show (withSymbols [i, j] g_i_j)
+-- "[| [| g_1_1 x y z, 0, 0 |], [| 0, g_2_2 x y z, 0 |], [| 0, 0, g_3_3 x y z |] |]"
 
-∂/∂ g_i_j x
--- [| [| g_1_1|x, 0, 0 |], [| 0, g_2_2|x, 0 |], [| 0, 0, g_3_3|x |] |]_i_j
+show (withSymbols [i, j] (`$\partial$`/`$\partial$` g_i_j x))
+-- "[| [| g_1_1|1 x y z, 0, 0 |], [| 0, g_2_2|1 x y z, 0 |], [| 0, 0, g_3_3|1 x y z |] |]"
 \end{lstlisting}
 
 \section{関数シンボルの内部表現とパターンマッチ}\label{funcsym-data}
 
 関数シンボルは\lstinline{Function}データコンストラクタを使ってEgison内部では表現されている．
-\lstinline{Function}データコンストラクタは三つの引数をとる．
+\lstinline{Function}データコンストラクタは二つの引数をとる．
 第一引数には関数シンボルの名前（\lstinline{ScalarData}型）がはいる．
-第二引数には関数シンボルの引数名のリスト（\lstinline{[String]}型）がはいる．
-第三引数には関数シンボルの引数の値のリスト（\lstinline{[ScalarData]}型）がはいる．
-\ref{funcsym-intro}節で紹介した合成関数の微分を実現するためには，この三つの引数がすべて必要である．
-\begin{lstlisting}[language=egison,numbers=none]
-declare symbol r, `$\theta$` : MathExpr
+第二引数には関数シンボルの引数の値のリスト（\lstinline{[ScalarData]}型）がはいる．
 
-def x : MathExpr := r * cos `$\theta$`
-def y : MathExpr := r * sin `$\theta$`
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol x, y : MathExpr
 def f : MathExpr := function (x, y)
 
 fromMathExpr f
--- Div (Plus [Term 1 [(Function f [x, y] [r * cos θ, r * sin θ], 1)]]) (Plus [Term 1 []])
+-- Div (Plus [Term 1 [(Function f [x, y], 1)]]) (Plus [Term 1 []])
 \end{lstlisting}
 
 \lstinline{func}パターンコンストラクタを使って関数シンボルにパターンマッチできる．
-このパターンは関数名，引数名のリスト，引数の値のリストを抽出する．
+このパターンは関数名と引数の値のリストを抽出する．
 
 \begin{lstlisting}[language=egison,numbers=none]
 match f as mathExpr with
-  | func $name $argnames $args -> (name, argnames, args)
-  -- (f, ["x", "y"], [r * cos θ, r * sin θ])
+  | func $name $args -> (name, args)
+  -- (f, [x, y])
 \end{lstlisting}
 
+連鎖律の実装では，引数の数を利用して各引数に対する偏微分係数を整数インデックスで取り出している．
 
 \begin{lstlisting}[language=egison,numbers=none]
 def `$\partial$`/`$\partial$` $f *$x :=
   match f as mathExpr with
     ...
-    | func _ $argnames $args ->
-      sum (map2 (\s r -> (userRefs f [s]) * `$\partial$`/`$\partial$` r x) argnames args)
+    | func _ $args ->
+      sum (map2 (\s r -> (userRefs f [s]) * `$\partial$`/`$\partial$` r x)
+               (between 1 (length args))
+               args)
     ...
 \end{lstlisting}
 
+ここで\lstinline{between 1 (length args)}は\lstinline{[1, 2, ..., n]}という整数のリストを生成する．
+\lstinline{userRefs f [1]}は\lstinline{f}の名前シンボルに整数インデックス\lstinline{1}を付加した数式\lstinline{f|1}を返す．
 
 \section{関数シンボルの実装方法}
 
