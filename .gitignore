@@ -1,4 +1,3 @@
-*.pdf
 *.omc
 *.aux
 *.blg
@@ -11,3 +10,5 @@
 *.idx
 *.ilg
 *.toc
+*.fdb_latexmk
+*.fls

@@ -2,6 +2,54 @@
 
 本章は，ユーザーが自身でマッチャーを定義する方法を解説する．　
 
+\section{\texttt{inductive pattern}宣言}\label{matcher-inductive}
+
+マッチャーを定義する際には，そのマッチャーが処理するパターンコンストラクタをあらかじめ\emph{inductive pattern宣言}（\emph{inductive pattern declaration}）\index{inductivepatternせんげん@inductive pattern宣言}で宣言しておく必要がある．
+
+inductive pattern宣言は，パターンコンストラクタの型を，データコンストラクタやマッチャーの定義から独立して宣言するための構文である．
+たとえば，リスト型\lstinline{[a]}に対するパターンコンストラクタは以下のように宣言される．
+\begin{lstlisting}[language=egison]
+inductive pattern [a] :=
+  | []
+  | (::) a [a]
+  | (++) [a] [a]
+\end{lstlisting}
+この宣言は，パターンコンストラクタ\lstinline{[]}，\lstinline{::}，\lstinline{++}がいずれもリスト型\lstinline{[a]}を対象とするパターンコンストラクタであることを宣言している．
+各パターンコンストラクタの後に並ぶ型は，そのパターンコンストラクタの引数の型，すなわちパターンマッチの成功時にネクスト・ターゲットとして渡される値の型を表す．
+
+inductive pattern宣言の重要な特徴は，\lstinline{::}というパターンコンストラクタが\lstinline{list}マッチャー，\lstinline{multiset}マッチャー，\lstinline{set}マッチャーなど，複数のマッチャーにわたって共有される点にある．それぞれのマッチャーは\lstinline{::}に対して異なる分解方法を実装するが，そのパターンコンストラクタの型はinductive pattern宣言によって一元的に管理される．
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll [1, 2, 3] as list integer with
+  | $x :: $xs -> (x, xs)
+-- [(1,[2,3])]
+
+matchAll [1, 2, 3] as multiset integer with
+  | $x :: $xs -> (x, xs)
+-- [(1,[2,3]),(2,[1,3]),(3,[1,2])]
+\end{lstlisting}
+同じパターン\lstinline{$x :: $xs}でも，使うマッチャーによって意味（分解方法）が変わる．
+
+このinductive pattern宣言とマッチャー定義の関係は，型クラスとインスタンス定義の関係に類似している．
+型クラス宣言がメソッドの型を宣言し，インスタンス定義がその具体的な実装を提供するのと同様に，inductive pattern宣言がパターンコンストラクタの型を宣言し，マッチャー定義がそのパターンコンストラクタに対する具体的な分解方法を定義する．
+
+\medskip
+\begin{center}
+\begin{tabular}{ll}
+\hline
+\textbf{型クラス} & \textbf{パターンマッチング} \\
+\hline
+型クラス宣言 & inductive pattern宣言 \\
+インスタンス定義 & マッチャー定義 \\
+メソッド名 & パターンコンストラクタ名 \\
+メソッドの型 & パターンコンストラクタの型 \\
+インスタンスディスパッチ（静的） & マッチャーディスパッチ（動的） \\
+\hline
+\end{tabular}
+\end{center}
+\medskip
+
+ただし，型クラスのインスタンス選択がコンパイル時に静的に決定されるのとは異なり，マッチャーの選択は\lstinline{match}式や\lstinline{matchAll}式においてユーザーが実行時に明示的に指定する（動的選択）．
+
 \section{マッチャーの定義の基礎}\label{matcher-basic}
 
 本節は，非自由データ型のなかでもっとも単純なunordered pair（要素の順番を無視するペア）のマッチャー定義をみていくことにより，マッチャー定義の方法の概略を解説する．
@@ -27,7 +75,13 @@ matchAll (1, 2) as unorderedIntegerPair with
 \end{lstlisting}
 
 上記のような動作をする\lstinline{unorderedIntegerPair}マッチャーは以下のように定義できる．
-型注釈により、整数のペアに対するマッチャーであることを示している．
+まず，\lstinline{pair}パターンコンストラクタをinductive pattern宣言で宣言しておく必要がある．
+\begin{lstlisting}[language=egison]
+inductive pattern (Integer, Integer) :=
+  | pair Integer Integer
+\end{lstlisting}
+この宣言は，\lstinline{pair}が整数のペア型\lstinline{(Integer, Integer)}を対象とするパターンコンストラクタで，\lstinline{Integer}型の引数を2つ取ることを宣言している．
+次に，型注釈により整数のペアに対するマッチャーであることを示しながら，\lstinline{unorderedIntegerPair}マッチャーを以下のように定義する．
 \begin{lstlisting}[language=egison]
 def unorderedIntegerPair : Matcher (Integer, Integer) := matcher
   | pair $ $ as (integer, integer) with
@@ -68,7 +122,13 @@ matcher
 1つ目のマッチャー節でマッチしない\lstinline{unorderedIntegerPair}に対するパターンは，ワイルドカードかパターン変数のみであるので，このマッチャー節はこれらのパターンを処理する．
 このマッチャー節は，パターンとターゲットを変えず，ただマッチャーを\lstinline{something}に変換するだけである．
 パターンとターゲットは\lstinline{something}を使ってパターンマッチされる．
-第\ref{mechanism}章\ref{mechanism-overview}節でみたように\lstinline{something}は，パターン変数に値を束縛することができる組み込みマッチャーである．
+\lstinline{something}は唯一の組み込みマッチャーであり，以下の3種類のパターンを処理する．
+\begin{itemize}
+  \item \textbf{ワイルドカード}：つねにパターンマッチに成功し，束縛は生じない．
+  \item \textbf{パターン変数} \lstinline{$x}：パターンマッチに成功し，ターゲットの値を\lstinline{x}に束縛する．
+  \item \textbf{値パターン} \lstinline{#e}：式\lstinline{e}を評価した値とターゲットの値を\emph{組み込み構造的同値判定}（データコンストラクタの構造による等価比較）で比較し，等しければパターンマッチに成功する．
+\end{itemize}
+値パターンを\lstinline{something}が直接処理するようになったのは，静的型付けの導入にともなう設計変更である（詳しくは後述の\ref{matcher-eq}節を参照）．
 
 以下の\lstinline{unorderedPair}のように，ペアの要素のデータ型に対するマッチャーを受け取るunordered pairに対するマッチャーを定義することができる．
 \begin{lstlisting}[language=egison,numbers=none]
@@ -76,7 +136,12 @@ matchAll (1, 2) as unorderedPair integer with
 | pair $x $y -> (x, y)
 -- [(1,2),(2,1)]
 \end{lstlisting}
-そのためには，\lstinline{unorderedPair}をマッチャーを引数にとってマッチャーを返す関数として定義すればよい．
+そのためには，まずinductive pattern宣言を型パラメータを使った汎用的な形に変更する．
+\begin{lstlisting}[language=egison,numbers=none]
+inductive pattern {a} (a, a) :=
+  | pair a a
+\end{lstlisting}
+そして，\lstinline{unorderedPair}をマッチャーを引数にとってマッチャーを返す関数として定義すればよい．
 \lstinline{pair}パターンに対するマッチャー節のネクスト・マッチャー式で\lstinline{unorderedPair}の引数である\lstinline{m}を指定している．
 型注釈により、型パラメータ\lstinline|{a}|と引数のマッチャー\lstinline|(m: Matcher a)|を受け取り、ペア型\lstinline|(a, a)|に対するマッチャーを返すことを示している．
 \begin{lstlisting}[language=egison,numbers=none]
@@ -90,7 +155,9 @@ def unorderedPair {a} (m: Matcher a) : Matcher (a, a) := matcher
 \section{\texttt{eq}マッチャーの定義}\label{matcher-eq}
 
 \lstinline{eq}マッチャーも\lstinline{matcher}式でユーザーが定義することができる．
-型注釈により、型制約\lstinline|{Eq a}|を持つ型パラメータ\lstinline{a}に対するマッチャーであることを示している．
+\lstinline{eq}マッチャーは値パターンとワイルドカード・パターン変数のみを処理するため，特別なパターンコンストラクタを持たない．
+したがって，\lstinline{eq}マッチャー自体にはinductive pattern宣言は不要である．
+型注釈により，型制約\lstinline|{Eq a}|を持つ型パラメータ\lstinline{a}に対するマッチャーであることを示している．
 \begin{lstlisting}[language=egison]
 def eq {Eq a} : Matcher a := matcher
   | #$val as () with
@@ -104,6 +171,22 @@ def eq {Eq a} : Matcher a := matcher
 変数\lstinline{val}には値パターンの中身が束縛される．
 このマッチャー節の原始パターンパターンは，パターン・ホールを含んでいないため，ネクスト・マッチャー式は空タプルである．
 原始マッチ節で，値パターンの中身とターゲットの値が等しいかどうかチェックしている．
+
+\paragraph{\texttt{something}と\texttt{eq}の違い．}
+\lstinline{something}は値パターンを組み込みの構造的同値判定で処理するのに対し，\lstinline{eq}は\lstinline{Eq}型クラスのメソッドであるユーザ定義の\lstinline{==}演算子を使って比較する．
+この2つの使い分けは，マッチャーを引数にとるマッチャー（マッチャーパラメータ化マッチャー）の設計と深く関わっている．
+
+たとえば，\lstinline{multiset}のような引数マッチャー\lstinline{m}を受け取るマッチャーで値パターンを処理するとき，再帰的な比較の基底ケースをどのマッチャーに委ねるかが問題になる．
+もし\lstinline{something}が値パターンを処理できないとすると，\lstinline{eq}マッチャーに委ねるしかなく，\lstinline{eq}は\lstinline{Eq}型クラス制約を必要とするため，\lstinline{multiset}の型が
+\lstinline|multiset : {Eq a} => Matcher a -> Matcher [a]|
+のように\lstinline{Eq}制約を必要とするものになってしまう．
+しかし\lstinline{multiset}の多くの用途は値パターンを使わないため，この制約は過度に制限的である．
+
+この問題を解決するために，\lstinline{something}に組み込みの構造的同値判定による値パターン処理を組み込んだ．
+これにより，マッチャーパラメータ化マッチャーは，型クラス制約を課すことなく\lstinline{something}を基底ケースとして使え，
+\lstinline|multiset : Matcher a -> Matcher [a]|
+という制約のない型を持つことができる．
+一方，ユーザ定義の等値比較（\lstinline{==}）を使いたい場合には，明示的に\lstinline{eq}マッチャーを指定することで対応できる．
 
 原始パターンパターンは，ここまでにでてきた3つの構成要素であるパターン・ホール，原始パターンパターンコンストラクタの適用，原始値パターンと，原始ワイルドカードからなる．
 \begin{lstlisting}[language=egison,numbers=none]
@@ -119,6 +202,7 @@ def eq {Eq a} : Matcher a := matcher
 \section{\texttt{multiset}マッチャーの定義}\label{matcher-multiset}
 
 本節は，\lstinline{multiset}マッチャーの定義を解説する．
+\lstinline{multiset}マッチャーは，\ref{matcher-inductive}節で示したリスト型\lstinline{[a]}のinductive pattern宣言で宣言されたパターンコンストラクタ（\lstinline{[]}，\lstinline{::}，\lstinline{++}）を処理するマッチャーである．
 型注釈により、型パラメータ\lstinline|{a}|と引数のマッチャー\lstinline|(m: Matcher a)|を受け取り、リスト型\lstinline|[a]|に対するマッチャーを返すことを示している．
 \begin{lstlisting}[language=egison]
 def multiset {a} (m: Matcher a) : Matcher [a] := matcher

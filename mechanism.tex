@@ -51,7 +51,7 @@ MState [($m, something, 2)
        ,(#m :: _, multiset eq, [8,2])]
        [] env
 \end{lstlisting}
-\lstinline{something}はEgison唯一の組み込みマッチャーであり，パターンマッチの途中結果に新しい束縛を追加する．
+\lstinline{something}はEgison唯一の組み込みマッチャーであり，パターンマッチの途中結果に新しい束縛を追加することができる．
 ここでは，変数\lstinline{m}に\lstinline{2}を束縛している．
 \begin{lstlisting}[language=egison,numbers=none]
 MState [(#m :: _, multiset eq, [8,2])]
