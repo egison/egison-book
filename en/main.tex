@@ -1,5 +1,5 @@
-\documentclass[b5paper,openany]{book}
-\usepackage[b5paper,truedimen,margin=25mm]{geometry}
+\documentclass[b5paper,papersize,openany]{jsbook}
+\usepackage[size=b5paper]{bxpapersize}
 \setcounter{secnumdepth}{2}
 
 \usepackage{subcaption}
@@ -120,7 +120,7 @@
 }
 
 % Hyperref for clickable links
-\usepackage[
+\usepackage[dvipdfmx,
   colorlinks=true,
   linkcolor=blue,
   citecolor=blue,
@@ -128,6 +128,7 @@
   bookmarks=true,
   bookmarksnumbered=true
 ]{hyperref}
+\usepackage{pxjahyper}
 
 \newcommand{\todo}[1]{\textcolor{red}{(TODO: #1)}}
 

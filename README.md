@@ -16,8 +16,6 @@ cd ja
 make
 ```
 
-Requires `platex`, `pbibtex`, `dvipdfmx`.
-
 ### English version
 
 ```bash
@@ -25,4 +23,4 @@ cd en
 make
 ```
 
-Requires `pdflatex`, `bibtex`.
+Both require `platex`, `pbibtex`, `dvipdfmx`.
