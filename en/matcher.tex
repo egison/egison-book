@@ -1,0 +1,331 @@
+\chapter{Defining Matchers}\label{matcher}
+
+This chapter explains how users can define their own matchers.
+
+\section{\texttt{inductive pattern} Declaration}\label{matcher-inductive}
+
+When defining a matcher, the pattern constructors that the matcher handles must be declared in advance using an \emph{inductive pattern declaration}\index{inductive pattern declaration}.
+
+An inductive pattern declaration is a syntax for declaring the types of pattern constructors independently from the definitions of data constructors and matchers.
+For example, the pattern constructors for the list type \lstinline{[a]} are declared as follows.
+\begin{lstlisting}[language=egison]
+inductive pattern [a] :=
+  | []
+  | (::) a [a]
+  | (++) [a] [a]
+\end{lstlisting}
+This declaration states that the pattern constructors \lstinline{[]}, \lstinline{::}, and \lstinline{++} are all pattern constructors targeting the list type \lstinline{[a]}.
+The types following each pattern constructor represent the types of that pattern constructor's arguments---that is, the types of the values passed as next targets upon successful pattern matching.
+
+An important feature of inductive pattern declarations is that a pattern constructor such as \lstinline{::} is shared across multiple matchers, including the \lstinline{list} matcher, the \lstinline{multiset} matcher, and the \lstinline{set} matcher. Each matcher implements a different decomposition method for \lstinline{::}, but the type of the pattern constructor is managed centrally through the inductive pattern declaration.
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll [1, 2, 3] as list integer with
+  | $x :: $xs -> (x, xs)
+-- [(1,[2,3])]
+
+matchAll [1, 2, 3] as multiset integer with
+  | $x :: $xs -> (x, xs)
+-- [(1,[2,3]),(2,[1,3]),(3,[1,2])]
+\end{lstlisting}
+Even with the same pattern \lstinline{$x :: $xs}, the meaning (decomposition method) changes depending on which matcher is used.
+
+The relationship between inductive pattern declarations and matcher definitions is analogous to the relationship between type classes and instance definitions.
+Just as a type class declaration declares the types of methods and an instance definition provides their concrete implementations, an inductive pattern declaration declares the types of pattern constructors and a matcher definition provides the concrete decomposition methods for those pattern constructors.
+
+\medskip
+\begin{center}
+\begin{tabular}{ll}
+\hline
+\textbf{Type classes} & \textbf{Pattern matching} \\
+\hline
+Type class declaration & Inductive pattern declaration \\
+Instance definition & Matcher definition \\
+Method name & Pattern constructor name \\
+Method type & Pattern constructor type \\
+Instance dispatch (static) & Matcher dispatch (dynamic) \\
+\hline
+\end{tabular}
+\end{center}
+\medskip
+
+However, unlike type class instance selection, which is statically determined at compile time, matcher selection is explicitly specified by the user at runtime in \lstinline{match} and \lstinline{matchAll} expressions (dynamic selection).
+
+\section{Basics of Matcher Definitions}\label{matcher-basic}
+
+This section explains the basics of matcher definitions by examining the matcher definition for unordered pairs (pairs that ignore the order of elements), one of the simplest non-free data types.
+
+First, let us confirm the behavior of the \lstinline{unorderedIntegerPair} matcher for unordered pairs of integers.
+Using the \lstinline{pair} pattern with \lstinline{unorderedIntegerPair}, both orderings of the elements are matched as follows.
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll (1, 2) as unorderedIntegerPair with
+| pair $x $y -> (x, y)
+-- [(1,2),(2,1)]
+\end{lstlisting}
+Thanks to this, pattern matching succeeds even when the first argument of \lstinline{pair} is the second element of the target.
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll (1, 2) as unorderedIntegerPair with
+| pair #2 $y -> y
+-- [1]
+\end{lstlisting}
+When the pattern is a pattern variable, the target is bound as is.
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll (1, 2) as unorderedIntegerPair with
+| $p -> p
+-- [(1,2)]
+\end{lstlisting}
+
+The \lstinline{unorderedIntegerPair} matcher that behaves as described above can be defined as follows.
+First, the \lstinline{pair} pattern constructor must be declared with an inductive pattern declaration.
+\begin{lstlisting}[language=egison]
+inductive pattern (Integer, Integer) :=
+  | pair Integer Integer
+\end{lstlisting}
+This declaration states that \lstinline{pair} is a pattern constructor targeting the integer pair type \lstinline{(Integer, Integer)} and takes two arguments of type \lstinline{Integer}.
+Next, the \lstinline{unorderedIntegerPair} matcher is defined as follows, with a type annotation indicating that it is a matcher for integer pairs.
+\begin{lstlisting}[language=egison]
+def unorderedIntegerPair : Matcher (Integer, Integer) := matcher
+  | pair $ $ as (integer, integer) with
+    | ($x, $y) -> [(x, y), (y, x)]
+  | $ as something with
+    | $tgt -> [tgt]
+\end{lstlisting}
+\lstinline{matcher} is a built-in syntax for creating matchers.
+\begin{lstlisting}[language=egison,numbers=none]
+matcher
+| `primitive pattern-pattern` as `next matcher expression` with
+  | `primitive data pattern` -> `body`
+  ...
+...
+\end{lstlisting}
+A \lstinline{matcher} expression takes multiple \emph{matcher clauses}.
+A matcher clause consists of a \emph{primitive pattern-pattern}\index{primitive pattern-pattern}, a next matcher expression, and multiple \emph{primitive match clauses}.
+A primitive match clause consists of a \emph{primitive data pattern}\index{primitive data pattern} and a body.
+
+Let us examine the first matcher clause of \lstinline{unorderedIntegerPair} (lines 2--3).
+First, the primitive pattern-pattern of this matcher clause is \lstinline{pair $ $}.
+A primitive pattern-pattern is a pattern on patterns.
+This primitive pattern-pattern matches the \lstinline{pair} pattern, and this matcher clause defines how pattern matching is performed for the \lstinline{pair} pattern.
+A pattern constructor that appears in a primitive pattern-pattern, such as \lstinline{pair}, is called a \emph{primitive pattern-pattern constructor}.
+The \lstinline{$} appearing as arguments of the \lstinline{pair} pattern is called a \emph{pattern hole}, a component of primitive pattern-patterns that matches any pattern.
+A pattern that matches a pattern hole is called a \emph{next pattern}.
+Pattern matching of primitive pattern-patterns is performed in essentially the same way as pattern matching on algebraic data types in typical functional programming languages.
+Next, the next matcher expression of this matcher clause is \lstinline{(integer, integer)}.
+This expresses that the two patterns bound to the pattern holes above (the arguments of the \lstinline{pair} pattern) will be recursively pattern-matched using the \lstinline{integer} matcher.
+This matcher clause takes one primitive match clause (line 3).
+The primitive data pattern is matched against the target.
+Pattern matching of primitive data patterns is also performed in essentially the same way as pattern matching on algebraic data types in typical functional programming languages.
+The body of a primitive match clause returns the decomposition results of the target.
+\lstinline{(x, y)} and \lstinline{(y, x)} are called \emph{next targets} and are recursively pattern-matched using the next patterns and next matchers.
+
+The primitive pattern-pattern of the second matcher clause (lines 4--5) is a pattern hole.
+Since a pattern hole matches any pattern, all patterns not matched by the first matcher clause are handled by the second matcher clause.
+The only patterns for \lstinline{unorderedIntegerPair} that do not match the first matcher clause are wildcards and pattern variables, so this matcher clause handles these patterns.
+This matcher clause simply changes the matcher to \lstinline{something} without changing the pattern or target.
+The pattern and target are then pattern-matched using \lstinline{something}.
+\lstinline{something} is the only built-in matcher and handles the following three types of patterns.
+\begin{itemize}
+  \item \textbf{Wildcard}: Always succeeds in pattern matching without producing any bindings.
+  \item \textbf{Pattern variable} \lstinline{$x}: Succeeds in pattern matching and binds the target value to \lstinline{x}.
+  \item \textbf{Value pattern} \lstinline{#e}: Evaluates the expression \lstinline{e} and compares the result with the target value using \emph{built-in structural equality} (equality comparison based on the structure of data constructors). If they are equal, the pattern match succeeds.
+\end{itemize}
+The handling of value patterns directly by \lstinline{something} is a design change accompanying the introduction of static typing (see Section~\ref{matcher-eq} below for details).
+
+The following \lstinline{unorderedPair} can be defined as a matcher for unordered pairs that takes a matcher for the data type of the pair's elements as an argument.
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll (1, 2) as unorderedPair integer with
+| pair $x $y -> (x, y)
+-- [(1,2),(2,1)]
+\end{lstlisting}
+To do this, first change the inductive pattern declaration to a generic form using type parameters.
+\begin{lstlisting}[language=egison,numbers=none]
+inductive pattern {a} (a, a) :=
+  | pair a a
+\end{lstlisting}
+Then, define \lstinline{unorderedPair} as a function that takes a matcher as an argument and returns a matcher.
+The next matcher expression of the matcher clause for the \lstinline{pair} pattern uses \lstinline{m}, the argument of \lstinline{unorderedPair}.
+The type annotation indicates that it takes a type parameter \lstinline|{a}| and a matcher argument \lstinline|(m: Matcher a)|, and returns a matcher for the pair type \lstinline|(a, a)|.
+\begin{lstlisting}[language=egison,numbers=none]
+def unorderedPair {a} (m: Matcher a) : Matcher (a, a) := matcher
+  | pair $ $ as (m, m) with
+    | ($x, $y) -> [(x, y), (y, x)]
+  | $ as something with
+    | $tgt -> [tgt]
+\end{lstlisting}
+
+\section{Definition of the \texttt{eq} Matcher}\label{matcher-eq}
+
+The \lstinline{eq} matcher can also be defined by the user using a \lstinline{matcher} expression.
+The \lstinline{eq} matcher handles only value patterns, wildcards, and pattern variables, so it has no special pattern constructors.
+Therefore, no inductive pattern declaration is needed for the \lstinline{eq} matcher itself.
+The type annotation indicates that it is a matcher for a type parameter \lstinline{a} with the type constraint \lstinline|{Eq a}|.
+\begin{lstlisting}[language=egison]
+def eq {Eq a} : Matcher a := matcher
+  | #$val as () with
+    | $tgt -> if val == tgt then [()] else []
+  | $ as something with
+    | $tgt -> [tgt]
+\end{lstlisting}
+The first matcher clause of the \lstinline{eq} matcher (lines 2--3) is a matcher clause for value patterns.
+\lstinline{#$val} is a primitive pattern-pattern that matches value patterns.
+Such a primitive pattern-pattern is called a \emph{primitive value pattern}.
+The variable \lstinline{val} is bound to the content of the value pattern.
+Since the primitive pattern-pattern of this matcher clause does not contain any pattern holes, the next matcher expression is the empty tuple.
+The primitive match clause checks whether the content of the value pattern and the target value are equal.
+
+\paragraph{Difference between \texttt{something} and \texttt{eq}.}
+\lstinline{something} handles value patterns using built-in structural equality, while \lstinline{eq} compares using the user-defined \lstinline{==} operator, which is a method of the \lstinline{Eq} type class.
+The distinction between these two is deeply related to the design of matchers that take matchers as arguments (matcher-parameterized matchers).
+
+For example, when processing a value pattern in a matcher like \lstinline{multiset} that takes an argument matcher \lstinline{m}, the question arises as to which matcher should handle the base case of recursive comparison.
+If \lstinline{something} could not handle value patterns, the only option would be to delegate to the \lstinline{eq} matcher, and since \lstinline{eq} requires the \lstinline{Eq} type class constraint, the type of \lstinline{multiset} would become
+\lstinline|multiset : {Eq a} => Matcher a -> Matcher [a]|,
+requiring the \lstinline{Eq} constraint.
+However, since many uses of \lstinline{multiset} do not use value patterns, this constraint would be overly restrictive.
+
+To solve this problem, built-in structural equality-based value pattern handling was incorporated into \lstinline{something}.
+This allows matcher-parameterized matchers to use \lstinline{something} as the base case without imposing type class constraints, giving
+\lstinline|multiset : Matcher a -> Matcher [a]|,
+a type without constraints.
+On the other hand, when user-defined equality comparison (\lstinline{==}) is desired, one can explicitly specify the \lstinline{eq} matcher.
+
+Primitive pattern-patterns consist of the four components we have seen so far: pattern holes, applications of primitive pattern-pattern constructors, primitive value patterns, and primitive wildcards.
+\begin{lstlisting}[language=egison,numbers=none]
+`primitive pattern-pattern` ::= $ | c `primitive pattern-pattern`* | #$`ID` | _
+\end{lstlisting}
+Usage examples of primitive wildcards are presented in Section~\ref{matcher-wildcard}.
+
+Primitive data patterns consist of wildcards, pattern variables, and applications of primitive data pattern constructors.
+\begin{lstlisting}[language=egison,numbers=none]
+`primitive data pattern` ::= _ | $`ID` | C `primitive data pattern`*
+\end{lstlisting}
+
+\section{Definition of the \texttt{multiset} Matcher}\label{matcher-multiset}
+
+This section explains the definition of the \lstinline{multiset} matcher.
+The \lstinline{multiset} matcher handles the pattern constructors (\lstinline{[]}, \lstinline{::}, \lstinline{++}) declared in the inductive pattern declaration for the list type \lstinline{[a]} shown in Section~\ref{matcher-inductive}.
+The type annotation indicates that it takes a type parameter \lstinline|{a}| and a matcher argument \lstinline|(m: Matcher a)|, and returns a matcher for the list type \lstinline|[a]|.
+\begin{lstlisting}[language=egison]
+def multiset {a} (m: Matcher a) : Matcher [a] := matcher
+  | [] as () with
+    | $tgt -> match tgt as (mutiset m) with
+                | [] -> [()]
+                | _ -> []
+  | $ :: $ as (m, multiset m) with
+    | $tgt -> matchAll tgt as list m with
+                | $hs ++ $x :: $ts -> (x, hs ++ ts)
+  | #$val as () with
+    | $tgt -> match (val, tgt) as (list m, multiset m) with
+                | ([], []) -> [()]
+                | ($x :: $xs, #x :: #xs) -> [()]
+                | (_, _) -> []
+  | $ as something with
+    | $tgt -> [tgt]
+\end{lstlisting}
+The first and fourth matcher clauses are nearly self-explanatory, so let us examine the second and third matcher clauses.
+
+Let us look at the second matcher clause (lines 6--8).
+The primitive pattern-pattern is \lstinline{$ :: $}, and the next matcher expression is \lstinline{(a, multiset a)}.
+Here, \lstinline{a} is the argument matcher of \lstinline{multiset}.
+The next targets are defined using a \lstinline{matchAll} expression.
+When the target is \lstinline{[1,2,3]}, this \lstinline{matchAll} expression returns \lstinline{[(1,[2,3]),(2,[1,3]),(3,[1,2])]}.
+Each next target contained in this list is recursively pattern-matched using the next patterns and next matchers.
+For example, the next targets \lstinline{1} and \lstinline{[2,3]} are pattern-matched with the first and second arguments of the cons pattern using the next matchers \lstinline{a} and \lstinline{multiset a}.
+
+Let us look at the third matcher clause.
+The primitive pattern-pattern of this matcher clause is the primitive value pattern \lstinline|#$val|.
+This matcher clause handles value patterns.
+This matcher clause compares whether the content of the value pattern (\lstinline{val}) and the target (\lstinline{tgt}) are equal.
+The first and third match clauses of this \lstinline{match} expression are self-explanatory, so we omit their explanation.
+The pattern of the second match clause extracts the first element of \lstinline{val} from \lstinline{tgt}.
+It then recursively pattern-matches the collection obtained by removing one identical element from both \lstinline{val} and \lstinline{tgt}, using the patterns \lstinline{$xs} and \lstinline{#xs}.
+Although this matcher clause is recursively called during the pattern matching of \lstinline{#xs}, since the length of the collection decreases by one each time, it eventually reaches either the first or third match clause.
+
+\section{Definition of the \texttt{sortedList} Matcher}\label{matcher-sorted}
+
+The program that enumerates pairs of primes of the form $(p,p+6)$ using doubly nested join-cons patterns takes increasingly longer to enumerate later pairs of primes.
+The reason is that the doubly nested join-cons pattern examines all combinations of primes.
+For example, this pattern examines all prime pairs such as $(3,5)$, $(3,7)$, $(3,11)$, $(3,13)$, $(3, 17)$, $(3,19)$.
+However, starting from $(3,11)$---the first prime pair whose difference exceeds $6$---there is no need to check whether they are of the form $(p,p+6)$.
+\begin{lstlisting}[language=egison,numbers=none]
+take 10 (matchAll primes as sortedList integer with
+         | _ ++ $p :: (_ ++  #(p + 6) :: _) -> (p, p + 6))
+-- [(5,11),(7,13),(11,17),(13,19),(17,23),(23,29),(31,37),(37,43),(41,47),(47,53)]
+\end{lstlisting}
+
+By using a matcher specialized for sorted lists, this unnecessary search can be avoided.
+By adding a matcher clause with \lstinline|$ ++ #$px : $| as the primitive pattern-pattern to the standard \lstinline{list} matcher, a matcher specialized for sorted lists can be created.
+This matcher clause reduces the computational complexity of the doubly nested join-cons pattern that matches prime pairs of the form $(p,p+6)$ from $O(n^2)$ to $O(n)$.
+The type annotation indicates that it takes a type parameter \lstinline{a} with the type constraint \lstinline|{Ord a}| and a matcher argument \lstinline|(m: Matcher a)|, and returns a matcher for the sorted list type \lstinline|[a]|.
+\begin{lstlisting}[language=egison,numbers=none]
+def sortedList {Ord a} (m: Matcher a) : Matcher [a] := matcher
+  | $ ++ #$px :: $ as (sortedList m, sortedList m) with
+    | \$tgt -> matchAll tgt as list m with
+               | loop $i (1, $n)
+                   ((?(\x -> x < px) & $h_i) :: ...)
+                   (#px :: $ts)
+                 -> (map (\i -> h_i) [1..n], ts)
+  ...
+\end{lstlisting}
+This optimization, which defines a pattern-matching algorithm directly for nested patterns, is called \emph{pattern fusion}\index{pattern fusion}.
+
+\section{Optimization with Primitive Wildcards}\label{matcher-wildcard}
+
+When a pattern contains wildcards, pattern matching can be sped up by omitting the computation of targets that match wildcards.
+In Egison, this optimization can be performed by using primitive wildcards in primitive pattern-patterns.
+This section presents such an optimization for the \lstinline{multiset} matcher introduced in Section~\ref{matcher-multiset}.
+This kind of optimization is called \emph{wildcard optimization}\index{wildcard optimization}.
+
+The target of the optimization presented in this section is the case where the second argument of the cons pattern is a wildcard.
+In this case, there is no need to compute the remaining collection after removing one element from the target collection.
+By using primitive wildcards, we can instruct the \lstinline{multiset} matcher to skip this computation.
+\begin{lstlisting}[language=egison]
+matchAll [1, 2, 3, 4, 5] as multiset eq with
+| $x :: _ -> x
+-- [1, 2, 3, 4, 5]
+\end{lstlisting}
+This optimization can be achieved by adding the matcher clause on lines 2--3 below to the definition of the \lstinline{multiset} matcher from Section~\ref{matcher-multiset}.
+A primitive wildcard is used in the primitive pattern-pattern of this matcher clause.
+Since the pattern hole is only in the first argument of the cons pattern, the next matcher is just \lstinline{m}, and since the next target is each element of \lstinline{tgt}, \lstinline{tgt} is returned as is.
+\begin{lstlisting}[language=egison]
+def multiset {a} (m: Matcher a) : Matcher [a] := matcher
+  | $ :: _ as m with
+    | $tgt -> tgt
+  | $ :: $ as (m, multiset m) with
+    | $tgt -> matchAll tgt as list m with
+              | $hs ++ $x :: $ts -> (x, hs ++ ts)
+  ...
+\end{lstlisting}
+
+The \lstinline{sortedList} matcher from Section~\ref{matcher-sorted} can be similarly optimized.
+The matcher clause on lines 2--7 below serves to skip the computation of the first argument of the join pattern.
+\begin{lstlisting}[language=egison]
+def sortedList {Ord a} (m: Matcher a) : Matcher [a] := matcher
+  | _ ++ #$px :: $ as sortedList m
+    | \tgt -> matchAll tgt as list m with
+              | loop $i (1, _)
+                  (?(\x -> x < px) :: ...)
+                  (#px :: $ts)
+                -> ts
+  | $ ++ #$px :: $ as (sortedList m, sortedList m)
+    | \tgt -> matchAll tgt as list m with
+              | loop $i (1, $n)
+                  ((?(\x -> x < px) & $h_i) :: ...)
+                  (#px :: $ts)
+                -> (map (\i -> h_i) [1..n], ts)
+  ...
+\end{lstlisting}
+
+\section{The \texttt{assocMultiset} Matcher}\label{matcher-assoc}
+
+Egison provides \lstinline{assocMultiset} as a matcher for multisets.
+This section introduces its usage and definition.
+
+A multiset can be represented as an association list of elements and their multiplicities.
+The \lstinline{assocMultiset} matcher is a matcher for multisets represented as such association lists.
+For example, the following program performs pattern matching on a multiset containing $4$ copies of $1$, $3$ copies of $2$, and $1$ copy of $3$.
+A pattern that extracts elements appearing $3$ or more times in the target multiset is expressed.
+\begin{lstlisting}[language=egison]
+matchAll [(1, 4), (2, 3), (3, 1)] as assocMultiset eq with
+  | $x ^ #3 :: $rs -> (x, rs)
+-- [(1, [(1, 1), (2, 3), (3, 2)]), (2, [(1, 4), (3, 2)])]
+\end{lstlisting}

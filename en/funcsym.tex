@@ -1,0 +1,165 @@
+\chapter{Function Symbols}\label{funcsym}
+
+A function $f(x,y)$ whose name is $f$ and whose arguments are $x,y$, but whose body is undefined, is often written on paper by abbreviating $f$ and omitting the arguments.
+\emph{Function symbols}\index{function symbol} (\emph{function symbol}) are the feature for introducing this notation of abbreviating arguments of symbolic functions into programming.
+Although the motivation for function symbols is simple, since they are a language feature unique to Egison, we dedicate an entire chapter to introducing them, including their implementation.
+
+\section{Basic Usage of Function Symbols}\label{funcsym-intro}
+
+Function symbols are particularly powerful when dealing with computations involving differentiation.
+In the following, we define a function symbol \lstinline{f} that takes \lstinline{x} and \lstinline{y} as arguments.
+Function symbols are treated as mathematical expressions of type \lstinline{MathExpr}.
+
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol x, y : MathExpr
+
+def f : MathExpr := function (x, y)
+\end{lstlisting}
+
+When a function symbol is displayed with \lstinline{show}, the argument values are always shown.
+
+\begin{lstlisting}[language=egison,numbers=none]
+show f  -- "f x y"
+\end{lstlisting}
+
+As shown below, the function symbol \lstinline{f} can be differentiated with respect to \lstinline{x} or \lstinline{y}.
+The resulting function from partial differentiation is displayed with the argument number appended using the \verb!|! symbol.
+\verb!f|1! represents ``the partial derivative of $f$ with respect to the first argument,'' and \verb!f|1|2! represents ``the result of first differentiating with respect to the first argument and then with respect to the second argument.''
+``\verb!|!'' is a built-in symbol in Egison, similar to ``\verb!_!'' and ``\verb!~!''.
+Below are display examples of differentiation of function symbols in both standard Egison output and LaTeX format output.
+``\lstinline[mathescape]{$\partial$/$\partial$}'' is a library function defined in Egison.
+
+\begin{lstlisting}[language=egison,numbers=none]
+show (`$\partial$`/`$\partial$` f x)          -- "f|1 x y"
+show (`$\partial$`/`$\partial$` (`$\partial$`/`$\partial$` f x) y) -- "f|1|2 x y"
+\end{lstlisting}
+
+Since \lstinline{f} is a function of \lstinline{x} and \lstinline{y}, differentiating with respect to \lstinline{z} returns \lstinline{0} as follows.
+
+\begin{lstlisting}[language=egison,numbers=none]
+show (`$\partial$`/`$\partial$` f z) -- "0"
+\end{lstlisting}
+
+In physics calculations, functions with four arguments $t,x,y,z$ frequently appear.
+Without a mechanism like function symbols, expressions would become long and difficult to read, so the function symbol mechanism improves program readability and writability.
+
+\section{Substituting Values into Arguments}\label{funcsym-apply}
+
+Values can be substituted into function symbol arguments using the same syntax as ordinary function application.
+Writing \lstinline{f 0 1} yields the expression with \lstinline{0} substituted for the first argument and \lstinline{1} for the second argument of \lstinline{f}.
+An error occurs if the number of arguments does not match.
+
+\begin{lstlisting}[language=egison,numbers=none]
+show (f 0 1)   -- "f 0 1"
+show (f x 0)   -- "f x 0"
+\end{lstlisting}
+
+The result of substituting arguments is also a mathematical expression of type \lstinline{MathExpr}, so it can be further differentiated.
+When a concrete numerical value is substituted for an argument, differentiation with respect to that argument yields \lstinline{0}.
+
+\begin{lstlisting}[language=egison,numbers=none]
+`$\partial$`/`$\partial$` (f 0 1) x -- 0
+\end{lstlisting}
+
+The \lstinline{V.substitute} function can also be used to replace arguments.
+
+\begin{lstlisting}[language=egison,numbers=none]
+V.substitute [|x, y|] [|0, 0|] f
+-- f 0 0
+\end{lstlisting}
+
+\section{Chain Rule for Composite Functions}\label{funcsym-chain}
+
+An important feature of Egison's function symbols is their support for the chain rule of composite functions.
+The reason the \lstinline{function} expression takes expressions rather than variable names as formal parameters is to support differentiation of composite functions.
+As before, let $g$ be an abbreviation for $g(x,y)$.
+Also assume the relations $x=r \cos \theta, y= r \sin \theta$.
+Then, differentiating $g$ with respect to $r$ returns the result $\frac{\partial g}{\partial x_1} \cos \theta + \frac{\partial g}{\partial x_2} \sin \theta$ by the chain rule.
+
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol r, `$\theta$` : MathExpr
+
+def x : MathExpr := r * cos `$\theta$`
+def y : MathExpr := r * sin `$\theta$`
+def g : MathExpr := function (x, y)
+
+show g
+-- "g (r * 'cos θ) (r * 'sin θ)"
+
+show (`$\partial$`/`$\partial$` g r)
+-- "g|1 (r * 'cos θ) (r * 'sin θ) * 'cos θ + g|2 (r * 'cos θ) (r * 'sin θ) * 'sin θ"
+\end{lstlisting}
+
+The symbols \verb!g|1! and \verb!g|2! appearing in the result of partial differentiation represent $\frac{\partial g}{\partial x_1}$ and $\frac{\partial g}{\partial x_2}$ respectively (the argument number is appended using the \verb!|! symbol).
+Since the argument values are always included in the display, it is clear at which point the partial derivative coefficients are evaluated.
+
+\section{Tensors with Function Symbol Components}\label{funcsym-tensor}
+
+In mathematics and physics, functions sometimes appear as components of tensors.
+For example, this occurs when representing vector fields or tensor fields.
+Egison allows function symbols to be used as components of tensors.
+As shown in the following example, when a tensor's components are function symbols, function symbols are generated with names formed by appending the component position indices to the variable name to which the tensor is bound.
+
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol x, y, z : MathExpr
+
+def g_i_j : Tensor MathExpr := generateTensor
+      (\match as list integer with
+         | [$n, #n] -> function (x, y, z)
+         | _ -> 0)
+      [3, 3]
+
+show (withSymbols [i, j] g_i_j)
+-- "[| [| g_1_1 x y z, 0, 0 |], [| 0, g_2_2 x y z, 0 |], [| 0, 0, g_3_3 x y z |] |]"
+
+show (withSymbols [i, j] (`$\partial$`/`$\partial$` g_i_j x))
+-- "[| [| g_1_1|1 x y z, 0, 0 |], [| 0, g_2_2|1 x y z, 0 |], [| 0, 0, g_3_3|1 x y z |] |]"
+\end{lstlisting}
+
+\section{Internal Representation and Pattern Matching of Function Symbols}\label{funcsym-data}
+
+Function symbols are internally represented in Egison using the \lstinline{Function} data constructor.
+The \lstinline{Function} data constructor takes two arguments.
+The first argument contains the name of the function symbol (of type \lstinline{ScalarData}).
+The second argument contains the list of argument values of the function symbol (of type \lstinline{[ScalarData]}).
+
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol x, y : MathExpr
+def f : MathExpr := function (x, y)
+
+fromMathExpr f
+-- Div (Plus [Term 1 [(Function f [x, y], 1)]]) (Plus [Term 1 []])
+\end{lstlisting}
+
+The \lstinline{func} pattern constructor can be used to pattern match on function symbols.
+This pattern extracts the function name and the list of argument values.
+
+\begin{lstlisting}[language=egison,numbers=none]
+match f as mathExpr with
+  | func $name $args -> (name, args)
+  -- (f, [x, y])
+\end{lstlisting}
+
+In the chain rule implementation, the number of arguments is used to extract the partial derivative coefficient for each argument using integer indices.
+
+\begin{lstlisting}[language=egison,numbers=none]
+def `$\partial$`/`$\partial$` $f *$x :=
+  match f as mathExpr with
+    ...
+    | func _ $args ->
+      sum (map2 (\s r -> (userRefs f [s]) * `$\partial$`/`$\partial$` r x)
+               (between 1 (length args))
+               args)
+    ...
+\end{lstlisting}
+
+Here, \lstinline{between 1 (length args)} generates the list of integers \lstinline{[1, 2, ..., n]}.
+\lstinline{userRefs f [1]} returns the expression \lstinline{f|1}, which is the name symbol of \lstinline{f} with the integer index \lstinline{1} appended.
+
+\section{Implementation of Function Symbols}
+
+An important aspect of the function symbol implementation is that function symbols retain their own names.
+For this purpose, the Egison interpreter keeps track of the name of the variable currently being defined.
+Additionally, to support function symbols appearing as tensor components as described in Section~\ref{funcsym-tensor}, it is necessary to track the position of the tensor component currently being defined.
+For this purpose, the Egison interpreter also keeps track of the position of the tensor component being defined.
+These are managed as additional arguments to the \lstinline{eval} function in the Egison interpreter implementation.

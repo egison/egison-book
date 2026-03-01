@@ -1,0 +1,140 @@
+\chapter{Egison Development Timeline}
+
+\section*{March 2010}
+
+While writing a program to automatically conjecture theorems in number theory for an undergraduate thesis, the idea for Egison's pattern matching was conceived.
+While implementing the \lstinline{mapWithBothSides} function, it was noticed that more powerful pattern matching would allow the same function to be written more concisely.
+\begin{lstlisting}[language=egison,numbers=none]
+def mapWithBothSides f xs := helper f [] xs
+ where
+  helper f xs [] := []
+  helper f xs (y :: ys) := f xs y ys :: helper f (xs ++ [y]) ys
+\end{lstlisting}
+\begin{lstlisting}[language=egison,numbers=none]
+def mapWithBothSides f xs := matchAll xs as list something with
+  | $hs ++ $x :: $ts -> f hs x ts
+\end{lstlisting}
+
+\section*{May 2011}
+
+The first Egison interpreter implementation was completed and released on Hackage.
+
+\section*{December 2011}
+
+Egison was accepted as one of the projects in the 2011 MITOU IT Human Resources Discovery and Development Program.
+
+\section*{March 2012}
+
+A master's thesis on the design of Egison's pattern matching was submitted.
+Loop patterns (Chapter~\ref{quick}, Section~\ref{quick-loop-pat}) and not patterns (Chapter~\ref{quick}, Section~\ref{quick-logical-pat}) were implemented immediately after.
+
+\section*{July 2012}
+
+The 1st Egison Workshop was held in Akihabara.
+The catchphrase ``pattern-match-oriented'' was coined from an idea by Yasunori Harada, who served as a project manager during the MITOU period.
+Egison Version 2.0 was released at the same time.
+At this point, the matcher syntax (Chapter~\ref{matcher}) settled into its current form.
+This was also when the name ``matcher'' came into use.
+Until then, it had been called ``type.''
+
+\section*{December 2012}
+
+The company where Egi was employed approved Egison development as part of his work duties.
+
+\section*{March 2013}
+
+Egison Version 3.0.0 was released.
+Around this time, pattern matching with infinite results (Chapter~\ref{mechanism}, Section~\ref{mechanism-traversal}) and lexical scoping of patterns via pattern functions (Chapter~\ref{quick}, Section~\ref{quick-pat-fun}) were realized.
+
+\section*{November 2013}
+
+Egi began working at Rakuten Institute of Technology.
+
+\section*{March 2016}
+
+Egison Version 3.6.0 was released.
+Starting from this version, a computer algebra system was implemented on top of Egison.
+\begin{lstlisting}[language=egison,numbers=none]
+(x + y)^3 -- x^3 + 3 * x^2 * y + 3 * x * y^2 + y^3
+(1 + i)^2 -- 2 * i
+\end{lstlisting}
+
+\section*{June 2016}
+
+A concise method for introducing tensor index notation to programming was successfully implemented.
+\begin{lstlisting}[language=egison,numbers=none]
+def R~i_j_k_l := withSymbols [m]
+  `$\partial$/$\partial$` `$\Gamma$`~i_j_l x~k - `$\partial$/$\partial$` `$\Gamma$`~i_j_k x~l + `$\Gamma$`~m_j_l . `$\Gamma$`~i_m_k - `$\Gamma$`~m_j_k . `$\Gamma$`~i_m_l
+\end{lstlisting}
+
+\section*{September 2017}
+
+Egi presented a paper on introducing tensor index notation to programming languages at Scheme Workshop 2017, held at the University of Oxford.
+This was the first international conference presentation about Egison.
+
+\section*{November 2017}
+
+Egison Version 3.7.0 was released.
+In addition to tensor index notation, a mechanism for concisely defining operators for differential forms was also implemented.
+\begin{lstlisting}[language=egison,numbers=none]
+def `$\Omega$` := withSymbols [i, j]
+       antisymmetrize (d `$\omega$`~i_j + `$\omega$`~i_k ∧ `$\omega$`~k_j)
+\end{lstlisting}
+
+Recruitment of part-time workers for Egison development began at Rakuten Institute of Technology.
+
+\section*{April 2018}
+
+Kawada, who came to Rakuten Institute of Technology as an intern, experimentally implemented an Egison with a static type system.
+
+\section*{May 2018}
+
+With the cooperation of Kori, a part-time worker at Rakuten Institute of Technology, the function symbol (\emph{function symbol}) feature was implemented in Egison.
+\begin{lstlisting}[language=egison,numbers=none]
+def f := function (x, y)
+`$\partial$`/`$\partial$` f x -- f|x
+`$\partial$`/`$\partial$` (`$\partial$`/`$\partial$` f x) y -- f|x|y
+`$\partial$`/`$\partial$` f z -- 0
+\end{lstlisting}
+
+\section*{August 2018}
+
+A paper on the design of Egison pattern matching (co-authored with Nishiwaki) was accepted at APLAS 2018.
+The paper, which had been written for over 6 years, was finally accepted.
+
+\section*{September 2018}
+
+A paper on loop patterns (Chapter~\ref{quick}, Section~\ref{quick-loop-pat}) was presented at Scheme Workshop 2018, held in St. Louis, USA.
+
+\section*{December 2018}
+
+A paper on the design of Egison pattern matching was presented at APLAS 2018, held in Wellington, New Zealand.
+
+The implementation of a Scheme macro providing Egison pattern matching was completed.
+\begin{lstlisting}[numbers=none]
+(match-all '(1 2 5 9 4) (Multiset Integer) [(cons x (cons `(+ x 1) _)) x])
+\end{lstlisting}
+
+\section*{April 2019}
+
+Egison Journal Vol.\ 1 was published.
+
+\section*{August 2019}
+
+A paper on the Scheme macro implementation of Egison pattern matching was presented at Scheme Workshop 2019, held in Berlin.
+
+\section*{September 2019}
+
+Egison Journal Vol.\ 2 was published.
+
+\section*{October 2019}
+
+With the cooperation of Kori, a part-time worker at Rakuten Institute of Technology, the Haskell metaprogramming implementation of Egison pattern matching was completed.
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll [1,2,5,9,4] (Multiset Integer) [[mc| cons $x (cons #(x+1) _) => x|]]
+-- [1,4]
+\end{lstlisting}
+
+\section*{December 2019}
+
+A paper proposing pattern-match-oriented programming, a new programming paradigm utilizing Egison's pattern matching (co-authored with Nishiwaki), was accepted at \textlangle{}programming\textrangle{} 2020.

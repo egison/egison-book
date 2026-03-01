@@ -1,0 +1,157 @@
+\chapter{Pattern-Match-Oriented Programming Exercises}
+
+To help you experience pattern-match-oriented programming, we have prepared problems in quiz format.
+
+\section*{The \texttt{member} Function}
+
+Fill in the blank below to complete the \lstinline{member} function.
+
+\begin{lstlisting}[language=egison]
+def member x xs :=
+  match xs as list eq with
+  | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` -> True
+  | _ -> False
+
+member 1 [1,2,3,4]
+-- True
+
+member 5 [1,2,3,4]
+-- False
+\end{lstlisting}
+
+\section*{The \texttt{concat} Function}
+
+Fill in the blanks below to complete the \lstinline{concat} function.
+
+\begin{lstlisting}[language=egison]
+def concat xss :=
+  matchAllDFS xss as `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` with
+  | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}2\vphantom{0}\hspace{5em}}` -> `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}3\vphantom{0}\hspace{5em}}`
+
+concat [[1,2],[3],[4,5]]
+-- [1,2,3,4,5]
+\end{lstlisting}
+
+\section*{Quadruplet Primes}
+
+Write a program that enumerates quadruplet primes.
+Quadruplet primes are quadruples of primes of the form $(p,p + 2,p + 6,p + 8)$.
+
+\begin{lstlisting}[language=egison]
+take 4 (matchAll primes as list integer with
+        | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` -> (p, p + 2, p + 6, p + 8))
+-- [(5, 7, 11, 13), (11, 13, 17, 19), (101, 103, 107, 109), (191, 193, 197, 199)]
+\end{lstlisting}
+
+\section*{Prime Pairs with Difference $6$}
+
+Fill in the blank below to extract prime pairs $(p, p+6)$.
+
+\begin{lstlisting}[language=egison]
+take 6 (matchAll primes as list integer with
+        | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` -> (p, p + 6))
+-- [(5, 11), (7, 13), (11, 17), (13, 19), (17, 23), (23, 29)]
+\end{lstlisting}
+
+\section*{The \texttt{intersect} Function}
+
+Fill in the blanks below to complete the \lstinline{intersect} function, which extracts the intersection of two collections.
+
+\begin{lstlisting}[language=egison]
+def intersect xs ys :=
+  matchAllDFS (xs, ys) as `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` with
+  | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}2\vphantom{0}\hspace{5em}}` -> `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}3\vphantom{0}\hspace{5em}}`
+
+intersect [1,2,3,4] [2,4,5]
+-- [2,4]
+\end{lstlisting}
+
+\section*{The \texttt{difference} Function}
+
+Fill in the blanks below to complete the \lstinline{difference} function, which extracts only the elements of the first collection that are not contained in the second collection.
+
+\begin{lstlisting}[language=egison]
+def difference xs ys :=
+  matchAllDFS (xs, ys) as `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` with
+  | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}2\vphantom{0}\hspace{5em}}` -> `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}3\vphantom{0}\hspace{5em}}`
+
+difference [1,2,3,4] [2,4,5]
+-- [1,3]
+\end{lstlisting}
+
+\section*{The \texttt{doubles} Function}
+
+Complete the \lstinline{doubles} function, which extracts only the elements that appear exactly $2$ times in a collection.
+
+\begin{lstlisting}[language=egison]
+def doubles xs :=
+  matchAllDFS xs as `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` with
+  | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}2\vphantom{0}\hspace{5em}}` -> `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}3\vphantom{0}\hspace{5em}}`
+
+doubles [1,2,3,2,1,1,4,5,3]
+-- [2,3]
+\end{lstlisting}
+
+\section*{The \texttt{tails} Function}
+
+Define the \lstinline{tails} function using pattern matching.
+Try to find two solutions: one using loop patterns and one without.
+
+\begin{lstlisting}[language=egison]
+def tails xs :=
+  matchAll xs as list something with
+  | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}`
+  -> ts
+
+tails [1,2,3,4]
+-- [[1, 2, 3, 4], [2, 3, 4], [3, 4], [4], []]
+\end{lstlisting}
+
+\section*{Multiset Equality Check}
+
+Define a two-argument predicate \lstinline{equalMultiset} that checks multiset equality using pattern matching.
+
+\begin{lstlisting}[language=egison]
+def equalMultiset xs ys :=
+  match (xs, ys) as (list eq, multiset eq) with
+  | ([], [])
+  -> True
+  | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}`
+  -> equalMultiset xs' ys'
+  | _
+  -> False
+
+equalMultiset [1,1,2] [2,1,1]
+-- True
+
+equalMultiset [1,1,2] [1,2,2]
+-- False
+\end{lstlisting}
+
+Try writing it without recursion using loop patterns.
+
+\begin{lstlisting}[language=egison]
+def equalMultiset xs ys :=
+  match (xs, ys) as (list eq, multiset eq) with
+  | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}2\vphantom{0}\hspace{5em}}`
+  -> True
+  | _
+  -> False
+\end{lstlisting}
+
+\section*{Poker Hand Evaluation Considering Jokers}
+
+Without modifying the implementation of the poker hand evaluation pattern matching (\lstinline{poker} function) from Chapter~\ref{pmo}, Section~\ref{pmo-poker} at all, modify only the definition of the \lstinline{card} matcher to enable poker hand evaluation that accounts for jokers.
+\begin{lstlisting}[language=egison]
+def card := matcher
+  | card $ $ as (suit, mod 13) with 
+    | Card $s $n -> [(s, n)]
+    | Joker -> `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}`
+  | $ as something with
+    | $tgt -> [tgt]
+
+poker [Card Spade 5, Card Spade 6, Joker, Card Spade 8, Card Spade 9]
+-- "Straight flush"
+poker [Card Spade 5, Card Diamond 5, Joker, Card Club 5, Card Heart 7]
+-- "Four of a kind"
+\end{lstlisting}

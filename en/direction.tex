@@ -1,0 +1,290 @@
+\chapter{Goals and Directions for Egison Development}\label{direction}
+
+This chapter discusses our plans for future Egison development, organized into three themes: ``Interpreter Development,'' ``Presenting Applications,'' and ``Research Beyond Egison.''
+
+\section{Interpreter Development}\label{direction-language}
+
+Regarding the development of the Egison interpreter, we are pursuing two directions:
+\begin{enumerate}
+\item Development of the Egison interpreter as an independent programming language
+\item Porting Egison's features to other languages
+\end{enumerate}
+Section~\ref{direction-language-egison} discusses the implementation of Egison itself, and Section~\ref{direction-language-library} discusses porting to other languages.
+
+\subsection{Egison Itself}\label{direction-language-egison}
+
+Egison itself fully implements the language features invented by the Egison community.
+While it is rich in language features, it has been implemented without much concern for execution speed and has only an interpreter implementation.
+This is to allow new language features to be implemented smoothly.
+The interpreter is implemented in Haskell.
+
+\subsubsection{Pursuing Novel Features}\label{direction-language-egison-new}
+
+The most exciting moment in Egison development is when a new feature that has never been implemented in any programming language is implemented in Egison and works.
+Ideas for new language features emerge when actually writing programs by hand for realistic problems.
+Features such as loop patterns, sequential patterns, tensor symmetry declarations, and function symbols were born in this way.
+We plan to continue inventing and implementing new language features.
+
+\subsubsection{Implementing a Static Type System and Compiler}\label{direction-language-egison-existing}
+
+Incorporating existing language features such as a static type system and compiler into Egison is also an important task.
+Incorporating existing language features into Egison often requires new innovations.
+For example, incorporating a static type system into Egison requires designing appropriate type rules for patterns and matchers.
+
+Research on introducing a static type system to Egison has progressed, including Typed Egison~\cite{typedEgison} and Formalized Egison~\cite{formalizedEgison} by Ou Kawada.
+Typed Egison extracts the minimal pattern matching functionality from the Egison interpreter and implements a static type system for it.
+Typed Egison is based on Egison version 3.
+Formalized Egison is an interpreter implemented in Coq to prove the type safety of Typed Egison.
+Introducing a static type system to Egison itself requires relatively significant effort and has not yet been undertaken.
+This is a task for Egison Version 5.
+
+Research on compilation techniques for Egison pattern matching has also progressed.
+In March 2020, Hiromi Ogawa devised a technique for transforming Egison pattern matching into Haskell programs using a backtracking monad, which was implemented as a Haskell library called Sweet Egison\cite{sweetEgison}.
+However, since Egison itself is a proof-of-concept programming language intended for rapid implementation of new features, implementing a compiler is not a near-term priority.
+
+\begin{oframed}
+  \paragraph{Release of Egison Version 4}
+Egison version 4, released in April 2020, introduced a completely new syntax to make it more familiar to a wider range of users.
+The new syntax of Egison Version 4 supports infix notation (\lstinline{:=}, \lstinline{++}, \lstinline{::}, \lstinline{+}, etc.), reducing the number and variety of required parentheses and improving readability.
+Below is a comparison of a program that extracts twin primes from an infinite list of primes using pattern matching, written in Egison version 3 and Egison version 4.
+\begin{lstlisting}[caption=Egison version 3,language=egison,numbers=none]
+(define $twin-primes
+  (match-all primes (list integer)
+    [<join _ <cons $p <cons ,(+ p 2) _>>> [p (+ p 2)]]))
+
+(take 5 twin-primes) ; => {[3 5] [5 7] [11 13] [17 19] [29 31]}
+\end{lstlisting}
+\begin{lstlisting}[caption=Egison version 4,language=egison,numbers=none]
+def twinPrimes :=
+  matchAll primes as list integer with
+    | _ ++ $p :: #(p + 2) :: _ -> (p, p + 2)
+
+take 5 twinPrimes -- => [(3, 5), (5, 7), (11, 13), (17, 19), (29, 31)]
+\end{lstlisting}
+
+The friendliness of the new syntax is especially apparent when writing mathematical expressions.
+Let us compare the formula for the Riemann curvature tensor, a famous formula in differential geometry, written in Egison version 3 and Egison version 4.
+The formula for the Riemann curvature tensor is expressed in mathematical notation as follows.
+\[R^{i}_{\;jkl} = \frac{\partial \Gamma^{i}_{\;jl}}{\partial x^k} - \frac{\partial \Gamma^{i}_{\;jk}}{\partial x^l} + \Gamma^{m}_{\;jl} \Gamma^{i}_{\;mk} - \Gamma^{m}_{\;jk} \Gamma^{i}_{\;ml} \]
+Since mathematical notation heavily uses infix notation, the new syntax with infix support produces a description closer to mathematical notation.
+Below is the actual comparison of the Riemann curvature tensor formula written in Egison version 3 and Egison version 4.
+\begin{lstlisting}[caption=Egison version 3,language=egison,numbers=none]
+(define $R~i_j_k_l
+  (with-symbols {m}
+    (+ (- (`$\partial$`/`$\partial$` `$\Gamma$`~i_j_l x~k) (`$\partial$`/`$\partial$` `$\Gamma$`~i_j_k x~l))
+       (- (. `$\Gamma$`~m_j_l `$\Gamma$`~i_m_k) (. `$\Gamma$`~m_j_k `$\Gamma$`~i_m_l)))))
+\end{lstlisting}
+\begin{lstlisting}[caption=Egison version 4,language=egison,numbers=none]
+def R~i_j_k_l := withSymbols [m]
+  `$\partial$`/`$\partial$` `$\Gamma$`~i_j_l x~k - `$\partial$`/`$\partial$` `$\Gamma$`~i_j_k x~l + `$\Gamma$`~m_j_l . `$\Gamma$`~i_m_k - `$\Gamma$`~m_j_k . `$\Gamma$`~i_m_l
+\end{lstlisting}
+\end{oframed}
+
+
+\subsection{Porting Egison Language Features to Other Programming Languages}\label{direction-language-library}
+
+Starting in 2019, we began implementing Egison's features in existing major programming languages.
+Porting Egison's language features to existing programming languages has the following advantages:
+\begin{enumerate}
+\item Users of the target programming language can easily try out Egison's features.
+\item Since programs are executed by the target language's interpreter/compiler, program execution speed is significantly faster than with Egison's na\"ive implementation.
+\end{enumerate}
+However, as mentioned in Section~\ref{direction-language-egison}, porting Egison's language features to existing languages requires considering compatibility with the existing language's other features, so not all features can be ported.
+For example, loop patterns have not yet been ported.
+Additionally, since deep knowledge of the target language's specification and implementation is required, achieving these advantages comes with a relatively high development cost.
+For this reason, Egison itself continues to be developed in parallel.
+
+\subsubsection{Scheme Library Implementation of Egison Pattern Matching (Implemented)}\label{direction-language-scheme}
+
+In December 2018, we implemented a library providing Egison's pattern matching for Scheme, a functional programming language that is itself simple yet has powerful metaprogramming features (language features for extending the language).
+Languages with powerful extension features (metaprogramming capabilities) and concise specifications are easier to port language features to.
+For this reason, Scheme was chosen as the first target language for porting.
+A paper about this library implementation was written and presented at Scheme Workshop 2019.
+Since this library implementation is compiled by the Scheme interpreter, it can execute programs using Egison's pattern matching approximately 50 times faster than the Egison interpreter.
+Gauche was chosen as the Scheme implementation.
+The library was implemented using a technique called deep embedding.
+
+\subsubsection{Haskell Library Implementation of Egison Pattern Matching, Part 1 (Implemented as miniEgison)}\label{direction-language-haskell1}
+
+Immediately after completing the Scheme port of Egison pattern matching, we began developing a Haskell library for porting Egison pattern matching to Haskell using a similar technique.
+While Scheme is a dynamically typed programming language, Haskell has a static type system, and the difficulty of the implementation lay in devising a porting technique that accounts for the type system.
+This implementation was completed around September 2019.
+
+\subsubsection{Haskell Library Implementation of Egison Pattern Matching, Part 2 (Implemented as Sweet Egison)}\label{direction-language-haskell2}
+
+miniEgison had the problem that programs written using miniEgison were several times slower than equivalent programs written in the standard functional programming style in Haskell.
+To solve this problem, a new Haskell library called Sweet Egison was implemented from March 2020 using a technique called shallow embedding.
+Sweet Egison transforms programs written using Egison pattern matching into equivalent programs in the functional programming style and executes them.
+Therefore, it combines the concise program descriptions enabled by Egison pattern matching with execution speed equivalent to ordinary Haskell programs.
+
+\subsubsection{Implementing Egison Pattern Matching as a GHC Extension (Not Yet Implemented)}\label{direction-language-ghc}
+
+When implementing language features as a DSL through a library, there are often places where verbose descriptions are necessary.
+miniEgison and Sweet Egison, which are Haskell libraries implementing Egison pattern matching, also have this problem, requiring slightly verbose descriptions in some places when writing match clauses and matcher definitions.
+To solve this problem, one could directly edit GHC, the standard Haskell compiler, to implement the features as built-in syntax.
+We plan to attempt implementing Egison's pattern matching by directly extending GHC.
+Beyond just implementing it, communication with the GHC community is necessary for it to be accepted into GHC.
+There is a mechanism called GHC Proposals for proposing new features to GHC.
+Once the implementation has progressed sufficiently, we would like to compile documentation and propose it there.
+
+\subsubsection{Systems Programming Language Rust (Not Yet Implemented)}\label{direction-language-rust}
+
+Implementing Egison pattern matching in a programming language that allows users to manage memory is an interesting challenge.
+Currently, we have the following questions:
+\begin{itemize}
+\item Can efficient pattern matching functionality be implemented through efficient memory manipulation?
+\item Is it necessary to restrict pattern matching functionality for efficient memory manipulation?
+\item If pattern matching functionality is restricted, are there still useful applications?
+\end{itemize}
+We are considering implementation in Rust, which is known for its rich metaprogramming features.
+
+\section{Presenting and Developing Applications}\label{application}
+
+The applications of the language features provided by Egison are not obvious to most programmers.
+Presenting and developing applications of Egison is important for convincing programmers that Egison is useful in practice and encouraging them to discover new applications.
+
+\subsection{Algorithm Implementation (SAT Solver)}
+
+Implementing various algorithms in Egison often clarifies the situations where Egison's features are useful and leads to the invention of new features.
+In Chapter~\ref{essence}, we introduced the implementation of the Davis-Putnam algorithm, one of the SAT solver algorithms, but the more complex yet efficient CDCL algorithm has also been implemented in Egison.
+When attempting to implement more efficient algorithms, the desire to manage memory usage arises, and as mentioned in Section~\ref{direction-language-library}, the need to use Egison's pattern matching in systems programming languages like Rust also emerges.
+
+\subsection{Computer Algebra System}
+
+The computer algebra system introduced in Part~\ref{part-cas} of this book is an important application of Egison pattern matching.
+Because the pattern matching engine for mathematical expressions can be implemented concisely, the computer algebra system could be implemented with minimal effort.
+This made it easy to extend the computer algebra system and to experiment with new features such as tensor index notation support and function symbols.
+
+\subsection{Theorem Proving Description Language Using Egison Pattern Matching}
+
+In the future, mathematical proofs will be written and verified on computers.
+The reason this is not yet done is that mathematical proofs cannot be expressed as concisely on computers as on paper.
+Egison developed features as a programming language to make algorithm descriptions more concise, and it should similarly be possible to make proof descriptions more concise.
+For example, Egison's pattern matching should be useful for describing the case analysis needed in proofs.
+Based on this idea, we are designing a proof assistant system with Egison pattern matching\cite{egi2020pattern}.
+
+\subsection{Query Language (Application of Pattern Matching)}
+
+Egison's pattern matching can be used as a query language for various kinds of databases.
+As an example, consider a query against a database managing a social network to retrieve the list of users who follow the user with username \lstinline|"Egison_Lang"| but are not followed back by this user.
+This query can be written using a \lstinline{matchAll} expression.
+The relational database tables are pattern-matched as sets.
+\begin{lstlisting}[language=egison]
+matchAll (users, follows, users) as (set user, set follow, set user) with
+  ((and (Name #"Egison_Lang") (ID $uid)) : _,
+   (and (FromID #uid) (ToID $fid)) : !((and (FromID #fid) (ToID #uid)) : _),
+   (and (ID #fid) (Name $fname)) : _) -> (fid, fname)
+\end{lstlisting}
+This \lstinline{matchAll} expression pattern-matches against a tuple of the user table (\lstinline{users}), the follow table (\lstinline{follows}), and the user table.
+Each table is pattern-matched as a set.
+Line 2 describes the pattern matching on the user table.
+\lstinline{Name} and \lstinline{ID} are pattern constructors for extracting the values of the respective record fields.
+The pattern on the user table in line 2 binds the ID of the user whose name is \lstinline{"Egison_Lang"} to the pattern variable \lstinline{$uid}.
+Line 3 describes the pattern matching on the follow table.
+\lstinline{FromID} and \lstinline{ToID} are pattern constructors for extracting the follower and followee.
+The user identified by \lstinline{FromID} follows the user identified by \lstinline{ToID}.
+Users who have not followed back the user with ID \lstinline{uid} are matched using the not pattern.
+Line 4 pattern-matches the user table to retrieve the name of the user with ID \lstinline{fid}.
+As a result, the tuple \lstinline{(fid, fname)} is returned.
+
+Egison pattern matching also has the advantage of concise query descriptions.
+For example, writing the equivalent query in SQL becomes complex.
+This is because conditions must be written in the \lstinline{WHERE} clause instead of non-linear patterns, and subqueries must be used instead of not patterns.
+Pattern-match-oriented query descriptions can be read from left to right in a single pass, whereas SQL queries cannot be read that way.
+\begin{lstlisting}[language=egison]
+SELECT DISTINCT ON (user.name) user.name
+  FROM user AS user1, follow AS follow1, user AS user2
+  WHERE user1.name = 'Egison_Lang' AND follow1.from_id = user1.id AND user2.id = follow1.to_id
+    AND NOT EXISTS
+      (SELECT '' FROM follow AS follow2
+         WHERE follow2.from_id = follow1.to_id AND follow2.to_id = user1.id)
+\end{lstlisting}
+
+\subsection{Machine Learning (Application of Tensor Index Notation)}
+
+Machine learning algorithms that handle tensors can be concisely expressed using index notation.
+As an example, we are considering an implementation of neural networks in Egison.
+The implementation of neural networks involves mathematical formulas such as the following.
+$x_i$ is the input from the previous layer to the current layer, $y_j$ is the output from the current layer to the next layer, $w^{\;i}_{j}$ is the weight, and $b_j$ is the bias.
+\[y_j = w^{\;i}_j x_i + b_j \]
+For neural network algorithms that involve only first-order tensors (vectors) and second-order tensors (matrices), the benefits of index notation are less pronounced compared to differential geometry computations, but index notation is still useful because it eliminates errors such as matrix transposition mistakes.
+Neural network algorithms require processing such as stencil computation, and pooling operations like average pooling and max pooling, which do not arise in mathematical tensor computation, so research is needed on how to express such processing.
+
+\section{Research Beyond Egison}
+
+We introduce some large unsolved problems that are difficult to resolve, which we began thinking about while developing Egison.
+
+\subsection{Representing Data of Two or More Dimensions}
+
+While programs can be visually laid out two-dimensionally using line breaks and indentation, programs are fundamentally one-dimensional string data.
+Programs are internally represented by syntax trees, which have a tree structure.
+The string representing a program is this tree structure linearized in depth-first order.
+Therefore, data and program structures that cannot be mapped onto a tree structure cannot be cleanly expressed as programs.
+
+Data that cannot be mapped onto a tree structure includes, for example, graphs.
+When a graph is linearized into a one-dimensional string, it inevitably becomes harder to read compared to a graph drawn on a two-dimensional surface.
+Other data difficult to linearize includes Othello boards and Go boards.
+The concept of ``sandwiching'' in Othello and ``surrounding'' in Go are intuitively simple concepts, yet they are difficult to express in programs.
+
+Program structures that cannot be cleanly mapped onto a tree include the application of functions that take multiple arguments and return multiple results.
+In typical programs, most functions take multiple arguments but return a single result.
+Therefore, nested function applications like $f(g(x),h(y))$, where the result of one function is passed to another, can be written cleanly.
+Functions that take a single argument and return multiple results can also be cleanly mapped onto a tree.
+In fact, this syntax is pattern matching.
+A pattern like \lstinline{$x :: $y :: _} can be thought of as nested applications of a function \lstinline{::} that takes one argument and returns two results.
+Nested applications of functions that take multiple arguments and return multiple results cannot be cleanly mapped onto a tree in these ways.
+
+A field where functions taking multiple arguments and returning multiple results frequently appear is quantum algorithms.
+For describing quantum algorithms, quantum circuits are often used, and the number of qubit inputs and outputs in a quantum circuit is generally the same.
+Introductions to quantum algorithms often include diagrams of quantum circuits, and these diagrams are easier to understand than programs.
+
+Solving these problems seems to require fundamental changes such as using structures other than trees to internally represent programs, or using representations other than character strings to write programs.
+The field of visual programming is known for techniques of describing programs as two-dimensional diagrams.
+We find it interesting to consider new programming languages from this perspective.
+
+\subsection{Computer Algebra Systems That Can Symbolically Process User-Defined Data Types Beyond Numbers}
+
+Many computer algebra systems, including Egison, can handle numerical computations symbolically.
+However, numbers are not the only objects we want to handle symbolically.
+We may also want to symbolically handle various user-defined data types such as lists, trees, and graphs.
+Egison's computer algebra system has symbolic handling of numbers built in, and it is not designed to extend symbolic computation to arbitrary data types.
+Therefore, we believe it would be interesting to create a more general computer algebra system capable of flexible symbolic computation.
+
+\subsection{A Theory for Comparing the Expressiveness of Different Programming Styles}
+
+No established method exists for objectively comparing the readability and writability of programs written in different programming styles.
+The lack of such a method is considered one of the reasons why the development of new notations is not very active.
+Furthermore, if such a method existed, we could objectively demonstrate the readability and writability of Egison programs, making it easier to promote Egison.
+For these reasons, we are contemplating methods for measuring the readability and writability of programs.
+This section describes our current thinking on this problem.
+
+The readability and writability of a program is equivalent to the ease of understanding the program.
+To define the ease of understanding a program, we need to define what it means to understand a program.
+Once we define what it means to understand a program, the computational complexity involved becomes the measure of ease of understanding.
+
+There are countless levels of understanding a program.
+For example, regarding a program that implements merge sort:
+\begin{itemize}
+\item A program that takes a list as an argument and returns a list
+\item A program that returns a list sorted according to an ordering
+\item A program that returns a result in $n \log(n)$ time complexity where $n$ is the length of the list
+\end{itemize}
+and so on -- it can be analyzed and understood from various perspectives.
+It is known that these program properties can be expressed as types of programs, and in some cases type checking and type inference can be performed.
+
+Therefore, we are considering whether the number of steps required for type checking could be used to measure the ease of understanding a program.
+To demonstrate the superiority of a new programming style, one would show that a particular program property becomes easier to verify in that style.
+Indeed, for complex program properties such as computational complexity, there is an intuition that programs written using Egison's pattern matching can be type-checked and type-inferred with less effort than ordinary functional programs.
+
+%\begin{oframed}
+%  \paragraph{Does the Ultimate Programming Language Exist?}
+%It has already been proven by Chaitin that no programming language can exist that can describe all conceivable algorithms more concisely than all other possible programming languages.
+%The proof is introduced in ``The Limits of Mathematics,'' Lecture 2 ``Elegant LISP Programs.''
+%
+%\todo{Outline Chaitin's proof.}
+%Algorithmic information theory.
+%Define the conciseness of a program as the number of bits needed to represent the program.
+%
+%Expanding the range of algorithms that can be concisely expressed by adding new syntax is similar to expanding the range of provable propositions by adding new axioms.
+%Thinking about it this way, it may be natural that such limits exist.
+%\end{oframed}

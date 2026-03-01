@@ -1,0 +1,1140 @@
+\chapter{Tensor Computation}\label{tensor}
+
+Egison has features developed specifically for conveniently describing tensor computations.
+This chapter introduces these features.
+
+\section{What Are Tensors?}
+
+A tensor is a generalization of vectors and matrices.
+A vector is a first-order tensor, and a matrix is a second-order tensor.
+In programs, vectors are often represented as one-dimensional arrays and matrices as two-dimensional arrays.
+An $n$th-order tensor is represented by an $n$-dimensional array.
+
+Below are examples of a vector, a matrix, and a second-order tensor expressed in mathematical notation.
+$$
+\begin{pmatrix}
+a_{1} & a_{2} & a_{3}\\
+\end{pmatrix}
+$$
+$$
+\begin{pmatrix}
+a_{11} & a_{12} & a_{13} \\
+a_{21} & a_{22} & a_{23}
+\end{pmatrix}
+$$
+$$
+\begin{pmatrix}
+
+\begin{pmatrix}
+a_{111} & a_{112} & a_{113} \\
+a_{121} & a_{122} & a_{123} 
+\end{pmatrix}
+
+\begin{pmatrix}
+a_{211} & a_{212} & a_{213} \\
+a_{221} & a_{222} & a_{223} 
+\end{pmatrix}
+
+\begin{pmatrix}
+a_{311} & a_{312} & a_{313} \\
+a_{321} & a_{322} & a_{323} 
+\end{pmatrix}
+
+\end{pmatrix}
+$$
+
+The above mathematical expressions are represented in Egison as follows.
+In Egison, tensors are represented by enclosing their components in \lstinline![| |]!.
+Matrices are represented as vectors of vectors, and second-order tensors as vectors of matrices.
+This is similar to the notation for multidimensional arrays in languages such as C.
+\begin{lstlisting}[language=egison,numbers=none]
+[| a_1, a_2, a_3 |]
+
+[| [| a_11, a_12, a_13 |],
+   [| a_21, a_22, a_23 |] |]
+
+[| [| [| a_111, a_112, a_113 |],
+      [| a_121, a_122, a_123 |] |],
+   [| [| a_211, a_212, a_213 |],
+      [| a_221, a_222, a_223 |] |],
+   [| [| a_311, a_312, a_313 |],
+      [| a_321, a_322, a_323 |] |] |]
+\end{lstlisting}
+
+\section{Index Notation for Tensors}
+
+Most tensor computations can be expressed as combinations of the tensor product, Hadamard product, and inner product of vectors.
+The tensor product returns a matrix consisting of all combinations of vector components.
+The Hadamard product returns a vector consisting only of corresponding component pairs.
+The inner product returns a scalar value obtained by summing the components of the Hadamard product.
+
+$$
+\begin{pmatrix}
+a_{1} & a_{2}
+\end{pmatrix}
+\otimes
+\begin{pmatrix}
+b_{1} & b_{2}
+\end{pmatrix}
+=
+\begin{pmatrix}
+a_{1} b_{1} & a_{1} b_{2} \\
+a_{2} b_{1} & a_{2} b_{2}
+\end{pmatrix}
+$$
+
+$$
+\begin{pmatrix}
+a_{1} & a_{2}
+\end{pmatrix}
+\circ
+\begin{pmatrix}
+b_{1} & b_{2}
+\end{pmatrix}
+=
+\begin{pmatrix}
+a_{1} b_{1} & a_{2} b_{2}
+\end{pmatrix}
+$$
+
+$$
+\begin{pmatrix}
+a_{1} & a_{2}
+\end{pmatrix}
+\cdot
+\begin{pmatrix}
+b_{1} & b_{2}
+\end{pmatrix}
+=
+a_{1} b_{1} + a_{2} b_{2}
+$$
+
+For example, the multiplication of matrix $A$ and matrix $B$ can be interpreted as an operation that takes the tensor product over the rows of $A$ and columns of $B$, and the inner product over the columns of $A$ and rows of $B$.
+
+$$
+\begin{pmatrix}
+a_{11} & a_{12} \\
+a_{21} & a_{22}
+\end{pmatrix}
+\begin{pmatrix}
+b_{11} & b_{12} \\
+b_{21} & b_{22}
+\end{pmatrix}
+=
+\begin{pmatrix}
+a_{11} b_{11} + a_{12} b_{21} & a_{11} b_{12} + a_{12} b_{22} \\
+a_{21} b_{11} + a_{22} b_{21} & a_{21} b_{12} + a_{22} b_{22}
+\end{pmatrix}
+$$
+
+For vectors, there are only three types of multiplication: tensor product, Hadamard product, and inner product. However, for matrices and higher-order tensors, there are infinitely many ways to multiply.
+Naming all these multiplications would be impractical.
+Therefore, mathematicians attach symbolic indices to tensors and use these indices as parameters to express these multiplications.
+For example, when different symbols are attached to each vector, it represents the tensor product; when the same symbol appears at the same position on each vector, it represents the Hadamard product; and when the same symbol appears in the superscript and subscript positions of the vectors, it represents the inner product.
+There are two types of indices: superscripts and subscripts.
+The positional relationship distinguishes between the Hadamard product and the inner product.
+This notation of using symbolic indices to specify how tensors are multiplied is called index notation.
+The mathematical expressions below can be represented in Egison using the program shown in Section~\ref{cas-linear}.
+
+$$
+\begin{pmatrix}
+a_{1} & a_{2}
+\end{pmatrix}_{i}
+\begin{pmatrix}
+b_{1} & b_{2}
+\end{pmatrix}_{j}
+=
+\begin{pmatrix}
+a_{1} b_{1} & a_{1} b_{2} \\
+a_{2} b_{1} & a_{2} b_{2}
+\end{pmatrix}_{ij}
+$$
+
+$$
+\begin{pmatrix}
+a_{1} & a_{2}
+\end{pmatrix}_{i}
+\begin{pmatrix}
+b_{1} & b_{2}
+\end{pmatrix}_{i}
+=
+\begin{pmatrix}
+a_{1} b_{1} & a_{2} b_{2}
+\end{pmatrix}_{i}
+$$
+
+$$
+\begin{pmatrix}
+a_{1} & a_{2}
+\end{pmatrix}^{i}
+\begin{pmatrix}
+b_{1} & b_{2}
+\end{pmatrix}_{i}
+=
+a_{1} b_{1} + a_{2} b_{2}
+$$
+
+Matrix multiplication can also be neatly expressed using index notation.
+By reversing the superscript/subscript positions and using the same symbol for the columns of A and the rows of B (where the inner product is taken), matrix multiplication can be expressed.
+
+$$
+\begin{pmatrix}
+a_{11} & a_{12} \\
+a_{21} & a_{22}
+\end{pmatrix}^{i}_{\ j}
+\begin{pmatrix}
+b_{11} & b_{12} \\
+b_{21} & b_{22}
+\end{pmatrix}^{j}_{\ k}
+=
+\begin{pmatrix}
+a_{11} b_{11} + a_{12} b_{21} & a_{11} b_{12} + a_{12} b_{22} \\
+a_{21} b_{11} + a_{22} b_{21} & a_{21} b_{12} + a_{22} b_{22}
+\end{pmatrix}^{i}_{\ k}
+$$
+
+\section{Key Ideas for Introducing Index Notation to Programming}\label{tensor-idea}
+
+The reason introducing index notation to programming is difficult is that the rules for symbolic indices differ for each operator.
+In particular, the index rules differ between tensor addition and multiplication.
+Let us introduce some examples.
+Let $u$ and $v$ each be vectors.
+\begin{itemize}
+\item $u_{i} + v_{i}$ returns a vector. In contrast, $u_{i} v_{i}$ is an invalid expression.
+(In Euclidean space, where superscript and subscript indices can be freely interchanged, $u_{i} v_{i}$ returns the inner product. However, we do not consider such exceptions here.)
+\item $u^{i} + v_{i}$ is invalid. In contrast, $u^{i} v_{i}$ returns the inner product.
+\item $u_{i} + v_{j}$ is invalid. In contrast, $u_{i} v_{j}$ returns the tensor product.
+\end{itemize}
+As shown, the rules for symbolic indices differ for each operator.
+Therefore, every time a function that handles tensors is defined, the symbolic index rules must be specified.
+This is a tedious task.
+Moreover, a new syntax for describing index rules may be needed in some cases.
+Such new syntax would make the programming language more complex.
+
+Egison solves this problem by simplifying the rules for symbolic indices.
+The simplification of index rules does not change the interpretation of valid expressions.
+However, some expressions that were previously invalid become valid.
+For example, $v_{i} + v_{j}$ was an invalid expression, but under the new index rules it becomes valid.
+Figure~\ref{fig:ruleAdd} shows the simplified index rules for tensor addition.
+By relaxing the index rules, many tensor operations can be viewed as variants of tensor addition.
+For example, tensor multiplication can be viewed as an operation that combines components in the same form as addition, followed by an additional process called contraction (Figure~\ref{fig:ruleMult}).
+Tensor contraction is the operation of summing the diagonal components when there are superscript and subscript indices with the same symbol.
+This perspective reduces the amount of index rule descriptions needed when defining functions on tensors.
+
+\begin{figure}
+\begin{minipage}[t]{0.5\columnwidth}
+\begin{subfigure}[h]{1.0\textwidth}
+\begin{center}
+\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
++
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}_{i}
+=
+\begin{pmatrix}
+a + c \\
+b + d
+\end{pmatrix}_{i}\]
+
+\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
++
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}_{j}
+=
+\begin{pmatrix}
+a + c & a + d \\
+b + c & b + d
+\end{pmatrix}_{ij}\]
+
+\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
++
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}^{i}
+=
+\begin{pmatrix}
+a + c & a + d \\
+b + c & b + d
+\end{pmatrix}_{i}^{\ i}\]
+\end{center}
+\caption{Index rules for addition}
+\label{fig:ruleAdd}
+\end{subfigure}
+\end{minipage}%
+\begin{minipage}[t]{0.5\columnwidth}
+\begin{subfigure}[h]{1.0\textwidth}
+\begin{center}
+\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}_{i}
+=
+contract
+\begin{pmatrix}
+a c \\
+b d
+\end{pmatrix}_{i}
+=
+\begin{pmatrix}
+a c \\
+b d
+\end{pmatrix}_{i}\]
+
+\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}_{j}
+=
+contract
+\begin{pmatrix}
+a c & a d \\
+b c & b d
+\end{pmatrix}_{ij}
+=
+\begin{pmatrix}
+a c & a d \\
+b c & b d
+\end{pmatrix}_{ij}\]
+
+\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}^{i}
+=
+contract
+\begin{pmatrix}
+a c & a d \\
+b c & b d
+\end{pmatrix}_{i}^{\ i}
+= a c + b d\]
+\end{center}
+\caption{Index rules for multiplication}
+\label{fig:ruleMult}
+\end{subfigure}
+\end{minipage}
+\caption{Simplified index rules}
+\label{fig:rule}
+\end{figure}
+
+\section{Scalar Parameters and Tensor Parameters}\label{tensor-params}
+
+The introduction of tensor index notation to programming is achieved through (i) a type system that distinguishes between scalar functions and tensor functions, and (ii) appropriate index reduction rules.
+Starting from this section, we explain these concepts.
+
+First, we explain the distinction between scalar functions and tensor functions through the type system.
+In Egison, whether a function is a scalar function or a tensor function is determined by the type annotations of its formal parameters.
+If the type of a formal parameter is not \lstinline{Tensor a}, that parameter is treated as a scalar.
+If the type of a formal parameter is \lstinline{Tensor a}, that parameter is treated as a tensor.
+When a tensor is passed as an argument to a parameter treated as a scalar, the function's processing is mapped over each component of the tensor.
+When a tensor is passed as an argument to a parameter treated as a tensor, the tensor is passed as-is to the parameter.
+In the following example, the type variable \lstinline{a} is inferred to be a scalar type, and when a tensor is passed, the processing is mapped over each component.
+\begin{lstlisting}[language=egison,numbers=none]
+(\u v -> (u, v)) [| a, b |]_i [| x, y |]_j
+-- [| [| (a, x), (a, y) |],
+--    [| (b, x), (b, y) |] |]_i_j
+\end{lstlisting}
+On the other hand, when the \lstinline{Tensor} type is explicitly specified, the tensor is passed as-is.
+\begin{lstlisting}[language=egison,numbers=none]
+(\(u: Tensor a) (v: Tensor a) -> (u, v)) [| a, b |]_i [| x, y |]_j
+-- ([| a, b |]_i, [| x, y |]_j)
+\end{lstlisting}
+
+Egison's type system distinguishes between two kinds of functions: \emph{scalar functions}\index{scalar function} (\emph{scalar function}) and \emph{tensor functions}\index{tensor function} (\emph{tensor function}).
+A scalar function is a function that, when given a tensor as an argument, maps its processing over each component.
+For example, ``\lstinline|+|'', ``\lstinline|-|'', ``\lstinline|*|'', ``\lstinline|/|'', and ``\lstinline[mathescape]!$\partial$/$\partial$!'' are scalar functions.
+A tensor function is a function that, when given a tensor as an argument, processes the tensor as a tensor directly.
+For example, a function that computes the determinant or a function for tensor multiplication cannot be defined by automatically mapping over each component, so they must be defined as tensor functions.
+Whether a function is a scalar function or a tensor function is determined by type annotations.
+If the type of a formal parameter is not \lstinline{Tensor a}, tensors passed as arguments are automatically mapped component-wise (scalar function).
+If the type of a formal parameter is \lstinline{Tensor a}, tensors are passed as-is (tensor function).
+Examples of scalar and tensor function definitions are explained in Figures~\ref{fig:minFunction} and~\ref{fig:dotFunction}.
+
+\begin{figure}[t]
+ \begin{subfigure}[b]{1.0\linewidth}
+\begin{lstlisting}[language=egison,numbers=none]
+def min (x: a) (y: a) : a := if x < y then x else y
+\end{lstlisting}
+  \caption{Definition of the \lstinline{min} function (the type annotation indicates it works for any comparable type \lstinline{a})}
+  \label{fig:minDef}
+ \end{subfigure}
+  \medskip
+ \begin{subfigure}[b]{1.0\linewidth}
+  {\small
+    $min(\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i},  \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{j}) = \begin{pmatrix} min(1,10) & min(1,20) & min(1,30) \\ min(2,10) & min(2,20) & min(2,30) \\ min(3,10) & min(3,20) & min(3,30) \\ \end{pmatrix}_{ij}
+    = \begin{pmatrix} 1 & 1 & 1 \\ 2 & 2 & 2 \\ 3 & 3 & 3 \\ \end{pmatrix}_{ij}$
+    }
+  \caption{Applying the \lstinline{min} function to vectors with different indices}
+  \label{fig:minDiff}
+ \end{subfigure}
+  \medskip
+ \begin{subfigure}[b]{1.0\linewidth}
+  {\small
+    $min(\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i},  \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{i}) = \begin{pmatrix} min(1,10) & min(1,20) & min(1,30) \\ min(2,10) & min(2,20) & min(2,30) \\ min(3,10) & min(3,20) & min(3,30) \\ \end{pmatrix}_{ii}
+  = \begin{pmatrix} min(1,10) \\ min(2,20) \\ min(3,30) \end{pmatrix}_{i} = \begin{pmatrix} 1 \\ 2 \\ 3 \end{pmatrix}_{i}$ 
+    }
+  \caption{Applying the \lstinline{min} function to vectors with the same index}
+  \label{fig:minSame}
+ \end{subfigure}
+ \caption{Definition and application examples of the \lstinline{min} function as an example of a scalar function}
+ \label{fig:minFunction}
+\end{figure}
+
+Figure~\ref{fig:minFunction} introduces the definition of the \lstinline{min} function and its application examples as an example of a scalar function.
+Since the formal parameter type is type variable \lstinline{a}, when a tensor is passed as an argument, the function is automatically applied component-wise.
+As a result of component-wise application, the function is applied in the same form as a tensor product, as shown in Figure~\ref{fig:minDiff}.
+The index reduction rules for tensors are simple.
+The only rule is that when a tensor with two or more indices of the same symbol is generated as a result of applying a scalar function (as in Figure~\ref{fig:minSame}), it is reduced to a tensor consisting of its diagonal components.
+The detailed specification of the index reduction rules is discussed in the next section.
+
+\begin{figure}[t]
+ \begin{subfigure}[b]{1.0\linewidth}
+\begin{lstlisting}[language=egison,numbers=none]
+def (.) (t1: Tensor a) (t2: Tensor a) : Tensor a := contractWith (+) (t1 * t2)
+\end{lstlisting}
+  \caption{Definition of the ``\lstinline{.}'' function (the type annotation indicates it receives tensors and returns a tensor)}
+  \label{fig:dotDef}
+ \end{subfigure}
+  \medskip
+ \begin{subfigure}[b]{1.0\linewidth}
+  {\small
+  $\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}^{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{i} = contractWith(+, \begin{pmatrix} 10 & 20 & 30 \\ 20 & 40 & 60 \\ 30 & 60 & 90 \\ \end{pmatrix}^{i}_{\;i})
+  = 10 + 40 + 90 = 140$
+  \\ \medskip \\
+  $\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{i} = contractWith(+, \begin{pmatrix} 10 \\ 40 \\ 90 \\ \end{pmatrix}_{i}) = \begin{pmatrix} 10 \\ 40 \\ 90 \\ \end{pmatrix}_{i}$
+  \\ \medskip \\
+  $\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{j} = contractWith(+, \begin{pmatrix} 10 & 20 & 30 \\ 20 & 40 & 60 \\ 30 & 60 & 90 \\ \end{pmatrix}_{ij})
+  = \begin{pmatrix} 10 & 20 & 30 \\ 20 & 40 & 60 \\ 30 & 60 & 90 \\ \end{pmatrix}_{ij}$ \\
+  }
+  \caption{Application of the ``\lstinline{.}'' function}
+  \label{fig:dotApp}
+ \end{subfigure}
+ \caption{Definition and application examples of the ``\lstinline{.}'' function as an example of a tensor function}
+ \label{fig:dotFunction}
+\end{figure}
+
+Figure~\ref{fig:dotFunction} introduces the definition and application examples of the ``\lstinline{.}'' function\index{.@\lstinline{.}}, a tensor multiplication function, as an example of a tensor function.
+Since the formal parameter type is \lstinline{Tensor a}, when a tensor is passed as an argument, it is passed as-is.
+As shown in Figure~\ref{fig:dotApp}, Egison has built-in support for both superscript and subscript indices.
+When the same symbol is used for a superscript and subscript, contraction can be performed using the \lstinline{contractWith} function.
+
+Superscripts are represented in programs using ``\lstinline|~|'' and subscripts using ``\lstinline|_|''.
+For example, the first computation example in Figure~\ref{fig:dotApp} is expressed in Egison as follows.
+\begin{lstlisting}[language=egison,numbers=none]
+[| 1, 2, 3 |]~i . [| 10, 20, 30 |]_i
+-- 140
+\end{lstlisting}
+
+\section{Three Types of Indices}\label{tensor-index}
+
+Egison introduces three types of indices for handling tensor index notation.
+The first two are the superscripts and subscripts introduced in the previous section, represented by \lstinline{~} and \lstinline{_}.
+The third is called the superscript-subscript index, represented by \lstinline{~_}\index{~_@\lstinline{~_}}.
+Superscript-subscript indices appear when a scalar function is applied to a tensor that has both a superscript and subscript index with the same symbol.
+\begin{lstlisting}[language=egison,numbers=none]
+[| 1 2 3 |]_i * [| 10 20 30 |]_i -- [| 10, 40, 90 |]_i
+[| 1 2 3 |]~i * [| 10 20 30 |]~i -- [| 10, 40, 90 |]~i
+[| 1 2 3 |]~i * [| 10 20 30 |]_i -- [| 10, 40, 90 |]~_i
+\end{lstlisting}
+
+The \lstinline{contractWith} function, which also appeared in the previous section, converts diagonal components of superscript-subscript indices into a list and folds it with the function given as the first argument.
+\begin{lstlisting}[language=egison,numbers=none]
+contractWith (+) [| 10, 40, 90 |]_i -- [| 10, 40, 90 |]_i
+contractWith (+) [| 10, 40, 90 |]~i -- [| 10, 40, 90 |]~i
+contractWith (+) [| 10, 40, 90 |]~_i -- 130
+\end{lstlisting}
+
+\lstinline{contractWith} is a library function defined using the built-in function \lstinline{contract}\index{contract@\lstinline{contract}}.
+The built-in function \lstinline{contract} returns the list of components at the slot with a superscript-subscript index.
+\begin{lstlisting}[language=egison,numbers=none]
+contract [| 1, 2, 3 |]~_i -- [1, 2, 3]
+contract [| [| 11, 12 |], [| 21, 22 |] |]~_i_j -- [[| 11, 12 |]_j, [| 21, 22 |]_j]
+contract [| [| 11, 12 |], [| 21, 22 |] |]_i~_j -- [[| 11, 21 |]_j, [| 12, 22 |]_i]
+contract [| [| 11, 12 |], [| 21, 22 |] |]~_i~_j -- [11, 12, 21, 22]
+\end{lstlisting}
+
+\section{Index Reduction Rules}\label{tensor-rules}
+
+\begin{figure}
+  \begin{center}
+\begin{lstlisting}[language=egison,numbers=none]
+E({A, xs}) =
+  if e(xs) = [] then
+    {A, xs})
+  elsif e(xs) = [{k,j}, …] & p(k,xs) = p(j,xs) then
+    E({diag(k, j, A), remove(j, xs))
+  elsif e(xs) = [{k,j}, …] & p(k,xs) != p(j,xs) then
+    E({diag(k, j, A), update(k, 0, remove(j, xs)))
+\end{lstlisting}
+  \end{center}
+  \caption{Pseudocode for index reduction}
+  \label{fig:semanticsRules}
+\end{figure}
+
+This section explains the index reduction rules using pseudocode.
+As explained in Section~\ref{tensor-params}, since applying a scalar function to tensors always maps the processing component-wise in the form of a tensor product, we only need to define the reduction rules for a single tensor.
+
+Figure~\ref{fig:semanticsRules} shows the pseudocode for index reduction.
+\lstinline{E(A,xs)} is a function that reduces an indexed tensor.
+\lstinline{A} is the array of tensor components, and \lstinline{xs} is the list of indices attached to \lstinline{A}.
+For example, \lstinline{E(A,xs)} operates on a tensor with indices ``\lstinline|~i_j_i|'' as follows.
+The flags \lstinline{1}, \lstinline{-1}, and \lstinline{0} represent superscript, subscript, and superscript-subscript indices, respectively.
+\begin{lstlisting}[language=egison,numbers=none]
+E({[|[|[|1,2|],[|3,4|]|]
+    ,[|[|5,6|],[|7,8|]|]|]
+ ,[{i,1}, {j,-1}, {i,-1}]}) =
+{[|[|1,3|],[|6,8|]|], [{i,0}, {j,-1}]}
+\end{lstlisting}
+Let us explain the auxiliary functions used in the pseudocode.
+\lstinline{e(xs)} finds pairs of indices with the same symbol in \lstinline{xs}.
+\lstinline{diag(k, j, A)} computes the tensor consisting of the diagonal components of \lstinline{A} with respect to the \lstinline{k}-th and \lstinline{j}-th slots.
+\lstinline{remove(k, xs)} removes the \lstinline{k}-th element from the list \lstinline{xs}.
+\lstinline{p(k, xs)} retrieves the value of the \lstinline{k}-th entry from the association list \lstinline{xs}.
+\lstinline{update(k, p, xs)} updates the value of the \lstinline{k}-th entry in the association list \lstinline{xs} to \lstinline{p}.
+These auxiliary functions operate as follows.
+\begin{lstlisting}[language=egison,numbers=none]
+e([{i, 1}, {j, -1}, {i, -1}])        = [{1,3}]
+diag(1, 2, [|[|11,12|],[|21,22|]|]) = [|11,22|]
+p(2, [{i, 1}, {j, -1}])             = -1
+remove(2, [{i, 1}, {j, -1}])        = [{i, 1}]
+update(2, 0, [{i, 1}, {j, -1}])     = [{i, 1}, {j, 0}]
+\end{lstlisting}
+
+\section{Application of Tensor Functions}\label{tensor-tensorfunc}
+
+When an indexed tensor is passed to a tensor function, it is applied to the tensor function together with its indices.
+Let us verify this behavior with the ``\lstinline{.}'' function defined in Figure~\ref{fig:dotDef}.
+Figure~\ref{fig:dotApp} displays the expansion step by step when the ``\lstinline{.}'' function is applied.
+Indexed tensors appear inside \lstinline{contractWith}, which is made possible by tensors being passed to tensor functions together with their indices.
+Thanks to this behavior, tensor functions can be applied using tensor index notation as follows.
+\begin{lstlisting}[language=egison,numbers=none]
+[|1,2,3|]~i . [|10,20,30|]_i -- 140
+[|1,2,3|]_i . [|10,20,30|]_j -- [|[|10,20,30|],[|20,40,60|],[|30,60,90|]|]_i_j
+[|1,2,3|]_i . [|10,20,30|]_i -- [|10,40,90|]_i
+\end{lstlisting}
+
+Sometimes, additional indices need to be attached to a tensor passed as an argument inside a tensor function.
+To attach new indices, insert \lstinline{...} between the tensor and the indices as follows.
+This feature is implemented as syntactic sugar using the built-in functions \lstinline{subrefs} and \lstinline{suprefs}, which are introduced in Section~\ref{tensor-refs}.
+Usage examples of this feature are presented in Chapter~\ref{diffgeo}.
+\begin{lstlisting}[language=egison,numbers=none]
+A..._i_j
+\end{lstlisting}
+
+\section{Index Completion for Omitted Indices}\label{tensor-completion}
+
+When a tensor with omitted indices is applied to a function, Egison automatically completes the indices.
+This section explains the rules for this completion.
+
+Let \lstinline{A} and \lstinline{B} be second-order tensors, i.e., matrices.
+When \lstinline{A} and \lstinline{B} are applied to a scalar function simultaneously with their indices omitted, the same combination of indices is completed as shown below.
+\begin{lstlisting}[language=egison,numbers=none]
+A + B -- A_t1_t2 + B_t1_t2
+\end{lstlisting}
+When ``\lstinline|!|'' is prefixed to the function application, different indices are completed as shown below.
+\begin{lstlisting}[language=egison,numbers=none]
+A !+ B -- A_t1_t2 + B_t3_t4
+\end{lstlisting}
+
+When a tensor with omitted indices is applied to a tensor function, no completion is performed.
+
+The above index completion rules are in fact necessary for a reason.
+Setting the index completion rules for omitted indices as described above allows differential form operators to be defined concisely.
+Concrete examples of differential form operator definitions are presented in Chapter~\ref{diffgeo}.
+As also mentioned later in Chapter~\ref{diffgeo}, ``\verb|!|'' only needs to be used within the definitions of differential form operators.
+Therefore, users generally do not need to be aware of ``\verb|!|''.
+
+\section{Mechanism of Automatic \texttt{tensorMap} Insertion}\label{tensor-tensormap}
+
+This section explains the mechanism of automatic \lstinline{tensorMap} insertion by the type system.
+
+\subsection{Basic Principle}
+
+Egison's type system compares the types of formal parameters and actual arguments at function application, and automatically inserts \lstinline{tensorMap} as needed.
+\lstinline{tensorMap} is a built-in function that applies the function given as the first argument to each component of the tensor given as the second argument and returns a tensor.
+
+The criteria for insertion are as follows:
+\begin{itemize}
+\item The formal parameter type cannot be unified with \lstinline{Tensor a} (e.g., \lstinline{Integer}, or a type variable \lstinline{a} with a type class constraint such as \lstinline{Num a})
+\item The actual argument type is \lstinline{Tensor a}
+\end{itemize}
+
+When both conditions are met, \lstinline{tensorMap} is automatically inserted.
+
+\subsection{Concrete Example}
+
+Let us verify the behavior using the \lstinline{min} function defined in Figure~\ref{fig:minFunction}.
+\begin{lstlisting}[language=egison,numbers=none]
+def min (x: a) (y: a) : a := if x < y then x else y
+
+min [|1,2,3|]_i [|10,20,30|]_j
+-- Internally transformed to:
+-- tensorMap (\xi -> tensorMap (\yi -> min xi yi) [|10,20,30|]_j) [|1,2,3|]_i
+-- Result: [|[|1,1,1|],[|2,2,2|],[|3,3,3|]|]_i_j
+
+min [|1,2,3|]_i [|10,20,30|]_i
+-- Result: [|1,2,3|]_i
+\end{lstlisting}
+
+The formal parameter type of the \lstinline{min} function is the type variable \lstinline{a}, which cannot be unified with \lstinline{Tensor a}.
+Therefore, when a tensor is passed as an argument, \lstinline{tensorMap} is automatically inserted.
+
+The indices of the resulting tensor for the first expression are ``\lstinline|_i_j|''.
+When the result of applying the first argument's function to the second argument's tensor components in \lstinline{tensorMap} is itself a tensor, \lstinline{tensorMap} moves the indices of that result tensor to the end of the indices of the overall result tensor.
+This is why the result tensor has the indices ``\lstinline|_i_j|''.
+This mechanism enables the application of scalar functions using tensor index notation.
+
+\subsection{Relationship with Type Class Constraints}
+
+\lstinline{tensorMap} is also inserted when there are type class constraints.
+\begin{lstlisting}[language=egison,numbers=none]
+def double {Num a} (x: a) : a := x + x
+
+double [|1,2,3|]_i
+-- Since Tensor Integer is not an instance of Num,
+-- tensorMap is automatically inserted:
+-- tensorMap (\xi -> double xi) [|1,2,3|]_i
+-- Result: [|2,4,6|]_i
+\end{lstlisting}
+
+Due to the type class constraint \lstinline{Num a}, the type variable \lstinline{a} must be an instance of the \lstinline{Num} class.
+Since \lstinline{Tensor Integer} is not an instance of the \lstinline{Num} class, it cannot be unified with \lstinline{Tensor a}.
+Therefore, when a tensor is passed as an argument, \lstinline{tensorMap} is automatically inserted, and the \lstinline{double} function is applied to each component (of type \lstinline{Integer}) of the tensor.
+
+\subsection{The Case of Tensor Functions}
+
+On the other hand, when the formal parameter type is explicitly \lstinline{Tensor a}, \lstinline{tensorMap} is not inserted.
+\begin{lstlisting}[language=egison,numbers=none]
+def (.) (t1: Tensor a) (t2: Tensor a) : Tensor a :=
+  contractWith (+) (t1 * t2)
+
+[|1,2,3|]~i . [|10,20,30|]_i
+-- tensorMap is not inserted; the tensor is passed as-is
+-- Result: 140
+\end{lstlisting}
+
+\subsection{Optimization Techniques}
+
+In the actual implementation, a built-in function called \lstinline{tensorMap2} is also used for optimization.
+When using nested \lstinline{tensorMap}, a tensor with non-diagonal components is generated even when only diagonal components are needed for diagonalization.
+\lstinline{tensorMap2} takes a binary function and two tensors as arguments and is implemented to compute only the components needed for the result tensor.
+
+\section{Index Reversal and the \texttt{flipIndices} Function}
+
+The partial differentiation function \lstinline[mathescape]!$\partial$/$\partial$! is a scalar function.
+However, \lstinline[mathescape]!$\partial$/$\partial$! is not just an ordinary scalar function.
+\lstinline[mathescape]!$\partial$/$\partial$! reverses the superscript/subscript positions of the second argument tensor's indices.
+For example, \lstinline[mathescape]|($\partial$/$\partial$ $\Gamma$~i_j_k x~l)| returns a fourth-order tensor with indices ``\lstinline|~i_j_k_l|''.
+
+To achieve this behavior, Egison provides a built-in function called \lstinline{flipIndices}\index{flipIndices@\lstinline{flipIndices}}.
+\lstinline{flipIndices} reverses the superscript/subscript positions of all indices of its argument tensor.
+Superscript-subscript indices remain as superscript-subscript indices even after reversal.
+
+The \lstinline[mathescape]!$\partial$/$\partial$! function is defined using \lstinline{flipIndices} as follows.
+\begin{lstlisting}[language=egison,numbers=none]
+def `$\partial$`/`$\partial$` (f: Tensor MathExpr) (x: Tensor MathExpr)
+    : Tensor MathExpr :=
+  tensorMap2 (\f x -> `$\partial$`/`$\partial$`' f x) f (flipIndices x)
+
+-- `$\partial$`/`$\partial$`' is an auxiliary function that computes partial differentiation on scalar values
+def `$\partial$`/`$\partial$`' (f: MathExpr) (x: MathExpr) : MathExpr := ...
+\end{lstlisting}
+
+Through \lstinline{tensorMap2}, the \lstinline[mathescape]!$\partial$/$\partial$'! function is applied to each component of \lstinline{f} and \lstinline{flipIndices x}.
+Since \lstinline{flipIndices x} reverses the indices of the second argument, the indices of the result tensor are also reversed.
+
+Below is a usage example of \lstinline[mathescape]!$\partial$/$\partial$!.
+\begin{lstlisting}[language=egison,numbers=none]
+`$\partial$`/`$\partial$` [|(r * (sin `$\theta$`)),(r * (cos `$\theta$`))|]_i [|r,`$\theta$`|]_j
+-- [|[|(sin `$\theta$`),(r * (cos `$\theta$`))|],[|(cos `$\theta$`),(-1 * r * (sin `$\theta$`))|]|]_i~j
+`$\partial$`/`$\partial$` [|(r * (sin `$\theta$`)),(r * (cos `$\theta$`))|]_i [|r,`$\theta$`|]_i
+-- [|(sin `$\theta$`),(-1 * r * (sin `$\theta$`))|]~_i
+\end{lstlisting}
+
+In the first example, the index of the second argument is reversed from \lstinline{_j} to \lstinline{~j}, and the result has indices \lstinline{_i~j}.
+
+\section{Generating Tensors with \texttt{generateTensor} Expressions}
+
+The \lstinline{generateTensor} expression is a convenient built-in syntax for initializing tensors.
+\lstinline{generateTensor} takes a function that accepts a list as the first argument and the desired tensor size as the second argument.
+For example, to generate a matrix of size $(3, 4)$ with all components equal to $1$, write the \lstinline{generateTensor} expression as follows.
+\begin{lstlisting}[language=egison,numbers=none]
+generateTensor [2]#1 [3, 4]
+-- [| [| 1, 1, 1, 1 |], [| 1, 1, 1, 1 |], [| 1, 1, 1, 1 |] |]
+\end{lstlisting}
+
+When combined with anonymous \lstinline{match} functions, various tensors can be generated with concise descriptions.
+For example, to generate the identity matrix, do the following.
+\begin{lstlisting}[language=egison,numbers=none]
+generateTensor (\match as list integer with
+                  | [$n, #n] -> 1
+                  | _ -> 0)
+               [3, 3]
+-- [| [| 1, 0, 0 |], [| 0, 1, 0 |], [| 0, 0, 1 |] |]
+\end{lstlisting}
+
+\section{Declaring Tensors}
+
+This section explains how to bind tensors to variables.
+First, tensors can be defined using \lstinline{def} or \lstinline{let} expressions, just like ordinary values.
+\begin{lstlisting}[language=egison,numbers=none]
+def A : Tensor Integer := [| [| 11, 12 |], [| 21, 22 |] |]
+
+A -- [| [| 11, 12 |], [| 21, 22 |] |]
+\end{lstlisting}
+
+In mathematics and physics, it is common to assign different values to tensors with the same variable name but different index types (superscript vs.\ subscript).
+Egison supports this convention by allowing different tensors to be defined for each index type.
+When referencing a variable, Egison uses both the variable name and the index type.
+The index type is specified by writing the index type after the variable name in the variable definition.
+\begin{lstlisting}[language=egison,numbers=none]
+def g__ : Tensor MathExpr := [| [| 2, 2 |], [| 2, 2 |] |]
+def g~~ : Tensor MathExpr := [| [| 1 / 2, 1 / 2 |], [| 1 / 2, 1 / 2 |] |]
+
+g_1_1 -- 2
+g~1~1 -- 1 / 2
+\end{lstlisting}
+
+To reference a variable that has been bound with a specified index type, it is convenient to use \emph{dummy symbols}\index{dummy symbol} (\emph{dummy symbol}).
+Dummy symbols are represented by \lstinline{#}, and each occurrence is treated as a unique symbol.
+Dummy symbols are a mechanism built into Egison.
+Using dummy symbols, \lstinline{g~~} and \lstinline{g__} defined above can be referenced as follows.
+\begin{lstlisting}[language=egison,numbers=none]
+g_#_# -- [| [| 2, 2 |], [| 2, 2 |] |]_#_#
+g~#~# -- [| [| 1 / 2, 1 / 2 |], [| 1 / 2, 1 / 2 |] |]~#~#
+\end{lstlisting}
+You can also specify the index type using regular symbols to reference tensors, but using dummy symbols is less prone to the mistake of accidentally using a defined variable as a symbol.
+\begin{lstlisting}[language=egison,numbers=none]
+g_i_j -- [| [| 2, 2 |], [| 2, 2 |] |]_i_j
+g~i~j -- [| [| 1 / 2, 1 / 2 |], [| 1 / 2, 1 / 2 |] |]_i_j
+\end{lstlisting}
+
+Dummy symbols are not intended for any use other than as tensor indices, but they can be treated like ordinary symbols.
+Below, two dummy symbols are added together.
+When two dummy symbols are added, they cannot be combined as shown below, because each dummy symbol is treated as a distinct symbol.
+\begin{lstlisting}[language=egison,numbers=none]
+# + # -- # + #
+\end{lstlisting}
+
+As in mathematical notation for tensors, symbols can also be written as indices on the left-hand side variable.
+\begin{lstlisting}[language=egison,numbers=none]
+def A_i_j : Tensor Integer := [| [| 11, 12 |], [| 21, 22 |] |]_i_j
+def B_i_j : Tensor Integer := [| [| 11, 12 |], [| 21, 22 |] |]_j_i
+
+A_#_# -- [| [| 11, 12 |], [| 21, 22 |] |]_#_#
+B_#_# -- [| [| 11, 21 |], [| 12, 22 |] |]_#_#
+\end{lstlisting}
+This feature is implemented in Egison as the following syntactic sugar.
+\begin{lstlisting}[language=egison,numbers=none]
+def A_i_j := ...
+-- => def A__ := withSymbols [i, j]
+--                 transpose [i, j] ...
+\end{lstlisting}
+The \lstinline{transpose} function is a built-in function that transposes tensor components in the order specified by the first argument.
+
+When no tensor with the same variable name and index type exists in the environment, the reference is performed by removing index types from the end one by one.
+For example, as shown below, when \lstinline{T~} and \lstinline{T_} are defined and \lstinline{T~#_#} is referenced, since \lstinline{T~_} does not exist in the environment, the last index type is removed and \lstinline{T~} is referenced instead.
+Since \lstinline{T~} is defined, its value is returned.
+\begin{lstlisting}[language=egison,numbers=none]
+def T~ : Tensor Integer := [| [| 11, 12 |], [| 21, 22 |] |]
+def T_ : Tensor Integer := [| [| -11, -12 |], [| -21, -22 |] |]
+
+T~#_# -- [| [| 11, 12 |], [| 21, 22 |] |]
+\end{lstlisting}
+
+\section{Convenient Syntax for Attaching Indices}\label{tensor-refs}
+
+For a tensor $A$ whose rank varies with a parameter $n$, one may want to attach indices like $A_{i_{1}...i_{n}}$.
+For this purpose, Egison provides built-in functions \lstinline{subrefs} and \lstinline{subrefs!}.
+These functions attach the list of indices given as the second argument to the tensor given as the first argument.
+\lstinline{subrefs} appends the index list from the second argument to the existing indices of the first argument's tensor, while \lstinline{subrefs!} removes the existing indices and attaches new ones.
+\begin{lstlisting}[language=egison,numbers=none]
+subrefs! A (map 1#i_%1 [1..n])
+subrefs  A (map 1#i_%1 [1..n])
+\end{lstlisting}
+Since tensors of the form $A_{i_{1}...i_{n}}$ appear frequently in mathematical expressions, the following syntactic sugar is provided for the programs using \lstinline{subrefs!} and \lstinline{subrefs} above.
+\begin{lstlisting}[language=egison,numbers=none]
+A_(i_1)...(i_n)
+A..._(i_1)...(i_n)
+\end{lstlisting}
+The above also applies to tensors with superscripts like $A^{i_{1}...i_{n}}$, for which Egison provides the built-in functions \lstinline{suprefs} and \lstinline{suprefs!}.
+
+The feature of \lstinline{subrefs} and \lstinline{suprefs} for appending indices to existing ones is used when defining functions for differential forms, which are introduced in Chapter~\ref{diffgeo}.
+
+\section{Declaring Symmetry and Antisymmetry of Tensors}\label{tensor-symm}
+
+\begin{figure}[t]
+ \begin{subfigure}[b]{1.0\linewidth}
+$$
+\begin{pmatrix}
+a_{11} & a_{12} & a_{13} \\
+a_{12} & a_{22} & a_{23} \\
+a_{13} & a_{23} & a_{33} \\
+\end{pmatrix}
+$$
+  \caption{Example of a symmetric tensor}
+  \label{fig:symmtensor}
+ \end{subfigure}
+  \medskip
+ \begin{subfigure}[b]{1.0\linewidth}
+$$
+\begin{pmatrix}
+0 & a_{12} & a_{13} \\
+-a_{12} & 0 & a_{23} \\
+-a_{13} & -a_{23} & 0 \\
+\end{pmatrix}
+$$
+  \caption{Example of an antisymmetric tensor}
+  \label{fig:antisymmtensor}
+ \end{subfigure}
+ \caption{Symmetry and antisymmetry of tensors}
+ \label{fig:symm}
+\end{figure}
+
+
+A tensor is said to be \emph{symmetric} when, as in the example of Figure~\ref{fig:symmtensor}, the upper triangular components and lower triangular components coincide.
+A tensor is said to be \emph{antisymmetric} when, as in the example of Figure~\ref{fig:antisymmtensor}, the signs of the upper triangular and lower triangular components are reversed.
+When a tensor is antisymmetric, the diagonal components are 0.
+
+Many tensors encountered in mathematics and physics possess symmetry.
+For example, the Riemann curvature tensor $R_{abcd}$ computed in Section~\ref{diffgeo-riemann} has multiple symmetries: $R_{abcd} = -R_{abdc}$, $R_{abcd} = -R_{bacd}$, and $R_{abcd} = R_{cdab}$.
+Mathematicians and physicists exploit these symmetries to skip unnecessary calculations.
+We would like to implement such symmetry-aware computation optimization in Egison, but to do so in a programming language, the tensor's symmetry must be explicitly declared.
+Egison has a notation for declaring tensor symmetry.
+This section explains the usage and implementation of this notation.
+
+\subsection{Notation for Declaring Tensor Symmetry}
+
+In addition to the symmetries above, the Riemann curvature tensor also has a symmetry known as the first Bianchi identity: $R_{abcd} + R_{acdb} + R_{adbc} = 0$.
+There is a notation $R_{a[bcd]} = 0$ that expresses this first Bianchi identity.
+The notation implemented in Egison for declaring tensor symmetry was inspired by this notation.
+
+We introduce the notation using concrete examples.
+In Egison, the Riemann curvature tensor $R_{abcd}$ can be defined as follows.
+The right-hand side contains a complex expression, but it can be ignored for this section.
+Please focus only on the left-hand side.
+\begin{lstlisting}[language=egison,numbers=none]
+def R_a_b_c_d : Tensor MathExpr := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
+\end{lstlisting}
+To declare the antisymmetry $R_{abcd} = -R_{abdc}$, enclose the indices \lstinline{_a_b} in curly braces \lstinline|{}|.
+\begin{lstlisting}[language=egison,numbers=none]
+def R{_a_b}_c_d : Tensor MathExpr := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
+\end{lstlisting}
+When $R_{abcd}$ is defined this way, referencing $R_{21cd}$ will return the sign-reversed value of the computed result for $R_{12cd}$.
+Multiple symmetries can be declared simultaneously.
+To declare both $R_{abcd} = -R_{abdc}$ and $R_{abcd} = -R_{bacd}$, enclose both \lstinline{_a_b} and \lstinline{_c_d} in curly braces \lstinline|{}|.
+\begin{lstlisting}[language=egison,numbers=none]
+def R{_a_b}{_c_d} : Tensor MathExpr := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
+\end{lstlisting}
+With this declaration, referencing $R_{2121}$ will return the computed result of $R_{1212}$.
+
+More complex symmetries such as $R_{abcd} = R_{cdab}$ can also be described.
+To express this symmetry, enclose \lstinline{_a_b} and \lstinline{_c_d} each in parentheses \lstinline{()} to treat them as groups.
+Then enclose them in square brackets \lstinline|[]|.
+While curly braces \lstinline|{}| are used to declare antisymmetry, square brackets \lstinline|[]| are used to declare symmetry.
+\begin{lstlisting}[language=egison,numbers=none]
+def R[(_a_b)(_c_d)] : Tensor MathExpr := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
+\end{lstlisting}
+
+All three symmetries $R_{abcd} = -R_{abdc}$, $R_{abcd} = -R_{bacd}$, and $R_{abcd} = R_{cdab}$ can also be declared simultaneously.
+\begin{lstlisting}[language=egison,numbers=none]
+def R[{_a_b}{_c_d}] : Tensor MathExpr := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
+\end{lstlisting}
+
+In summary, Egison uses three types of brackets to declare symmetry.
+Square brackets \lstinline|[]| are used to declare symmetry.
+Curly braces \lstinline|{}| are used to declare antisymmetry.
+Parentheses \lstinline|()| are used to group multiple indices together.
+
+Since the indices of symmetric tensors are usually adjacent, the symmetries of tensors encountered in mathematics and physics can almost always be declared using this notation.
+A nice aspect of this notation is that symmetry can be declared without changing the program on the right-hand side of \lstinline{:=} at all.
+
+
+\subsection{Example Where Symmetry Declaration Shortens Tensor Definitions}
+
+Earlier, we mentioned that an advantage of this approach is that no changes to the program on the right-hand side of \lstinline{:=} are needed, but there are also cases where the program on the right-hand side can be simplified.
+For example, this occurs for tensors whose values are defined using different expressions for each block, as shown below.
+\begin{lstlisting}[language=egison,numbers=none]
+def R'_i_j_k_l : Tensor MathExpr :=
+  generateTensor
+    (\match as list integer with
+       | [#1, #1, _, _] -> 0
+       | [_, _, #1, #1] -> 0
+       | [#1, $b, #1, $d] -> -1 * p^2 * `$\delta$`~(b - 1)_(d - 1)
+       | [$a, #1, #1, $d] ->      p^2 * `$\delta$`~(a - 1)_(d - 1)
+       | [#1, $b, $c, #1] ->      p^2 * g_(b - 1)_(c - 1)
+       | [$a, #1, $c, #1] -> -1 * p^2 * g_(a - 1)_(c - 1)
+       | [#1, $b, $c, $d] -> -1 * p * `$\nabla$`J_(b - 1)_(c - 1)~(d - 1)
+       | [$a, #1, $c, $d] ->      p * `$\nabla$`J_(a - 1)_(c - 1)~(d - 1)
+       | [$a, $b, #1, $d] -> -1 * p * `$\nabla$`J~(d - 1)_(a - 1)_(b - 1)
+       | [$a, $b, $c, #1] ->      p * `$\nabla$`J_(c - 1)_(a - 1)_(b - 1)
+       | [$a, $b, $c, $d] -> R_(a - 1)_(b - 1)_(c - 1)~(d - 1)
+                             + -1 * p^2 * J_(b - 1)_(c - 1) * J_(a - 1)~(d - 1)
+                             +      p^2 * J_(a - 1)_(c - 1) * J_(b - 1)~(d - 1)
+                             +  2 * p^2 * J_(a - 1)_(b - 1) * J_(c - 1)~(d - 1))
+    [5, 5, 5, 5]
+\end{lstlisting}
+Symmetry can greatly reduce the number of conditional branches.
+\begin{lstlisting}[language=egison,numbers=none]
+def R'[{_i_j}{_k_l}] : Tensor MathExpr :=
+  generateTensor
+    (\match as list integer with
+       | [#1, #1, _, _] -> 0
+       | [#1, $b, #1, $d] -> -1 * p^2 * `$\delta$`~(b - 1)_(d - 1)
+       | [#1, $b, $c, $d] -> -1 * p * `$\nabla$`J_(b - 1)_(c - 1)~(d - 1)
+       | [$a, $b, $c, $d] -> R_(a - 1)_(b - 1)_(c - 1)~(d - 1)
+                             + -1 * p^2 * J_(b - 1)_(c - 1) * J_(a - 1)~(d - 1)
+                             +      p^2 * J_(a - 1)_(c - 1) * J_(b - 1)~(d - 1)
+                             +  2 * p^2 * J_(a - 1)_(b - 1) * J_(c - 1)~(d - 1))
+    [5, 5, 5, 5]
+\end{lstlisting}
+
+
+\subsection{Implementation}
+
+This section explains the implementation of the notation for declaring tensor symmetry.
+This notation is implemented as syntactic sugar using \lstinline{generateTensor} expressions.
+We explain the transformation through several concrete examples.
+
+First, let us explain how square brackets \lstinline|[]| for declaring symmetry are expanded.
+The \lstinline{...} in the following program is where some program that returns a tensor is placed.
+\begin{lstlisting}[language=egison,numbers=none]
+def X[_i_j] := ...
+\end{lstlisting}
+A program of the above form is expanded into the following program.
+\begin{lstlisting}[language=egison,numbers=none]
+def X_i_j : Tensor a :=
+ let tmpX_i_j := ...
+   generateTensor
+     (\i j -> if i > j then tmpX_j_i
+              else          tmpX_i_j)
+     (tensorShape tmpX_#_#)
+\end{lstlisting}
+A new variable \lstinline{tmpX} is introduced and assigned the tensor to be defined.
+\lstinline{X} itself is defined using a \lstinline{generateTensor} expression.
+This \lstinline{generateTensor} expression is defined so that the lower-half components reference the upper-half components.
+Since Egison lazily evaluates tensor components, the lower-half components of \lstinline{tmpX} are never computed.
+Therefore, the computation cost of tensor components is halved.
+
+Curly braces \lstinline|{}| for declaring antisymmetry are expanded in the same way.
+\begin{lstlisting}[language=egison,numbers=none]
+def X{_i_j} := ...
+\end{lstlisting}
+The interior of the \lstinline{generateTensor} expression is modified so that the lower-half components have their signs reversed relative to the upper-half components, and the diagonal components are $0$.
+\begin{lstlisting}[language=egison,numbers=none]
+def X_i_j : Tensor a :=
+  let tmpX_i_j := ...
+    generateTensor
+      (\i j -> if i > j      then -tmpX_j_i
+               else if i = j then 0
+               else               tmpX_i_j)
+      (tensorShape tmpX_#_#)
+\end{lstlisting}
+
+\section{Detailed Mechanism of tensorMap Insertion}
+
+In Egison, the compiler automatically inserts \lstinline{tensorMap} and \lstinline{tensorMap2} so that polymorphic functions work correctly with tensor arguments.
+This section provides a detailed explanation of this automatic insertion mechanism.
+
+\subsection{Processing Flow and Timing}
+
+The insertion of \lstinline{tensorMap} is executed after type inference (Phase 5-6) and before type class expansion (Phase 8-2), at Phase 8-1.
+The processing flow is as follows:
+
+\begin{enumerate}
+\item Phase 5-6: Type inference assigns types to all expressions.
+\item Phase 8-1: TensorMap insertion automatically inserts \lstinline{tensorMap}/\lstinline{tensorMap2} where needed.
+\item Phase 8-2: Type class expansion converts type class methods (e.g., \lstinline{(+)}) into dictionary lookup form (\lstinline{dict_Num_("plus")}).
+\end{enumerate}
+
+The reason TensorMap insertion is executed before type class expansion is to first determine the argument types (scalar or tensor), so that instance selection can be performed correctly during type class expansion.
+
+\subsection{Basic Principles of Insertion}
+
+TensorMap insertion is based on the following principles:
+
+\subsubsection{Principle 1: Insertion for Operations on Scalar Types Inside Type Constructors}
+
+When a scalar type or a type variable with type class constraints exists inside a type constructor (list \lstinline{[a]}, tuple \lstinline{(a, b)}, etc.), \lstinline{tensorMap} or \lstinline{tensorMap2} is always inserted for operations on that type.
+
+For example, when an element \lstinline{x} extracted from a variable \lstinline{xs: [a]} is subjected to an operation \lstinline{(+)} that expects a scalar type, it is transformed to \lstinline{tensorMap2 (+)}.
+
+\subsubsection{Principle 2: Behavior of tensorMap on Scalars}
+
+\lstinline{tensorMap} and \lstinline{tensorMap2} are implemented so that they can be applied to scalar values directly:
+
+\begin{itemize}
+\item \lstinline{tensorMap f scalar} returns \lstinline{f scalar} (acts as identity when not a tensor)
+\item \lstinline{tensorMap2 f s1 s2} returns \lstinline{f s1 s2}
+\end{itemize}
+
+This property eliminates the need to insert conditional branches for determining at runtime whether arguments are scalars or tensors, greatly simplifying the implementation.
+
+\subsection{Insertion for Higher-Order Functions}
+
+When a function is passed as an argument to a higher-order function, if that function is a binary function and both parameters are scalar types, it is automatically wrapped with \lstinline{tensorMap2}.
+
+\subsubsection{Detection of Binary Functions}
+
+A function is detected as a binary function to be wrapped with \lstinline{tensorMap2} when its type has the form \lstinline{a -> b -> c} (where \lstinline{c} is not a function type) and both \lstinline{a} and \lstinline{b} are scalar types.
+
+Whether a type is scalar is determined by checking whether it cannot be unified with \lstinline{Tensor a}:
+\begin{itemize}
+\item A type variable with type class constraints (e.g., \lstinline|{Num a} a|) cannot be unified with \lstinline{Tensor a} because \lstinline{Tensor} does not have an instance of \lstinline{Num}, so it is determined to be a scalar type.
+\item Concrete types (\lstinline{Integer}, \lstinline{Float}, etc.) also cannot be unified with \lstinline{Tensor a}, so they are determined to be scalar types.
+\item A tensor type like \lstinline{Tensor Integer} can be unified with \lstinline{Tensor a}, so it is not determined to be a scalar type.
+\end{itemize}
+
+\subsubsection{Wrapping with tensorMap2}
+
+A binary function \lstinline{f : a -> b -> c} is transformed as follows:
+\begin{lstlisting}[language=egison,numbers=none]
+f  --->  \x y -> tensorMap2 f x y
+\end{lstlisting}
+Here, the lambda arguments \lstinline{x} and \lstinline{y} have tensor types (\lstinline{Tensor a} and \lstinline{Tensor b}), and the result is also a tensor type (\lstinline{Tensor c}).
+
+\subsubsection{Handling of Eta-Expanded Lambdas}
+
+At the TensorMap insertion stage, type class methods still appear in eta-expanded form.
+For example, the \lstinline{(+)} operator appears in the following form:
+\begin{lstlisting}[language=egison,numbers=none]
+\etaVar1 etaVar2 -> dict_Num_("plus") etaVar1 etaVar2
+\end{lstlisting}
+
+When the body of this two-argument lambda is a two-argument function application, the entire body is wrapped with \lstinline{tensorMap2}:
+\begin{lstlisting}[language=egison,numbers=none]
+\etaVar1 etaVar2 -> tensorMap2 (\x y -> dict_Num_("plus") x y) etaVar1 etaVar2
+\end{lstlisting}
+
+This transformation ensures that tensorMap insertion is correctly applied to type class methods as well.
+
+\subsection{Concrete Example: The sum Function}
+
+By tracing the transformation of the polymorphic \lstinline{sum} function, we can understand the TensorMap insertion mechanism more concretely.
+
+\subsubsection{Original Definition}
+
+\begin{lstlisting}[language=egison,numbers=none]
+def sum {Num a} (xs: [a]) : a := foldl1 (+) xs
+\end{lstlisting}
+
+This function has the polymorphic type \lstinline{[a] -> a} with the type class constraint \lstinline|{Num a}|.
+
+\subsubsection{Phase 5-6: After Type Inference}
+
+Type inference instantiates the type variable \lstinline{a} to a concrete type (e.g., \lstinline{t0}):
+
+\begin{lstlisting}[language=egison,numbers=none]
+def sum : {Num t0} [t0] -> t0 :=
+  \xs ->
+    foldl1 ((+) : {Num t0} t0 -> t0 -> t0) (xs : [t0])
+\end{lstlisting}
+
+Here, the type of \lstinline{xs} is \lstinline{[t0]}, and the type variable \lstinline{t0} with a type class constraint exists inside the type constructor \lstinline{[]}.
+Also, the type of \lstinline{(+)} is \lstinline|{Num t0} t0 -> t0 -> t0|, a binary function taking scalar types as arguments.
+
+\subsubsection{Phase 8-1: After TensorMap Insertion}
+
+\lstinline{(+)} is a binary function with both parameters being scalar types (\lstinline{t0}), so it is wrapped with \lstinline{tensorMap2}:
+
+\begin{lstlisting}[language=egison,numbers=none]
+def sum : {Num t0} [t0] -> t0 :=
+  \xs ->
+    foldl1 (tensorMap2 (+)) xs
+\end{lstlisting}
+
+At this point, even if the elements of \lstinline{xs} are tensors, \lstinline{tensorMap2} correctly performs component-wise addition.
+
+\subsubsection{Phase 8-2: After Type Class Expansion}
+
+The type class method \lstinline{(+)} is expanded into dictionary lookup form:
+
+\begin{lstlisting}[language=egison,numbers=none]
+def sum : {Num t0} [t0] -> t0 :=
+  \dict_Num xs ->
+    foldl1 (tensorMap2 (dict_Num_("plus"))) xs
+\end{lstlisting}
+
+Here, \lstinline{dict_Num} is the method dictionary for the \lstinline{Num t0} instance.
+
+\subsubsection{Runtime Behavior}
+
+This transformation makes the \lstinline{sum} function work correctly for both scalars and tensors:
+
+\paragraph{Scalar case (\lstinline{t0 = Integer}):}
+\begin{lstlisting}[language=egison,numbers=none]
+sum [1, 2, 3]
+-- foldl1 (tensorMap2 (+)) [1, 2, 3]
+-- tensorMap2 (+) 1 2  -->  (+) 1 2  -->  3
+-- tensorMap2 (+) 3 3  -->  (+) 3 3  -->  6
+-- Result: 6
+\end{lstlisting}
+
+For scalars, \lstinline{tensorMap2} acts as identity, so ordinary addition is performed.
+
+\paragraph{Tensor case (\lstinline{t0 = Tensor Integer}):}
+\begin{lstlisting}[language=egison,numbers=none]
+sum [[| 1, 2 |], [| 3, 4 |]]
+-- foldl1 (tensorMap2 (+)) [[| 1, 2 |], [| 3, 4 |]]
+-- tensorMap2 (+) [| 1, 2 |] [| 3, 4 |]  -->  [| 1+3, 2+4 |]  -->  [| 4, 6 |]
+-- Result: [| 4, 6 |]
+\end{lstlisting}
+
+For tensors, \lstinline{tensorMap2} applies addition component-wise.
+
+\paragraph{Mixed case:}
+\begin{lstlisting}[language=egison,numbers=none]
+sum [[| 1, 2 |], 3]
+-- tensorMap2 (+) [| 1, 2 |] 3  -->  tensorMap (\x -> x + 3) [| 1, 2 |]
+--                                -->  [| 1+3, 2+3 |]  -->  [| 4, 5 |]
+-- Result: [| 4, 5 |]
+\end{lstlisting}
+
+Even when one argument is a tensor and the other is a scalar, \lstinline{tensorMap2} handles it appropriately.
+
+\subsection{Summary}
+
+Through the TensorMap insertion mechanism, Egison achieves the following:
+
+\begin{itemize}
+\item Users only need to define polymorphic functions with type class constraints, and tensor operations are automatically supported.
+\item The compiler automatically inserts \lstinline{tensorMap}/\lstinline{tensorMap2} based on type information, so users do not need to write them explicitly.
+\item Depending on the runtime type, scalar and tensor operations are automatically switched.
+\item Functions passed as arguments to higher-order functions (\lstinline{foldl}, \lstinline{map}, etc.) also have appropriate transformations applied automatically.
+\end{itemize}
+
+This design allows Egison's computer algebra system to handle scalars and tensors uniformly, while providing an intuitive and user-friendly interface.

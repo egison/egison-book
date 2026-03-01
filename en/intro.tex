@@ -1,0 +1,202 @@
+\chapter{What is Programming Egison}\label{intro}
+
+This chapter introduces what kind of language Egison is.
+We hope you will gain a general understanding of Egison and the pattern-match-oriented programming paradigm it advocates.
+
+\section{Egison's Position Among Programming Languages}\label{intro-egison}
+
+Programming language features can be broadly divided into two categories.
+Features for concisely describing operations on various machines including computers, and features for expressing abstract concepts in the programmer's mind as programs.
+Since computers are physical devices, the former features are essential.
+These include, for example, features that automate operations for cache and memory management.
+The latter features aim to enable programmers to describe algorithms in their minds without translating them for computers.
+Among the problems we want computers to solve, many involve abstract concepts in their solutions.
+Even abstractions that humans can easily understand are often difficult to express in a form that computers can understand.
+Egison is built with a focus on expanding the latter category of features.
+
+The mainstream school aiming at concise algorithm description is functional programming languages.
+A major characteristic of programming in functional programming languages is that programmers can treat functions in the same way as other built-in data types.
+Specifically, functions can be passed as arguments to other functions, and functions that return functions can be defined.
+Thanks to this, there are many cases where processes that are difficult to modularize in non-functional programming languages can be modularized.
+In functional programming, operations on the physical device that is the computer are, in most cases, hidden from the programmer by the compiler.
+
+However, even in functional programming languages, there are cases where one needs to translate the algorithmic image in one's mind in order to express it as a program.
+Algorithms dealing with non-free data types are a typical example.
+A non-free data type is a data type that has multiple equivalent representations for the same data.
+For example, multisets (sets that allow duplicate elements) are a non-free data type.
+This is because the multiset $\{a, a, b\}$ can also be represented as $\{a, b, a\}$ or $\{b, a ,a\}$.
+Other examples of non-free data types include graphs and mathematical expressions.
+
+Egison was developed with the goal of expanding the range of algorithms that can be described concisely by enabling pattern matching on non-free data types.
+Egison implements features for pattern matching on data of non-free data types.
+Through this, it advocates pattern-match-oriented programming, a programming paradigm that leverages this pattern matching.
+
+Furthermore, a computer algebra system has been implemented on top of Egison, leveraging this pattern matching capability.
+A computer algebra system is a programming language capable of symbolic computation such as $x + x = 2 x$ and $(x + y)^2 = x^2 + 2 x y + y^2$.
+Using Egison, pattern matching on mathematical expressions can be easily defined, making it possible to implement a computer algebra system with considerably less code than in other languages.
+Leveraging the extensibility afforded by the concise implementation of this computer algebra system, several novel features have been implemented in Egison as a computer algebra system.
+In particular, features for describing tensor computations have been well developed, enabling users to easily define differential geometry operators that were previously difficult to define.
+
+\begin{oframed}
+  \paragraph{Pursuing New Notations and Scientific Research}
+  In existing languages, we sometimes cannot directly express the images in our minds.
+  Such inconveniences arise when the abstractions we perform in our minds cannot be expressed in the language.
+  If we can discover new syntax that enables the expression of such abstractions and incorporate it into the language, this problem can be solved.
+  In fact, Egison was started by finding one such abstraction for programming languages.
+
+  The question of whether it is truly possible to create a language that can express all images is extremely difficult.
+  This is because the images in our minds change as our understanding of the subject deepens.
+  Along with that change, the expressions that are convenient for us naturally evolve as well.
+
+  To illustrate this point, let us consider an extreme example.
+
+  Suppose there is a person who already knows the concept of numbers but does not know the concepts of addition or multiplication.
+  For that person, the decimal system is an incomprehensible concept, and decimal notation is completely unintelligible.
+  However, for someone who knows the concepts of addition and multiplication and their properties to some extent, decimal notation is an extremely convenient and intuitive representation of numbers.
+
+  Not knowing addition or multiplication may seem like an extreme example.
+  However, looking back at the history of science, it would not be surprising if there are still many important concepts that we do not yet know.
+  When such concepts are discovered and our understanding of nature deepens, new notations will be born in language to express them.
+  Conversely, new notations born in this way help us understand nature more deeply, and as a result, further new notations are born.
+  In this way, the evolution of notation and the advancement of science are two sides of the same coin.
+
+  Therefore, studying notation has great significance.
+  There are several interesting problems such as ``Is there a general method for finding new notations?'', ``Are there general laws that better notations satisfy?'', and ``Is there a general method for measuring the expressive power of notations?''
+  The author expects that when the answers to these problems become clear, an entirely new worldview will emerge.
+  The motivation for creating Egison is to approach the answers to these problems through the creation of a new programming language.
+\end{oframed}
+
+\begin{oframed}
+  \paragraph{Reasons for Preparing a Custom Programming Language}
+The new programming language features implemented in Egison could alternatively be implemented by extending an existing programming language rather than creating the custom programming language Egison.
+The reason for not choosing this approach and instead creating the custom programming language Egison is that it allows new features to be implemented more quickly and reliably.
+Adding newly invented features to an existing programming language sometimes requires large-scale investigation and implementation beyond the new feature itself, because the new feature may conflict with existing features and affect a wide range of the language implementation.
+In fact, both Egison's pattern matching and tensor index notation are such features.
+For example, if one were to implement Egison's pattern matching in Haskell, one would need to design and implement a type system in addition to implementing the pattern matching functionality.
+Similarly, implementing tensor index notation in Haskell would also require implementing symbolic computation capabilities for handling symbolic indices, as well as designing data structures and a type system for handling tensors with symbolic indices.
+In contrast, preparing a custom programming language designed to implement newly invented features allows the implementation to be done with minimal effort.
+However, preparing a custom programming language has disadvantages such as the need to reimplement known features and the difficulty of acquiring new users.
+
+As of January 2026, Egison has been equipped with a static type system (Egison version 5).
+Type inference allows type annotations to be omitted in many cases, but types can also be explicitly specified when needed.
+This type system is integrated with Egison's advanced features such as pattern matching on non-free data types and tensor computation.
+The introduction of the static type system has improved program reliability and significantly enhanced its practicality as a computer algebra system.
+
+Starting in 2019, efforts have also begun to implement Egison's features in existing major programming languages.
+The porting of Egison's features to other languages is discussed in Section~\ref{direction-language-library}.
+\end{oframed}
+
+\section{Part~\ref{part-pmo}: Pattern-Match-Oriented Programming}\label{intro-pmo}
+
+Part~\ref{part-pmo} explains pattern-match-oriented programming, a new programming paradigm advocated by Egison.
+
+\subsection{What is Pattern-Match-Oriented Programming}
+
+In this section, we introduce through several examples what kind of programming paradigm pattern-match-oriented\index{pattern-match-oriented} programming is.
+
+A clear example where pattern-match-oriented programming makes program description more intuitive is the implementation of the \lstinline{intersect} function.
+\lstinline{intersect} is a function that takes two lists as arguments and returns a list of elements common to both lists.
+Using Egison to pattern match each argument list as a set (ignoring element order), we can describe \lstinline{intersect} by writing a pattern that matches elements common to both lists.
+How to read the program will be introduced in subsequent chapters.
+\begin{lstlisting}[language=egison,numbers=none]
+def intersect xs ys :=
+  matchAllDFS (xs, ys) as (set eq, set eq) with
+  | ($x :: _, #x :: _) -> x
+\end{lstlisting}
+In contrast, writing this in a functional programming style in Haskell without using Egison's pattern matching requires describing a method for extracting common elements by combining functions on lists.
+\begin{lstlisting}[language=egison,numbers=none]
+intersect xs ys =  filter (\x -> any (== x) ys) xs
+\end{lstlisting}
+This program can also be rewritten using list comprehension as follows.
+\begin{lstlisting}[language=egison,numbers=none]
+intersect xs ys =  [x | x <- xs, any (== x) ys]
+\end{lstlisting}
+
+The program using Egison's pattern matching simply describes a pattern that matches elements common to two lists, whereas in functional programming, the programmer must think of and describe the method for extracting those common elements.
+The former style of programming, which describes ``what to compute'' (what to do), is called declarative programming, and the latter style, which describes ``how to compute'' (how to do), is called procedural programming.
+When ``how to compute'' is obvious from ``what to compute,'' declarative programming, which describes ``what to compute,'' results in more readable and concise programs.
+In the case of the \lstinline{intersect} example, declarative programming is made possible because Egison can modularize the set pattern matching algorithm.
+
+As a slightly different example, we define the \lstinline{concat} function using pattern-match-oriented programming.
+By writing a pattern that matches elements of a list of lists, we can define \lstinline{concat}.
+
+\begin{lstlisting}[language=egison,numbers=none]
+def concat xss :=
+  matchAllDFS xss as list (list something) with
+  | _ ++ (_ ++ $x :: _) :: _ -> x
+
+concat [[1,2],[3],[4,5]]
+-- [1,2,3,4,5]
+\end{lstlisting}
+
+As yet another example of pattern-match-oriented programming, we define the \lstinline{unique} function.
+We can define \lstinline{unique} by writing a pattern that matches elements for which no identical value appears later in the list.
+\begin{lstlisting}[language=egison,numbers=none]
+def unique xs :=
+  matchAllDFS xs as list eq with
+  | _ ++ $x :: !(_ ++ #x :: _) -> x
+
+unique [1,2,3,2,4]
+-- [1,3,2,4]  
+\end{lstlisting}
+In the subsequent chapters, we will explain the Egison syntax, features, and programming techniques used in the programs above.
+
+\subsection{Organization of Part~\ref{part-pmo}}
+
+Part~\ref{part-pmo} aims to provide as compact an explanation as possible of pattern-match-oriented programming and the Egison features that support it.
+For this reason, this book assumes prior knowledge of functional programming (programming using Lisp-family languages, OCaml, or Haskell).
+Simple features that also exist in existing functional languages are only briefly explained when they appear.
+
+The organization of Part~\ref{part-pmo} is as follows.
+Chapter~\ref{quick} introduces Egison's syntax related to pattern matching.
+Chapter~\ref{pmo} introduces techniques frequently used in pattern-match-oriented programming.
+Chapter~\ref{essence} explains what pattern-match-oriented programming is---a programming style that leverages Egison's pattern matching.
+Chapter~\ref{mechanism} explains the internal mechanisms of pattern matching in Egison.
+Chapter~\ref{matcher} explains how users can define matchers.
+Chapter~\ref{etc} explains features useful for practical programming, such as anonymous parameter functions and IO input/output functionality.
+Chapter~\ref{sweet} introduces how to use Sweet Egison, a library for using Egison's pattern matching in Haskell.
+
+Readers interested in Egison as users are advised to read Chapter~\ref{quick}, Chapter~\ref{pmo}, Chapter~\ref{essence}, Section~\ref{mechanism-overview} of Chapter~\ref{mechanism}, and Chapter~\ref{matcher} in order.
+Readers interested in the design and implementation of Egison can read Chapter~\ref{mechanism} and Chapter~\ref{matcher} after reading the first half of Chapter~\ref{quick}.
+
+\section{Part~\ref{part-cas}: Egison as a Computer Algebra System}\label{intro-cas}
+
+Part~\ref{part-cas} introduces the features that Egison has as a computer algebra system.
+
+\subsection{Egison as a Computer Algebra System and Its Features}
+
+A computer algebra system is a programming language capable of symbolic computation such as $x + x = 2 x$.
+Such symbolic computation constitutes a large part of the calculations we perform on a daily basis.
+In fact, most of the calculations that appear in mathematics from middle school onward involve symbolic computation.
+Therefore, creating a programming language capable of symbolic computation is important.
+
+The reason building a computer algebra system is difficult is that mathematical expressions containing symbolic variables are a non-free data type without a single fixed form.
+For example, the expression $(x + y)^2$ is equivalent to the expression $x^2 + 2 x y + y^2$.
+Because Egison's pattern matching, which is also applicable to non-free data types, allows expression rewriting to be implemented concisely, a computer algebra system can be implemented with considerably less code than in existing programming languages.
+Based on this idea, a computer algebra system was implemented in Egison in 2016.
+This computer algebra system is integrated with the Egison interpreter and can be used within Egison.
+
+The implementation of this computer algebra system is simpler compared to other computer algebra system implementations.
+This has the advantage of making feature extensions easier.
+In fact, thanks to this, the introduction of tensor index notation into programming---a distinctive and important feature of Egison---was also easy to implement.
+The technique of introducing tensor index notation into a programming language was conceived while creating sample programs for differential geometry computations using this computer algebra system, and was implemented within a few weeks.
+
+Implementing computer algebra system features within a programming language has the advantage of making it easier to create practical tools.
+For computer algebra systems, there are many cases where users are satisfied as long as the system is faster than manual calculation, and execution speed is not as critically demanded as in ordinary programming languages.
+For mathematics researchers, being able to write in programs the mathematical notation they normally write by hand is often more appreciated than execution speed.
+Therefore, implementing a computer algebra system is an ideal challenge for Egison, which aims to introduce new notations into programming.
+
+%Also, there are cases where users do not need to understand the implementation of new features provided by Egison.
+%As long as they can use it, they can use the notation without understanding how it is implemented.
+%They are also less resistant to understanding abstract new notations compared to general programmers.
+
+\subsection{Organization of Part~\ref{part-cas}}
+
+Part~\ref{part-cas} first explains how to use the computer algebra system and then describes Egison's features as a computer algebra system.
+
+The organization of Part~\ref{part-cas} is as follows.
+Chapter~\ref{cas} introduces the methods of symbolic computation that characterize computer algebra systems, along with concrete program examples.
+Chapter~\ref{mexpr} explains how mathematical expression data is represented internally in Egison.
+Chapter~\ref{tensor} explains how to write programs using tensor index notation.
+Chapter~\ref{funcsym} explains function symbols.
+Chapter~\ref{diffgeo} presents programs for differential geometry computations as practical applications of the features described up to that point.

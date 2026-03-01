@@ -1,0 +1,46 @@
+Egison開発の目標は，以下の2つにまとめられる．
+\begin{enumerate}
+\item コンピュータ・プログラムを簡潔に表現するための革新的な機能を設計・開発する．
+\item それらの機能の応用事例を提示・開発し，ユーザー数を増やす．
+\end{enumerate}
+
+
+
+\section{Egisonについての執筆}\label{direction-writing}
+
+\subsection{論文}\label{direction-writing-paper}
+
+Egisonについての論文は現在5本の査読付き論文（ただしそのうち3本はワークショップ論文）を出版している．
+これらの論文のうち特に重要なのは，APLAS 2018に採択されたEgisonパターンマッチの設計についての論文と$\langle$Programming$\rangle$ 2020に採択されたEgisonパターンマッチをいかした新しいプログラミング・スタイルであるパターンマッチ指向プログラミングを提唱した論文である．
+
+\subsection{パターンマッチについての論文}
+
+採択済みのパターンマッチについての論文は以下の通りである．
+\begin{enumerate}
+\item Egisonパターンマッチの仕組みについての論文（APLAS 2018）
+\item パターンマッチ指向プログラミングについての論文（$\langle$Programming$\rangle$ 2020）
+\item ループパターンについての論文（Scheme Workshop 2019）
+\item EgisonパターンマッチのScheme移植についての論文（Scheme Workshop 2020）
+\end{enumerate}
+
+現在のところ，各予定のパターンマッチについての論文は以下の通りである．
+\begin{enumerate}
+\item CDCL SATソルバーの実装についての論文
+\item EgisonパターンマッチのHaskell移植についての論文
+\end{enumerate}
+
+\subsection{テンソル添字記法についての論文}
+
+現在，採択済みのパターンマッチについての論文は以下の一つだけである．
+\begin{enumerate}
+\item テンソル添字記法をプログラミング言語に導入する手法についての露文（Scheme Workshop 2017）
+\end{enumerate}
+
+\subsection{チュートリアル}\label{direction-writing-tutorial}
+
+Egison特有の機能について，Egisonの初心者がなるべく早く習得できる資料をチュートリアルとしてまとめている．
+
+\subsection{マニュアル}\label{direction-writing-manual}
+
+Egisonのマニュアルについては，簡潔な文書をウェブサイトで公開しているのみであったが，Version 4をリリースして大きく文法が変わったこのタイミングで，マニュアルを新しく書き直している．
+

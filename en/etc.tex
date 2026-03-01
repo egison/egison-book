@@ -1,0 +1,543 @@
+\chapter{Several Features as a Functional Programming Language}\label{etc}
+
+This chapter introduces several Egison features that facilitate functional programming.
+
+\section{Anonymous Parameter Functions}
+
+Anonymous parameter functions\index{anonymous parameter function} allow you to define functions without naming the arguments.
+Lambda expressions let you omit the naming of the function itself.
+Anonymous parameter functions, which also let you omit the naming of arguments, can be thought of as taking this idea one step further.
+For example, an anonymous parameter function that multiplies the first argument by 10 and adds the second argument can be defined as follows.
+\begin{lstlisting}[language=egison,numbers=none]
+2#(%1 * 10 + %2) 1 2
+-- 12
+\end{lstlisting}
+The \lstinline{2} before \lstinline{#} indicates that this defines a 2-argument function.
+The \lstinline{%1} and \lstinline{%2} appearing in the function body represent the first and second arguments, respectively.
+
+Anonymous parameter functions have two variants: one that takes a tuple as its argument and one that takes a list.
+These two variants are defined by enclosing the number before \lstinline{#} in parentheses or brackets.
+Enclosing the number before \lstinline{#} in \lstinline{()} defines an anonymous parameter function that takes a tuple as its argument.
+\begin{lstlisting}[language=egison,numbers=none]
+(2)#(%1, %2) (10, 20)
+-- (10, 20)
+\end{lstlisting}
+Enclosing the number before \lstinline{#} in \lstinline{[]} defines an anonymous parameter function that takes a list as its argument.
+\begin{lstlisting}[language=egison,numbers=none]
+[2]#(%2, %1) [10, 20]
+-- (20, 10)
+\end{lstlisting}
+
+\section{Anonymous \texttt{matchAll} Functions and Anonymous \texttt{match} Functions}
+
+When defining functions, it is common to immediately pattern-match on a formal parameter.
+In such cases, the formal parameter name serves no purpose other than as the target of that pattern match.
+To address this issue, anonymous \lstinline{matchAll} functions and anonymous \lstinline{match} functions are provided.
+
+First, let us introduce anonymous \lstinline{matchAll} functions.
+An anonymous \lstinline{matchAll} function is defined by writing \lstinline{matchAll} immediately after \lstinline{\} without a space.
+In this case, the pattern-matching target is omitted.
+This is because the argument of the anonymous \lstinline{matchAll} function becomes the target.
+\begin{lstlisting}[language=egison,numbers=none]
+\matchAll as list something with
+  | $hs ++ $ts -> (hs, ts)
+\end{lstlisting}
+
+An anonymous \lstinline{match} function can be defined simply by replacing \lstinline{matchAll} with \lstinline{match} in an anonymous \lstinline{matchAll} function.
+\begin{lstlisting}[language=egison,numbers=none]
+\match as list something with
+  | nil -> True
+  | _ -> False
+\end{lstlisting}
+
+\section{Defining Infix Operators}
+
+Egison provides the ability for users to define new infix operators.
+To declare an infix operator, use \lstinline{infix}, \lstinline{infixl}, or \lstinline{infixr}.
+\lstinline{infix}, \lstinline{infixl}, and \lstinline{infixr} are used to define non-associative, left-associative, and right-associative operators, respectively.
+\lstinline{infix}, \lstinline{infixl}, and \lstinline{infixr} all take three arguments.
+The first argument takes the keyword \lstinline{expression} or \lstinline{pattern} to specify whether the infix operator being defined is a function or a pattern constructor.
+The second argument takes an integer value specifying the precedence of the infix operator being defined.
+The third argument takes the name of the infix operator being defined.
+
+As an example of defining a function used as an infix operator, the logical conjunction \lstinline{&&} is defined as follows.
+The type annotation indicates that it takes two boolean values as arguments and returns a boolean value.
+\begin{lstlisting}[language=egison,numbers=none]
+infixr expression 5 &&
+
+def (&&) (a: Bool) (b: Bool) : Bool := match (a, b) as (eq, eq) with
+  | (#True, #True) -> True
+  | _              -> False
+\end{lstlisting}
+
+As an example of defining a pattern constructor used as an infix operator, the join pattern \lstinline{++} is defined as follows.
+The type annotation indicates that it takes a type parameter \lstinline|{a}| and a matcher argument \lstinline|(m: Matcher a)|, and returns a matcher for the list type \lstinline|[a]|.
+\begin{lstlisting}[language=egison,numbers=none]
+infixl pattern 7 ++
+
+def list {a} (m: Matcher a) : Matcher [a] := matcher
+  | $ ++ $ as (list m, list m) with
+    ...
+\end{lstlisting}
+
+\begin{table}[h]
+\begin{center}
+    \begin{tabular}{ | l | l | l |}
+    \hline
+    Operator & Description & Precedence \\ \hline
+    \texttt{\^} & Exponentiation & 8 \\ \hline
+    \texttt{*} & Multiplication & 7 \\ \hline
+    \texttt{/} & Division & 7 \\ \hline
+    \texttt{\%} & Remainder & 7 \\ \hline
+    \texttt{.} & Tensor product & 7 \\ \hline
+    \texttt{+} & Addition & 6 \\ \hline
+    \texttt{-} & Subtraction & 6 \\ \hline
+    \texttt{::} & Cons & 5 \\ \hline
+    \texttt{++} & Append & 5 \\ \hline
+    \texttt{=}, \texttt{<=} \texttt{>=}, \texttt{<}, \texttt{>} & Comparison & 4 \\ \hline
+    \texttt{\&\&} & Logical conjunction & 3 \\ \hline
+    \texttt{||} & Logical disjunction & 2 \\ \hline
+    \texttt{\$} & Function application & 0 \\ \hline
+    \end{tabular}
+\end{center}
+    \caption{List of infix operators (functions)}
+    \label{tab:infixFunctions}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+    \begin{tabular}{ | l | l | l |}
+    \hline
+    Operator & Description & Precedence \\ \hline
+    \texttt{\^} & Exponentiation & 8 \\ \hline
+    \texttt{*} & Multiplication & 7 \\ \hline
+    \texttt{/} & Division & 7 \\ \hline
+    \texttt{+} & Addition & 6 \\ \hline
+    \texttt{::} & Cons & 5 \\ \hline
+    \texttt{++} & Append & 5 \\ \hline
+    \texttt{\&} & And-pattern & 3 \\ \hline
+    \texttt{|} & Or-pattern & 2 \\ \hline
+    \end{tabular}
+\end{center}
+    \caption{List of infix operators (patterns)}
+    \label{tab:infixPatterns}
+\end{table}
+
+\section{Type Classes}
+
+Egison supports type classes\index{type class}.
+Type classes are a mechanism for abstracting common behavior across multiple types.
+Egison's type classes have syntax and semantics similar to Haskell's type classes.
+
+\subsection{Defining Type Classes}
+
+Type classes are defined using the \lstinline{class} keyword.
+A type class definition includes a type variable and the signatures of functions required for that type variable.
+For example, the \lstinline{Eq} type class representing types that can be compared for equality is defined as follows.
+\begin{lstlisting}[language=egison,numbers=none]
+class Eq a where
+  (==) (x: a) (y: a) : Bool
+  (/=) (x: a) (y: a) : Bool
+\end{lstlisting}
+This definition means that ``for a type \lstinline{a} to be an instance of \lstinline{Eq}, it must provide operations \lstinline{==} and \lstinline{/=} that take two values of type \lstinline{a} and return a \lstinline{Bool}.''
+
+As another example, the \lstinline{Num} type class representing numeric types is defined as follows.
+\begin{lstlisting}[language=egison,numbers=none]
+class Num a where
+  (+) (x: a) (y: a) : a
+  (-) (x: a) (y: a) : a
+  (*) (x: a) (y: a) : a
+  (/) (x: a) (y: a) : a
+\end{lstlisting}
+
+\subsection{Type Class Instances}
+
+To make a concrete type an instance of a type class, use the \lstinline{instance} keyword.
+For example, to make the \lstinline{Integer} type an instance of \lstinline{Eq}, write the following.
+\begin{lstlisting}[language=egison,numbers=none]
+instance Eq Integer where
+  (==) x y := x = y
+  (/=) x y := not (x == y)
+\end{lstlisting}
+
+An example of making the \lstinline{MathExpr} type (a type representing mathematical expressions) an instance of \lstinline{Num} is as follows.
+\begin{lstlisting}[language=egison,numbers=none]
+instance Num MathExpr where
+  (+) x y := plusForMathExpr x y
+  (-) x y := minusForMathExpr x y
+  (*) x y := multForMathExpr x y
+  (/) x y := divForMathExpr x y
+\end{lstlisting}
+
+Type class instance definitions can also include type class constraints.
+For example, when making the \lstinline{Tensor a} type an instance of \lstinline{Eq}, if the element type \lstinline{a} also needs to be an instance of \lstinline{Eq}, write the following.
+\begin{lstlisting}[language=egison,numbers=none]
+instance {Eq a} Eq (Tensor a) where
+  (==) t1 t2 := t1 = t2
+  (/=) t1 t2 := not (t1 == t2)
+\end{lstlisting}
+
+\subsection{Using Type Class Constraints}
+
+By using type classes, you can impose constraints on polymorphic functions.
+Type class constraints are written in curly braces \lstinline|{}| in the function's type signature.
+For example, a function that compares two values for equality can be defined as follows.
+\begin{lstlisting}[language=egison,numbers=none]
+def eqAs {Eq a} (m: Matcher a) (x: a) (y: a) : Bool := ...
+\end{lstlisting}
+This type signature means ``when type \lstinline{a} is an instance of \lstinline{Eq}, \lstinline{eqAs} takes a \lstinline{Matcher a}, an \lstinline{a}, and an \lstinline{a}, and returns a \lstinline{Bool}.''
+
+Multiple type class constraints can also be imposed.
+For example, a function that requires both ordering and equality can be written as follows.
+\begin{lstlisting}[language=egison,numbers=none]
+def compare {Eq a, Ord a} (x: a) (y: a) : Ordering := ...
+\end{lstlisting}
+
+Type class constraints can be used not only in function definitions but also in matcher definitions.
+For example, the \lstinline{sortedList} matcher requires that the element type be orderable (an instance of \lstinline{Ord}).
+\begin{lstlisting}[language=egison,numbers=none]
+def sortedList {Ord a} (m: Matcher a) : Matcher [a] := matcher
+  ...
+\end{lstlisting}
+
+\subsection{Type Class Implementation: Dictionary-Passing Style}
+
+Egison's type classes are implemented using \emph{dictionary-passing style}.
+This means that a function with type class constraints is transformed into a function that actually takes a dictionary containing the type class methods as an argument.
+
+For example, the following function with a type class constraint
+\begin{lstlisting}[language=egison,numbers=none]
+def double {Num a} (x: a) : a := x + x
+\end{lstlisting}
+is internally transformed into a function that takes a dictionary parameter.
+\begin{lstlisting}[language=egison,numbers=none]
+def double (dict_Num_a) (x: a) : a :=
+  (dict_Num_a_"plus") x x
+\end{lstlisting}
+Here, \lstinline{dict_Num_a} is a hash (dictionary) containing the methods of the \lstinline{Num a} instance (\lstinline{+}, \lstinline{-}, \lstinline{*}, \lstinline{/}).
+
+When calling a function on a concrete type, the appropriate instance dictionary is automatically passed.
+For example, \lstinline{double 1} is transformed into the following.
+\begin{lstlisting}[language=egison,numbers=none]
+double numInteger 1
+\end{lstlisting}
+Here, \lstinline{numInteger} is the dictionary for the \lstinline{Num Integer} instance.
+
+This dictionary-passing style achieves dynamic dispatch of type classes (selection of methods based on the type at runtime).
+It also correctly handles calls between functions with type class constraints.
+For example, in the following functions
+\begin{lstlisting}[language=egison,numbers=none]
+def myPlus {Num a} (x: a) (y: a) : a := x + y
+def myPlus2 {Num a} (x: a) (y: a) : a := myPlus x y
+\end{lstlisting}
+the dictionary received by \lstinline{myPlus2} is correctly passed to \lstinline{myPlus}.
+
+\section{\texttt{IO} Input/Output}
+
+Egison, whose default evaluation strategy is lazy evaluation, has special syntax for writing programs with side effects.
+Egison is a language with a static type system, and it uses the same approach as Haskell for writing programs with side effects.
+
+\subsection{The \texttt{main} Function}
+
+For example, a program that outputs the string ``Hello world!'' can be written as follows.
+The type annotation indicates that it takes a list of strings as command-line arguments and performs IO processing.
+\begin{lstlisting}[language=egison,numbers=none]
+def main (args: [String]) : IO () := write "Hello world!\n"
+\end{lstlisting}
+When the command-line option \lstinline{-t} is not specified, Egison executes the \lstinline{main} function.
+The above program can be executed as follows.
+\begin{lstlisting}[language=egison,numbers=none]
+$ cat hello.egi
+def main (args: [String]) : IO () := write "Hello world!\n"
+$ egison hello.egi
+Hello world!
+\end{lstlisting}
+\lstinline{write} is a built-in IO function in Egison.
+\lstinline{write} takes a string as its first argument and prints that string to standard output.
+There are several other IO functions besides \lstinline{write}.
+Figure~\ref{tab:ioFunctions} summarizes the complete list.
+
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{ | l | p{9.5cm} |}
+    \hline
+    Function name & Description \\ \hline
+    \texttt{return} $x$ & Returns $x$ as the result of an IO function. \\ \hline
+    \texttt{openInputFile} $path$ & Opens the file at path $path$ in read mode and returns an input port to that file. \\ \hline
+    \texttt{openOutputFile} $path$ & Opens the file at path $path$ in write mode and returns an output port to that file. \\ \hline
+    \texttt{closeInputPort} $port$ & Closes the input port $port$. \\ \hline
+    \texttt{closeOutputPort} $port$ & Closes the output port $port$. \\ \hline
+    \texttt{readChar} & Reads one character from standard input and returns that character. \\ \hline
+    \texttt{readLine} & Reads one line from standard input and returns that string. \\ \hline
+    \texttt{writeChar} $c$ & Writes the character $c$ to standard output. \\ \hline
+    \texttt{write} $s$ & Writes the string $s$ to standard output. \\ \hline
+    \texttt{readCharFromPort} $port$ & Reads one character from the input port $port$ and returns that character. \\ \hline
+    \texttt{readLineFromPort} $port$ & Reads one line from the input port $port$ and returns that string. \\ \hline
+    \texttt{writeCharToPort} $c$ $port$ & Writes the character $c$ to the output port $port$. \\ \hline
+    \texttt{writeToPort} $s$ $port$ & Writes the string $s$ to the output port $port$. \\ \hline
+    \texttt{isEof} & Checks whether standard input has reached EOF (end of file), returning \texttt{True} if so and \texttt{False} otherwise. \\ \hline
+    \texttt{isEofPort} $port$ & Checks whether the input port $port$ has reached EOF, returning \texttt{True} if so and \texttt{False} otherwise. \\ \hline
+    \texttt{flush} & Immediately outputs the contents buffered in standard output. \\ \hline
+    \texttt{flushPort} $port$ & Immediately outputs the contents buffered in the output port $port$. \\ \hline
+    \texttt{readFile} $path$ & Reads the entire contents of the file at path $path$ and returns it as a string. \\ \hline
+    \texttt{rand} $n_1$ $n_2$ & Returns a random integer in the range from $n_1$ to $n_2$ (inclusive). \\ \hline
+    \texttt{f.rand} $f_1$ $f_2$ & Returns a random floating-point number in the range from $f_1$ to $f_2$. \\ \hline
+    \texttt{newIORef} & Creates a mutable variable (reference) and returns that reference. The initial value is undefined. \\ \hline
+    \texttt{writeIORef} $ref$ $x$ & Updates the value of the mutable variable referenced by $ref$ to $x$. \\ \hline
+    \texttt{readIORef} $ref$ & Returns the current value of the mutable variable referenced by $ref$. \\ \hline
+    \texttt{readProcess} $cmd$ $args$ $input$ & Executes the command $cmd$ with argument list $args$, provides the string $input$ as standard input, and returns the standard output as a string. \\ \hline
+    \texttt{io} $ioAction$ & Executes the IO function $ioAction$ within a pure function and returns its result (equivalent to \texttt{unsafePerformIO}). \\ \hline
+    \end{tabular}
+\end{center}
+    \caption{List of IO functions}
+    \label{tab:ioFunctions}
+\end{table}
+
+The first argument of \lstinline{main} contains the command-line arguments.
+Command-line arguments are passed as strings to the first argument of \lstinline{main}.
+\begin{lstlisting}[language=egison,numbers=none]
+$ cat args.egi
+def main (args: [String]) : IO () := write (show args)
+$ egison args.egi hello world 1
+["hello", "world", "1"]
+\end{lstlisting}
+
+If you want to make a script created in Egison into a command, you can use a shebang.
+\begin{lstlisting}[language=egison,numbers=none]
+$ cat args
+#!/usr/local/egison
+
+def main (args: [String]) : IO () := write (show args)
+$ args hello world 1
+["hello", "world", "1"]
+\end{lstlisting}
+
+\subsection{The \texttt{do} Expression}
+
+The \lstinline{do} expression allows you to combine multiple IO functions and execute them in sequence.
+The \lstinline{do} expression corresponds to Haskell's \lstinline{do} notation.
+For example, the following program reads one line of user input and outputs it.
+\begin{lstlisting}[language=egison,numbers=none]
+def main (arg: [String]) : IO () := do
+  let line := readLine ()
+  write line
+\end{lstlisting}
+
+The \lstinline{do} expression can be combined with recursive functions.
+The following is a program that implements a REPL (Read-Eval-Print Loop) without the Eval part.
+\begin{lstlisting}[language=egison,numbers=none]
+def main (arg: [String]) : IO () := repl
+
+def repl : IO () := do
+  write "> "
+  flush ()
+  let line := readLine ()
+  write line
+  flush ()
+  repl
+\end{lstlisting}
+
+As in Haskell, a syntax for \lstinline{do} notation without the offside rule is also supported.
+\begin{lstlisting}[language=egison,numbers=none]
+do { print "foo" ; print "bar" ; print "baz" }
+\end{lstlisting}
+
+Note that Egison's \lstinline{do} expression can only be used with the IO monad and cannot be used with the list monad or other monads as in Haskell.
+
+\subsection{The \texttt{io} Function}
+
+The \lstinline{io} function is a built-in function corresponding to Haskell's \lstinline{unsafePerformIO} function.
+Using the \lstinline{io} function, you can call IO functions from within ordinary functions that are not IO functions.
+This is convenient for tasks such as printf debugging.
+
+The following program rolls two dice and returns the sum of their values.
+\begin{lstlisting}[language=egison,numbers=none]
+def dice : Integer := io (rand 1 6)
+
+dice + dice
+\end{lstlisting}
+
+\section{Built-in Functions}
+
+Egison provides a large number of built-in functions (primitive functions)\index{built-in function}.
+These functions are built into the language implementation and can be used directly by the user.
+This section introduces the major built-in functions organized by category.
+
+\subsection{Arithmetic Functions}
+
+Built-in functions for integer and floating-point arithmetic are provided.
+Table~\ref{tab:arithFunctions} shows the major arithmetic functions.
+
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{ | l | p{9cm} |}
+    \hline
+    Function name & Description \\ \hline
+    \texttt{i.+} $x$ $y$ & Returns the sum of integers $x$ and $y$. \\ \hline
+    \texttt{i.-} $x$ $y$ & Returns the difference of integers $x$ and $y$. \\ \hline
+    \texttt{i.*} $x$ $y$ & Returns the product of integers $x$ and $y$. \\ \hline
+    \texttt{i./} $x$ $y$ & Returns the quotient of integer $x$ divided by $y$ as a rational number. \\ \hline
+    \texttt{i.modulo} $x$ $y$ & Returns the remainder of integer $x$ divided by $y$ (\texttt{mod}). \\ \hline
+    \texttt{i.quotient} $x$ $y$ & Returns the quotient of integer $x$ divided by $y$ (\texttt{quot}). \\ \hline
+    \texttt{i.\%} $x$ $y$ & Returns the remainder of integer $x$ divided by $y$ (\texttt{rem}). \\ \hline
+    \texttt{i.power} $x$ $y$ & Returns integer $x$ raised to the power of $y$. \\ \hline
+    \texttt{i.abs} $x$ & Returns the absolute value of integer $x$. \\ \hline
+    \texttt{i.neg} $x$ & Returns integer $x$ with its sign negated. \\ \hline
+    \texttt{i.<} $x$ $y$ & Returns \texttt{True} if integer $x$ is less than $y$, \texttt{False} otherwise. \\ \hline
+    \texttt{i.<=} $x$ $y$ & Returns \texttt{True} if integer $x$ is less than or equal to $y$, \texttt{False} otherwise. \\ \hline
+    \texttt{i.>} $x$ $y$ & Returns \texttt{True} if integer $x$ is greater than $y$, \texttt{False} otherwise. \\ \hline
+    \texttt{i.>=} $x$ $y$ & Returns \texttt{True} if integer $x$ is greater than or equal to $y$, \texttt{False} otherwise. \\ \hline
+    \texttt{f.+} $x$ $y$ & Returns the sum of floating-point numbers $x$ and $y$. \\ \hline
+    \texttt{f.-} $x$ $y$ & Returns the difference of floating-point numbers $x$ and $y$. \\ \hline
+    \texttt{f.*} $x$ $y$ & Returns the product of floating-point numbers $x$ and $y$. \\ \hline
+    \texttt{f./} $x$ $y$ & Returns the quotient of floating-point number $x$ divided by $y$. \\ \hline
+    \texttt{f.abs} $x$ & Returns the absolute value of floating-point number $x$. \\ \hline
+    \texttt{f.neg} $x$ & Returns floating-point number $x$ with its sign negated. \\ \hline
+    \texttt{f.<} $x$ $y$ & Returns \texttt{True} if floating-point number $x$ is less than $y$, \texttt{False} otherwise. \\ \hline
+    \texttt{f.<=} $x$ $y$ & Returns \texttt{True} if floating-point number $x$ is less than or equal to $y$, \texttt{False} otherwise. \\ \hline
+    \texttt{f.>} $x$ $y$ & Returns \texttt{True} if floating-point number $x$ is greater than $y$, \texttt{False} otherwise. \\ \hline
+    \texttt{f.>=} $x$ $y$ & Returns \texttt{True} if floating-point number $x$ is greater than or equal to $y$, \texttt{False} otherwise. \\ \hline
+    \texttt{round} $x$ & Rounds floating-point number $x$ to the nearest integer. \\ \hline
+    \texttt{floor} $x$ & Returns the largest integer less than or equal to floating-point number $x$ (floor function). \\ \hline
+    \texttt{ceiling} $x$ & Returns the smallest integer greater than or equal to floating-point number $x$ (ceiling function). \\ \hline
+    \texttt{truncate} $x$ & Returns the integer obtained by truncating the fractional part of floating-point number $x$. \\ \hline
+    \end{tabular}
+\end{center}
+    \caption{List of arithmetic functions}
+    \label{tab:arithFunctions}
+\end{table}
+
+Mathematical functions for floating-point numbers are also provided (Table~\ref{tab:mathFunctions}).
+
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{ | l | p{9cm} |}
+    \hline
+    Function name & Description \\ \hline
+    \texttt{f.sqrt} $x$ & Returns the square root of floating-point number $x$. \\ \hline
+    \texttt{f.exp} $x$ & Returns $e$ (the base of natural logarithms) raised to the power of $x$. \\ \hline
+    \texttt{f.log} $x$ & Returns the natural logarithm of floating-point number $x$. \\ \hline
+    \texttt{f.sin} $x$ & Returns the sine of $x$. \\ \hline
+    \texttt{f.cos} $x$ & Returns the cosine of $x$. \\ \hline
+    \texttt{f.tan} $x$ & Returns the tangent of $x$. \\ \hline
+    \texttt{f.asin} $x$ & Returns the arcsine of $x$. \\ \hline
+    \texttt{f.acos} $x$ & Returns the arccosine of $x$. \\ \hline
+    \texttt{f.atan} $x$ & Returns the arctangent of $x$. \\ \hline
+    \texttt{f.sinh} $x$ & Returns the hyperbolic sine of $x$. \\ \hline
+    \texttt{f.cosh} $x$ & Returns the hyperbolic cosine of $x$. \\ \hline
+    \texttt{f.tanh} $x$ & Returns the hyperbolic tangent of $x$. \\ \hline
+    \texttt{f.asinh} $x$ & Returns the inverse hyperbolic sine of $x$. \\ \hline
+    \texttt{f.acosh} $x$ & Returns the inverse hyperbolic cosine of $x$. \\ \hline
+    \texttt{f.atanh} $x$ & Returns the inverse hyperbolic tangent of $x$. \\ \hline
+    \end{tabular}
+\end{center}
+    \caption{List of mathematical functions}
+    \label{tab:mathFunctions}
+\end{table}
+
+The mathematical constants pi \lstinline{f.pi} ($\pi \approx 3.14159$) and Euler's number \lstinline{f.e} ($e \approx 2.71828$) are defined.
+
+\subsection{String Manipulation Functions}
+
+Built-in functions for manipulating strings are provided (Table~\ref{tab:stringFunctions}).
+
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{ | l | p{9cm} |}
+    \hline
+    Function name & Description \\ \hline
+    \texttt{pack} $cs$ & Converts a list of characters $cs$ to a string. \\ \hline
+    \texttt{unpack} $s$ & Converts a string $s$ to a list of characters. \\ \hline
+    \texttt{unconsString} $s$ & Returns a tuple of the first character and the remaining string of string $s$. \\ \hline
+    \texttt{lengthString} $s$ & Returns the length (number of characters) of string $s$. \\ \hline
+    \texttt{appendString} $s_1$ $s_2$ & Returns the string obtained by concatenating strings $s_1$ and $s_2$. \\ \hline
+    \texttt{splitString} $pat$ $s$ & Splits string $s$ by the pattern $pat$ and returns a list of substrings. \\ \hline
+    \texttt{regex} $pat$ $s$ & Matches string $s$ against the regular expression $pat$ and returns a triple of the pre-match, match, and post-match parts. \\ \hline
+    \texttt{regexCg} $pat$ $s$ & Matches string $s$ against the regular expression $pat$ and returns the result including capture groups. \\ \hline
+    \texttt{read} $s$ & Parses string $s$ as an Egison expression, evaluates it, and returns the result. \\ \hline
+    \texttt{readTsv} $s$ & Parses tab-separated string $s$, evaluates it, and returns the result. \\ \hline
+    \texttt{show} $x$ & Converts value $x$ to its string representation. \\ \hline
+    \texttt{showTsv} $x$ & Converts value $x$ to a tab-separated format string. \\ \hline
+    \end{tabular}
+\end{center}
+    \caption{List of string manipulation functions}
+    \label{tab:stringFunctions}
+\end{table}
+
+\subsection{Type Conversion and Type Checking Functions}
+
+Built-in functions for type conversion and type checking are provided (Table~\ref{tab:typeFunctions}).
+
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{ | l | p{9cm} |}
+    \hline
+    Function name & Description \\ \hline
+    \texttt{itof} $n$ & Converts integer $n$ to a floating-point number. \\ \hline
+    \texttt{rtof} $r$ & Converts rational number $r$ to a floating-point number. \\ \hline
+    \texttt{ctoi} $c$ & Converts character $c$ to its Unicode code point (integer). \\ \hline
+    \texttt{itoc} $n$ & Converts integer $n$ to the corresponding Unicode character. \\ \hline
+    \texttt{isInteger} $x$ & Returns \texttt{True} if value $x$ is an integer, \texttt{False} otherwise. \\ \hline
+    \texttt{isRational} $x$ & Returns \texttt{True} if value $x$ is a rational number, \texttt{False} otherwise. \\ \hline
+    \end{tabular}
+\end{center}
+    \caption{List of type conversion and type checking functions}
+    \label{tab:typeFunctions}
+\end{table}
+
+Note: In Egison, \lstinline{MathExpr}, \lstinline{Integer}, and \lstinline{Rational} are identified with each other, so \lstinline{isInteger} and \lstinline{isRational} are used to determine properties of numerical values in the computer algebra system.
+
+\subsection{Tensor-Related Functions}
+
+Built-in functions for obtaining tensor information are provided (Table~\ref{tab:tensorFunctions}).
+
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{ | l | p{9cm} |}
+    \hline
+    Function name & Description \\ \hline
+    \texttt{tensorShape} $t$ & Returns the shape (size of each dimension) of tensor $t$ as a list. \\ \hline
+    \texttt{tensorToList} $t$ & Converts the elements of tensor $t$ to a list. \\ \hline
+    \texttt{dfOrder} $t$ & Returns the order of the differential form $t$. \\ \hline
+    \texttt{addSubscript} $sym$ $sub$ & Adds the subscript $sub$ to the symbol $sym$. \\ \hline
+    \texttt{addSuperscript} $sym$ $sup$ & Adds the superscript $sup$ to the symbol $sym$. \\ \hline
+    \end{tabular}
+\end{center}
+    \caption{List of tensor-related functions}
+    \label{tab:tensorFunctions}
+\end{table}
+
+\subsection{Debugging and Testing Functions}
+
+Built-in functions for program debugging and testing are provided (Table~\ref{tab:debugFunctions}).
+
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{ | l | p{9cm} |}
+    \hline
+    Function name & Description \\ \hline
+    \texttt{assert} $label$ $test$ & Raises an assertion error containing the label $label$ if the test $test$ is not \texttt{True}. \\ \hline
+    \texttt{assertEqual} $label$ $actual$ $expected$ & Raises an assertion error containing the label $label$ if values $actual$ and $expected$ are not equal. \\ \hline
+    \end{tabular}
+\end{center}
+    \caption{List of debugging and testing functions}
+    \label{tab:debugFunctions}
+\end{table}
+
+\section{The \texttt{seq} Expression}
+
+The \lstinline{seq} expression is used when you want to partially evaluate a program strictly rather than lazily.
+While lazy evaluation is convenient, it can sometimes waste memory and be inefficient.
+Partially evaluating a program strictly can improve efficiency.
+The \lstinline{seq} expression strictly evaluates its first argument and then evaluates its second argument.
+For example, it is known that \lstinline{foldl} can be made more efficient by using the \lstinline{seq} expression as follows.
+The type annotation indicates that it takes a folding function, an initial value, and a list, and returns the accumulated result.
+\begin{lstlisting}[language=egison,numbers=none]
+def foldl {a, b} (fn: b -> a -> b) (init: b) (ls: [a]) : b :=
+  match ls as list something with
+    | [] -> init
+    | $x :: $xs ->
+      let z := fn init x
+        in seq z (foldl fn z xs)
+\end{lstlisting}
+      
