@@ -141,13 +141,51 @@ class Eq a where
 \end{lstlisting}
 This definition means that ``for a type \lstinline{a} to be an instance of \lstinline{Eq}, it must provide operations \lstinline{==} and \lstinline{/=} that take two values of type \lstinline{a} and return a \lstinline{Bool}.''
 
-As another example, the \lstinline{Num} type class representing numeric types is defined as follows.
+Egison also supports \emph{superclass declarations} using the \lstinline{extends} keyword.
+A type class can declare one or more superclasses, meaning that any type that is an instance of the subclass must also be an instance of the superclass(es).
+
+Using these features, Egison defines the following algebraic type class hierarchy for numeric types.
+First, the additive hierarchy is defined as follows.
 \begin{lstlisting}[language=egison,numbers=none]
-class Num a where
+class AddSemigroup a where
   (+) (x: a) (y: a) : a
-  (-) (x: a) (y: a) : a
+
+class AddMonoid a extends AddSemigroup a where
+  zero : a
+
+class AddGroup a extends AddMonoid a where
+  neg (x: a) : a
+\end{lstlisting}
+\lstinline{AddSemigroup} provides addition, \lstinline{AddMonoid} extends it with a zero element, and \lstinline{AddGroup} further extends it with negation.
+
+Similarly, the multiplicative hierarchy is defined as follows.
+\begin{lstlisting}[language=egison,numbers=none]
+class MulSemigroup a where
   (*) (x: a) (y: a) : a
-  (/) (x: a) (y: a) : a
+
+class MulMonoid a extends MulSemigroup a where
+  one : a
+
+class MulGroup a extends MulMonoid a where
+  inv (x: a) : a
+\end{lstlisting}
+
+These hierarchies are combined into composite algebraic structures.
+A type class can extend \emph{multiple} superclasses, separated by commas.
+A type class with no methods of its own serves as a \emph{marker class} that simply combines its superclasses.
+\begin{lstlisting}[language=egison,numbers=none]
+class Ring a extends AddGroup a, MulMonoid a
+class Field a extends Ring a, MulGroup a
+\end{lstlisting}
+\lstinline{Ring} requires both additive group and multiplicative monoid structure, while \lstinline{Field} additionally requires multiplicative inverses.
+
+Further extensions for computer algebra are also defined.
+\begin{lstlisting}[language=egison,numbers=none]
+class GCDDomain a extends Ring a where
+  gcd (x: a) (y: a) : a
+
+class EuclideanDomain a extends GCDDomain a where
+  divMod (x: a) (y: a) : (a, a)
 \end{lstlisting}
 
 \subsection{Type Class Instances}
@@ -160,13 +198,32 @@ instance Eq Integer where
   (/=) x y := not (x == y)
 \end{lstlisting}
 
-An example of making the \lstinline{MathExpr} type (a type representing mathematical expressions) an instance of \lstinline{Num} is as follows.
+An example of making the \lstinline{MathExpr} type an instance of the algebraic type class hierarchy is as follows.
+Each level of the hierarchy requires its own instance definition.
 \begin{lstlisting}[language=egison,numbers=none]
-instance Num MathExpr where
+instance AddSemigroup MathExpr where
   (+) x y := plusForMathExpr x y
-  (-) x y := minusForMathExpr x y
+
+instance AddMonoid MathExpr where
+  zero := 0
+
+instance AddGroup MathExpr where
+  neg x := minusForMathExpr 0 x
+
+instance MulSemigroup MathExpr where
   (*) x y := multForMathExpr x y
-  (/) x y := divForMathExpr x y
+
+instance MulMonoid MathExpr where
+  one := 1
+
+instance MulGroup MathExpr where
+  inv x := divForMathExpr 1 x
+\end{lstlisting}
+
+Marker class instances (classes with no methods) can be declared without a \lstinline{where} clause.
+\begin{lstlisting}[language=egison,numbers=none]
+instance Ring MathExpr
+instance Field MathExpr
 \end{lstlisting}
 
 Type class instance definitions can also include type class constraints.
@@ -193,6 +250,17 @@ For example, a function that requires both ordering and equality can be written 
 def compare {Eq a, Ord a} (x: a) (y: a) : Ordering := ...
 \end{lstlisting}
 
+Using the algebraic type class hierarchy, subtraction and division can be defined as derived operations using the minimum necessary type class constraints.
+\begin{lstlisting}[language=egison,numbers=none]
+def (-) {AddGroup a} (x: a) (y: a) : a := x + neg y
+def (/) {Field a} (x: a) (y: a) : a := x * inv y
+\end{lstlisting}
+Similarly, \lstinline{sum} and \lstinline{product} are defined with precise constraints.
+\begin{lstlisting}[language=egison,numbers=none]
+def sum {AddMonoid a} (xs: [a]) : a := foldl (+) zero xs
+def product {MulMonoid a} (xs: [a]) : a := foldl (*) one xs
+\end{lstlisting}
+
 Type class constraints can be used not only in function definitions but also in matcher definitions.
 For example, the \lstinline{sortedList} matcher requires that the element type be orderable (an instance of \lstinline{Ord}).
 \begin{lstlisting}[language=egison,numbers=none]
@@ -207,28 +275,28 @@ This means that a function with type class constraints is transformed into a fun
 
 For example, the following function with a type class constraint
 \begin{lstlisting}[language=egison,numbers=none]
-def double {Num a} (x: a) : a := x + x
+def double {AddSemigroup a} (x: a) : a := x + x
 \end{lstlisting}
 is internally transformed into a function that takes a dictionary parameter.
 \begin{lstlisting}[language=egison,numbers=none]
-def double (dict_Num_a) (x: a) : a :=
-  (dict_Num_a_"plus") x x
+def double (dict_AddSemigroup_a) (x: a) : a :=
+  (dict_AddSemigroup_a_"plus") x x
 \end{lstlisting}
-Here, \lstinline{dict_Num_a} is a hash (dictionary) containing the methods of the \lstinline{Num a} instance (\lstinline{+}, \lstinline{-}, \lstinline{*}, \lstinline{/}).
+Here, \lstinline{dict_AddSemigroup_a} is a hash (dictionary) containing the methods of the \lstinline{AddSemigroup a} instance (in this case, \lstinline{+}).
 
 When calling a function on a concrete type, the appropriate instance dictionary is automatically passed.
 For example, \lstinline{double 1} is transformed into the following.
 \begin{lstlisting}[language=egison,numbers=none]
-double numInteger 1
+double addSemigroupInteger 1
 \end{lstlisting}
-Here, \lstinline{numInteger} is the dictionary for the \lstinline{Num Integer} instance.
+Here, \lstinline{addSemigroupInteger} is the dictionary for the \lstinline{AddSemigroup Integer} instance.
 
 This dictionary-passing style achieves dynamic dispatch of type classes (selection of methods based on the type at runtime).
 It also correctly handles calls between functions with type class constraints.
 For example, in the following functions
 \begin{lstlisting}[language=egison,numbers=none]
-def myPlus {Num a} (x: a) (y: a) : a := x + y
-def myPlus2 {Num a} (x: a) (y: a) : a := myPlus x y
+def myPlus {AddSemigroup a} (x: a) (y: a) : a := x + y
+def myPlus2 {AddSemigroup a} (x: a) (y: a) : a := myPlus x y
 \end{lstlisting}
 the dictionary received by \lstinline{myPlus2} is correctly passed to \lstinline{myPlus}.
 

@@ -579,7 +579,7 @@ Egison's type system compares the types of formal parameters and actual argument
 
 The criteria for insertion are as follows:
 \begin{itemize}
-\item The formal parameter type cannot be unified with \lstinline{Tensor a} (e.g., \lstinline{Integer}, or a type variable \lstinline{a} with a type class constraint such as \lstinline{Num a})
+\item The formal parameter type cannot be unified with \lstinline{Tensor a} (e.g., \lstinline{Integer}, or a type variable \lstinline{a} with a type class constraint such as \lstinline{AddSemigroup a})
 \item The actual argument type is \lstinline{Tensor a}
 \end{itemize}
 
@@ -612,17 +612,17 @@ This mechanism enables the application of scalar functions using tensor index no
 
 \lstinline{tensorMap} is also inserted when there are type class constraints.
 \begin{lstlisting}[language=egison,numbers=none]
-def double {Num a} (x: a) : a := x + x
+def double {AddSemigroup a} (x: a) : a := x + x
 
 double [|1,2,3|]_i
--- Since Tensor Integer is not an instance of Num,
+-- Since Tensor Integer is not an instance of AddSemigroup,
 -- tensorMap is automatically inserted:
 -- tensorMap (\xi -> double xi) [|1,2,3|]_i
 -- Result: [|2,4,6|]_i
 \end{lstlisting}
 
-Due to the type class constraint \lstinline{Num a}, the type variable \lstinline{a} must be an instance of the \lstinline{Num} class.
-Since \lstinline{Tensor Integer} is not an instance of the \lstinline{Num} class, it cannot be unified with \lstinline{Tensor a}.
+Due to the type class constraint \lstinline{AddSemigroup a}, the type variable \lstinline{a} must be an instance of the \lstinline{AddSemigroup} class.
+Since \lstinline{Tensor Integer} is not an instance of the \lstinline{AddSemigroup} class, it cannot be unified with \lstinline{Tensor a}.
 Therefore, when a tensor is passed as an argument, \lstinline{tensorMap} is automatically inserted, and the \lstinline{double} function is applied to each component (of type \lstinline{Integer}) of the tensor.
 
 \subsection{The Case of Tensor Functions}
@@ -978,7 +978,7 @@ The processing flow is as follows:
 \begin{enumerate}
 \item Phase 5-6: Type inference assigns types to all expressions.
 \item Phase 8-1: TensorMap insertion automatically inserts \lstinline{tensorMap}/\lstinline{tensorMap2} where needed.
-\item Phase 8-2: Type class expansion converts type class methods (e.g., \lstinline{(+)}) into dictionary lookup form (\lstinline{dict_Num_("plus")}).
+\item Phase 8-2: Type class expansion converts type class methods (e.g., \lstinline{(+)}) into dictionary lookup form (\lstinline{dict_AddSemigroup_("plus")}).
 \end{enumerate}
 
 The reason TensorMap insertion is executed before type class expansion is to first determine the argument types (scalar or tensor), so that instance selection can be performed correctly during type class expansion.
@@ -1014,7 +1014,7 @@ A function is detected as a binary function to be wrapped with \lstinline{tensor
 
 Whether a type is scalar is determined by checking whether it cannot be unified with \lstinline{Tensor a}:
 \begin{itemize}
-\item A type variable with type class constraints (e.g., \lstinline|{Num a} a|) cannot be unified with \lstinline{Tensor a} because \lstinline{Tensor} does not have an instance of \lstinline{Num}, so it is determined to be a scalar type.
+\item A type variable with type class constraints (e.g., \lstinline|{AddSemigroup a} a|) cannot be unified with \lstinline{Tensor a} because \lstinline{Tensor} does not have an instance of \lstinline{AddSemigroup}, so it is determined to be a scalar type.
 \item Concrete types (\lstinline{Integer}, \lstinline{Float}, etc.) also cannot be unified with \lstinline{Tensor a}, so they are determined to be scalar types.
 \item A tensor type like \lstinline{Tensor Integer} can be unified with \lstinline{Tensor a}, so it is not determined to be a scalar type.
 \end{itemize}
@@ -1032,12 +1032,12 @@ Here, the lambda arguments \lstinline{x} and \lstinline{y} have tensor types (\l
 At the TensorMap insertion stage, type class methods still appear in eta-expanded form.
 For example, the \lstinline{(+)} operator appears in the following form:
 \begin{lstlisting}[language=egison,numbers=none]
-\etaVar1 etaVar2 -> dict_Num_("plus") etaVar1 etaVar2
+\etaVar1 etaVar2 -> dict_AddSemigroup_("plus") etaVar1 etaVar2
 \end{lstlisting}
 
 When the body of this two-argument lambda is a two-argument function application, the entire body is wrapped with \lstinline{tensorMap2}:
 \begin{lstlisting}[language=egison,numbers=none]
-\etaVar1 etaVar2 -> tensorMap2 (\x y -> dict_Num_("plus") x y) etaVar1 etaVar2
+\etaVar1 etaVar2 -> tensorMap2 (\x y -> dict_AddSemigroup_("plus") x y) etaVar1 etaVar2
 \end{lstlisting}
 
 This transformation ensures that tensorMap insertion is correctly applied to type class methods as well.
@@ -1049,32 +1049,32 @@ By tracing the transformation of the polymorphic \lstinline{sum} function, we ca
 \subsubsection{Original Definition}
 
 \begin{lstlisting}[language=egison,numbers=none]
-def sum {Num a} (xs: [a]) : a := foldl1 (+) xs
+def sum {AddMonoid a} (xs: [a]) : a := foldl (+) zero xs
 \end{lstlisting}
 
-This function has the polymorphic type \lstinline{[a] -> a} with the type class constraint \lstinline|{Num a}|.
+This function has the polymorphic type \lstinline{[a] -> a} with the type class constraint \lstinline|{AddMonoid a}|.
 
 \subsubsection{Phase 5-6: After Type Inference}
 
 Type inference instantiates the type variable \lstinline{a} to a concrete type (e.g., \lstinline{t0}):
 
 \begin{lstlisting}[language=egison,numbers=none]
-def sum : {Num t0} [t0] -> t0 :=
+def sum : {AddMonoid t0} [t0] -> t0 :=
   \xs ->
-    foldl1 ((+) : {Num t0} t0 -> t0 -> t0) (xs : [t0])
+    foldl ((+) : {AddSemigroup t0} t0 -> t0 -> t0) (zero : {AddMonoid t0} t0) (xs : [t0])
 \end{lstlisting}
 
 Here, the type of \lstinline{xs} is \lstinline{[t0]}, and the type variable \lstinline{t0} with a type class constraint exists inside the type constructor \lstinline{[]}.
-Also, the type of \lstinline{(+)} is \lstinline|{Num t0} t0 -> t0 -> t0|, a binary function taking scalar types as arguments.
+Also, the type of \lstinline{(+)} is \lstinline|{AddSemigroup t0} t0 -> t0 -> t0|, a binary function taking scalar types as arguments.
 
 \subsubsection{Phase 8-1: After TensorMap Insertion}
 
 \lstinline{(+)} is a binary function with both parameters being scalar types (\lstinline{t0}), so it is wrapped with \lstinline{tensorMap2}:
 
 \begin{lstlisting}[language=egison,numbers=none]
-def sum : {Num t0} [t0] -> t0 :=
+def sum : {AddMonoid t0} [t0] -> t0 :=
   \xs ->
-    foldl1 (tensorMap2 (+)) xs
+    foldl (tensorMap2 (+)) zero xs
 \end{lstlisting}
 
 At this point, even if the elements of \lstinline{xs} are tensors, \lstinline{tensorMap2} correctly performs component-wise addition.
@@ -1084,12 +1084,13 @@ At this point, even if the elements of \lstinline{xs} are tensors, \lstinline{te
 The type class method \lstinline{(+)} is expanded into dictionary lookup form:
 
 \begin{lstlisting}[language=egison,numbers=none]
-def sum : {Num t0} [t0] -> t0 :=
-  \dict_Num xs ->
-    foldl1 (tensorMap2 (dict_Num_("plus"))) xs
+def sum : {AddMonoid t0} [t0] -> t0 :=
+  \dict_AddMonoid xs ->
+    foldl (tensorMap2 (dict_AddMonoid_("plus"))) (dict_AddMonoid_("zero")) xs
 \end{lstlisting}
 
-Here, \lstinline{dict_Num} is the method dictionary for the \lstinline{Num t0} instance.
+Here, \lstinline{dict_AddMonoid} is the method dictionary for the \lstinline{AddMonoid t0} instance.
+Note that the \lstinline{AddMonoid} dictionary contains both its own method (\lstinline{zero}) and the inherited \lstinline{AddSemigroup} method (\lstinline{+}) through the superclass relationship.
 
 \subsubsection{Runtime Behavior}
 

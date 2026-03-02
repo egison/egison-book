@@ -141,13 +141,51 @@ class Eq a where
 \end{lstlisting}
 この定義は，「型\lstinline{a}が\lstinline{Eq}のインスタンスであるためには，2つの\lstinline{a}型の値を受け取り\lstinline{Bool}を返す\lstinline{==}と\lstinline{/=}という演算を提供しなければならない」ことを意味する．
 
-もう一つの例として，数値型を表す\lstinline{Num}型クラスは以下のように定義される．
+Egisonは\lstinline{extends}キーワードによる\emph{スーパークラス宣言}もサポートしている．
+型クラスは1つ以上のスーパークラスを宣言でき，サブクラスのインスタンスである型はスーパークラスのインスタンスでもなければならない．
+
+これらの機能を使って，Egisonは数値型のための以下の代数的型クラス階層を定義している．
+まず，加法の階層は以下のように定義される．
 \begin{lstlisting}[language=egison,numbers=none]
-class Num a where
+class AddSemigroup a where
   (+) (x: a) (y: a) : a
-  (-) (x: a) (y: a) : a
+
+class AddMonoid a extends AddSemigroup a where
+  zero : a
+
+class AddGroup a extends AddMonoid a where
+  neg (x: a) : a
+\end{lstlisting}
+\lstinline{AddSemigroup}は加法を提供し，\lstinline{AddMonoid}はそれに零元を追加し，\lstinline{AddGroup}はさらに符号反転を追加する．
+
+同様に，乗法の階層は以下のように定義される．
+\begin{lstlisting}[language=egison,numbers=none]
+class MulSemigroup a where
   (*) (x: a) (y: a) : a
-  (/) (x: a) (y: a) : a
+
+class MulMonoid a extends MulSemigroup a where
+  one : a
+
+class MulGroup a extends MulMonoid a where
+  inv (x: a) : a
+\end{lstlisting}
+
+これらの階層を組み合わせて複合的な代数構造を定義する．
+型クラスはカンマ区切りで\emph{複数}のスーパークラスを継承できる．
+独自のメソッドをもたない型クラスは，スーパークラスを組み合わせるだけの\emph{マーカークラス}として機能する．
+\begin{lstlisting}[language=egison,numbers=none]
+class Ring a extends AddGroup a, MulMonoid a
+class Field a extends Ring a, MulGroup a
+\end{lstlisting}
+\lstinline{Ring}は加法群と乗法モノイドの両方の構造を要求し，\lstinline{Field}はさらに乗法逆元を要求する．
+
+数式処理向けの拡張も定義されている．
+\begin{lstlisting}[language=egison,numbers=none]
+class GCDDomain a extends Ring a where
+  gcd (x: a) (y: a) : a
+
+class EuclideanDomain a extends GCDDomain a where
+  divMod (x: a) (y: a) : (a, a)
 \end{lstlisting}
 
 \subsection{型クラスのインスタンス}
@@ -160,13 +198,32 @@ instance Eq Integer where
   (/=) x y := not (x == y)
 \end{lstlisting}
 
-\lstinline{MathExpr}型（数式を表す型）を\lstinline{Num}のインスタンスにする例は以下のとおりである．
+\lstinline{MathExpr}型を代数的型クラス階層のインスタンスにする例は以下のとおりである．
+階層の各レベルごとにインスタンス定義が必要になる．
 \begin{lstlisting}[language=egison,numbers=none]
-instance Num MathExpr where
+instance AddSemigroup MathExpr where
   (+) x y := plusForMathExpr x y
-  (-) x y := minusForMathExpr x y
+
+instance AddMonoid MathExpr where
+  zero := 0
+
+instance AddGroup MathExpr where
+  neg x := minusForMathExpr 0 x
+
+instance MulSemigroup MathExpr where
   (*) x y := multForMathExpr x y
-  (/) x y := divForMathExpr x y
+
+instance MulMonoid MathExpr where
+  one := 1
+
+instance MulGroup MathExpr where
+  inv x := divForMathExpr 1 x
+\end{lstlisting}
+
+メソッドをもたないマーカークラスのインスタンスは\lstinline{where}句なしで宣言できる．
+\begin{lstlisting}[language=egison,numbers=none]
+instance Ring MathExpr
+instance Field MathExpr
 \end{lstlisting}
 
 型クラスのインスタンス定義には型クラス制約を含めることもできる．
@@ -193,6 +250,17 @@ def eqAs {Eq a} (m: Matcher a) (x: a) (y: a) : Bool := ...
 def compare {Eq a, Ord a} (x: a) (y: a) : Ordering := ...
 \end{lstlisting}
 
+代数的型クラス階層を使うことで，減算と除算を最小限の型クラス制約をもつ導出演算として定義できる．
+\begin{lstlisting}[language=egison,numbers=none]
+def (-) {AddGroup a} (x: a) (y: a) : a := x + neg y
+def (/) {Field a} (x: a) (y: a) : a := x * inv y
+\end{lstlisting}
+同様に，\lstinline{sum}と\lstinline{product}も適切な制約で定義される．
+\begin{lstlisting}[language=egison,numbers=none]
+def sum {AddMonoid a} (xs: [a]) : a := foldl (+) zero xs
+def product {MulMonoid a} (xs: [a]) : a := foldl (*) one xs
+\end{lstlisting}
+
 型クラス制約は，関数だけでなくマッチャーの定義にも使える．
 たとえば，\lstinline{sortedList}マッチャーは，要素型が順序付け可能（\lstinline{Ord}のインスタンス）であることを要求する．
 \begin{lstlisting}[language=egison,numbers=none]
@@ -207,28 +275,28 @@ Egisonの型クラスは\emph{辞書渡しスタイル}（dictionary-passing sty
 
 たとえば，以下のような型クラス制約をもつ関数は
 \begin{lstlisting}[language=egison,numbers=none]
-def double {Num a} (x: a) : a := x + x
+def double {AddSemigroup a} (x: a) : a := x + x
 \end{lstlisting}
 内部的には以下のように辞書パラメータを受け取る関数に変換される．
 \begin{lstlisting}[language=egison,numbers=none]
-def double (dict_Num_a) (x: a) : a :=
-  (dict_Num_a_"plus") x x
+def double (dict_AddSemigroup_a) (x: a) : a :=
+  (dict_AddSemigroup_a_"plus") x x
 \end{lstlisting}
-ここで\lstinline{dict_Num_a}は\lstinline{Num a}インスタンスのメソッド（\lstinline{+}，\lstinline{-}，\lstinline{*}，\lstinline{/}）を含むハッシュ（辞書）である．
+ここで\lstinline{dict_AddSemigroup_a}は\lstinline{AddSemigroup a}インスタンスのメソッド（この場合は\lstinline{+}）を含むハッシュ（辞書）である．
 
 具体的な型に対して関数を呼び出す場合，適切なインスタンスの辞書が自動的に渡される．
 たとえば，\lstinline{double 1}は以下のように変換される．
 \begin{lstlisting}[language=egison,numbers=none]
-double numInteger 1
+double addSemigroupInteger 1
 \end{lstlisting}
-ここで\lstinline{numInteger}は\lstinline{Num Integer}インスタンスの辞書である．
+ここで\lstinline{addSemigroupInteger}は\lstinline{AddSemigroup Integer}インスタンスの辞書である．
 
 この辞書渡しスタイルにより，型クラスの動的ディスパッチ（実行時の型に応じたメソッドの選択）が実現される．
 また，型クラス制約をもつ関数同士の呼び出しも正しく処理される．
 たとえば，以下のような関数では
 \begin{lstlisting}[language=egison,numbers=none]
-def myPlus {Num a} (x: a) (y: a) : a := x + y
-def myPlus2 {Num a} (x: a) (y: a) : a := myPlus x y
+def myPlus {AddSemigroup a} (x: a) (y: a) : a := x + y
+def myPlus2 {AddSemigroup a} (x: a) (y: a) : a := myPlus x y
 \end{lstlisting}
 \lstinline{myPlus2}が受け取った辞書が\lstinline{myPlus}に正しく渡される．
 
