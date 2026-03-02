@@ -1,9 +1,9 @@
 all: *.tex *.bib
-	platex main
+	-platex -interaction=nonstopmode main
 	-pbibtex main
-	makeindex main
-	platex main
-	platex main
+	-makeindex main
+	-platex -interaction=nonstopmode main
+	-platex -interaction=nonstopmode main
 	dvipdfmx main.dvi
 
 clean:

@@ -42,7 +42,7 @@ Research on compilation techniques for Egison pattern matching has also progress
 In March 2020, Hiromi Ogawa devised a technique for transforming Egison pattern matching into Haskell programs using a backtracking monad, which was implemented as a Haskell library called Sweet Egison\cite{sweetEgison}.
 However, since Egison itself is a proof-of-concept programming language intended for rapid implementation of new features, implementing a compiler is not a near-term priority.
 
-\begin{oframed}
+\begin{framed}
   \paragraph{Release of Egison Version 4}
 Egison version 4, released in April 2020, introduced a completely new syntax to make it more familiar to a wider range of users.
 The new syntax of Egison Version 4 supports infix notation (\lstinline{:=}, \lstinline{++}, \lstinline{::}, \lstinline{+}, etc.), reducing the number and variety of required parentheses and improving readability.
@@ -78,7 +78,7 @@ Below is the actual comparison of the Riemann curvature tensor formula written i
 def R~i_j_k_l := withSymbols [m]
   `$\partial$`/`$\partial$` `$\Gamma$`~i_j_l x~k - `$\partial$`/`$\partial$` `$\Gamma$`~i_j_k x~l + `$\Gamma$`~m_j_l . `$\Gamma$`~i_m_k - `$\Gamma$`~m_j_k . `$\Gamma$`~i_m_l
 \end{lstlisting}
-\end{oframed}
+\end{framed}
 
 
 \subsection{Porting Egison Language Features to Other Programming Languages}\label{direction-language-library}
@@ -276,7 +276,7 @@ Therefore, we are considering whether the number of steps required for type chec
 To demonstrate the superiority of a new programming style, one would show that a particular program property becomes easier to verify in that style.
 Indeed, for complex program properties such as computational complexity, there is an intuition that programs written using Egison's pattern matching can be type-checked and type-inferred with less effort than ordinary functional programs.
 
-%\begin{oframed}
+%\begin{framed}
 %  \paragraph{Does the Ultimate Programming Language Exist?}
 %It has already been proven by Chaitin that no programming language can exist that can describe all conceivable algorithms more concisely than all other possible programming languages.
 %The proof is introduced in ``The Limits of Mathematics,'' Lecture 2 ``Elegant LISP Programs.''
@@ -287,4 +287,4 @@ Indeed, for complex program properties such as computational complexity, there i
 %
 %Expanding the range of algorithms that can be concisely expressed by adding new syntax is similar to expanding the range of provable propositions by adding new axioms.
 %Thinking about it this way, it may be natural that such limits exist.
-%\end{oframed}
+%\end{framed}
