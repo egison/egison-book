@@ -616,11 +616,14 @@ A parameter for which this is possible is called \emph{tensor-compatible}\index{
 \end{itemize}
 \lstinline{tensorMap} is a built-in function that applies the function given as the first argument to each component of the tensor given as the second argument and returns a tensor.
 
-Parameter types fall into three classes:
+Whether a parameter type is tensor-compatible is determined as follows:
 \begin{itemize}
 \item concrete scalar types such as \lstinline{Integer} --- not tensor-compatible (scalar parameters);
-\item type variables with class constraints (such as the \lstinline{a} of \lstinline|{Ord a}|) --- the \lstinline{Tensor} type is not an instance of those classes, so not tensor-compatible (scalar parameters);
-\item explicit \lstinline{Tensor a} types and type variables without constraints --- tensor-compatible; tensors are passed through as-is.
+\item explicit \lstinline{Tensor a} types --- tensor-compatible;
+\item type variables --- decided by \textbf{whether the \lstinline{Tensor} type can satisfy all the attached class constraints}.
+An unconstrained type variable is always tensor-compatible.
+The \lstinline{a} of \lstinline|{Eq a}| is tensor-compatible as well, because the library provides \lstinline|instance {Eq a} Eq (Tensor a)|.
+By contrast, the \lstinline{a} of \lstinline|{Ord a}| or \lstinline|{AddSemigroup a}| is not tensor-compatible: the \lstinline{Tensor} type has no instances of those classes.
 \end{itemize}
 This classification is determined by the function's \emph{principal type} (its inferred type) alone, so where \lstinline{tensorMap} is inserted is deterministic, and type annotations are never needed to control insertion.
 Moreover, the decision stays entirely within Hindley--Milner inference: no index information is lifted to the type level, and no dependent typing is required.
@@ -650,9 +653,9 @@ When the result of applying the first argument's function to the second argument
 This is why the result tensor has the indices ``\lstinline|_i_j|''.
 This mechanism enables the application of scalar functions using tensor index notation.
 
-\subsection{Unconstrained Type Variables}
+\subsection{Tensor-Compatibility of Type Variables}
 
-The key point of the classification is that \textbf{the dividing line is the type class constraint, not the type variable itself}.
+For type variables, the dividing line is \textbf{not the presence of constraints but whether the \lstinline{Tensor} type can satisfy the attached constraints}.
 An unconstrained type variable can be instantiated to any type --- including \lstinline{Tensor} types --- so it is tensor-compatible.
 Passing a tensor to the identity function, for example, inserts no \lstinline{tensorMap}: the tensor passes through as-is.
 \begin{lstlisting}[language=egison,numbers=none]
@@ -662,7 +665,16 @@ myId [|1,2,3|]_i -- [| 1, 2, 3 |]_i
 \end{lstlisting}
 It is thanks to this classification that generic higher-order functions carrying tensors as elements (list operations and the like) work as expected.
 
-By contrast, a parameter with an explicit type class constraint is a scalar parameter.
+A constrained type variable stays tensor-compatible when the \lstinline{Tensor} type has an instance of the class.
+For example, \lstinline|{Eq a}| poses no obstacle because of \lstinline|instance {Eq a} Eq (Tensor a)|: equality is decided on whole tensors, not lifted component-wise.
+\begin{lstlisting}[language=egison,numbers=none]
+def eqTest {Eq a} (x: a) (y: a) : Bool := x == y
+
+eqTest [|1,2|]_i [|1,2|]_i -- True
+eqTest [|1,2|]_i [|1,3|]_i -- False
+\end{lstlisting}
+
+By contrast, a constraint whose class has no \lstinline{Tensor} instance makes the parameter a scalar parameter.
 \begin{lstlisting}[language=egison,numbers=none]
 def double {AddSemigroup a} (x: a) : a := x + x
 
@@ -1046,7 +1058,7 @@ TensorMap insertion is based on the following principles:
 
 \subsubsection{Principle 1: Insertion for Operations on Scalar Types Inside Type Constructors}
 
-When a scalar type or a type variable with type class constraints exists inside a type constructor (list \lstinline{[a]}, tuple \lstinline{(a, b)}, etc.), \lstinline{tensorMap} or \lstinline{tensorMap2} is always inserted for operations on that type.
+When a scalar type, or a type variable constrained by classes of which \lstinline{Tensor} has no instance, exists inside a type constructor (list \lstinline{[a]}, tuple \lstinline{(a, b)}, etc.), \lstinline{tensorMap} or \lstinline{tensorMap2} is always inserted for operations on that type.
 
 For example, when an element \lstinline{x} extracted from a variable \lstinline{xs: [a]} is subjected to an operation \lstinline{(+)} that expects a scalar type, it is transformed to \lstinline{tensorMap2 (+)}.
 

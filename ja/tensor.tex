@@ -619,11 +619,14 @@ Egisonの型システムは，関数適用ごとに，\textbf{仮引数の型が
 \end{itemize}
 \lstinline{tensorMap}は，第一引数の関数を第二引数のテンソルの成分ごとに適用してテンソルを返す組み込み関数である．
 
-仮引数の型は3通りに分類される：
+仮引数の型がテンソル互換かどうかは，つぎのように定まる：
 \begin{itemize}
 \item \lstinline{Integer}のような具体的なスカラー型 --- テンソル互換でない（スカラー仮引数）
-\item 型クラス制約つきの型変数（\lstinline|{Ord a}|の\lstinline{a}など） --- \lstinline{Tensor}型はそのクラスのインスタンスでないため，テンソル互換でない（スカラー仮引数）
-\item 制約のない型変数，および明示的な\lstinline{Tensor a}型 --- テンソル互換（テンソルはそのまま渡される）
+\item 明示的な\lstinline{Tensor a}型 --- テンソル互換
+\item 型変数 --- \textbf{付いている型クラス制約のすべてを\lstinline{Tensor}型が満たせるか}で決まる．
+制約がなければ常にテンソル互換である．
+\lstinline|{Eq a}|の\lstinline{a}もテンソル互換である（ライブラリに\lstinline|instance {Eq a} Eq (Tensor a)|があるため）．
+一方，\lstinline|{Ord a}|や\lstinline|{AddSemigroup a}|の\lstinline{a}はテンソル互換でない（\lstinline{Tensor}型はこれらのクラスのインスタンスをもたない）．
 \end{itemize}
 この分類は関数の\emph{主型}（推論された型）だけから決まるため，どこに\lstinline{tensorMap}が挿入されるかは決定的であり，型注釈は挿入の制御のためには不要である．
 また，判定はHindley--Milner型推論の範囲に収まっており，添字の情報を型に持ち上げることも，依存型も必要としない．
@@ -653,9 +656,9 @@ min [|1,2,3|]_i [|10,20,30|]_i
 このために結果のテンソルの添字が``\lstinline|_i_j|''となる．
 この仕組みがテンソルの添字記法を使ってスカラー関数を適用することを可能にしている．
 
-\subsection{制約のない型変数はテンソル互換}
+\subsection{型変数のテンソル互換性}
 
-分類の要点は，\textbf{型変数そのものではなく，型クラス制約が分かれ目になる}ことである．
+型変数の分類の分かれ目は，\textbf{制約の有無そのものではなく，付いている制約を\lstinline{Tensor}型が満たせるか}である．
 制約のない型変数はどんな型にも --- \lstinline{Tensor}型にも --- 実体化できるので，テンソル互換である．
 たとえば恒等関数にテンソルを渡しても，\lstinline{tensorMap}は挿入されず，テンソルがそのまま通る．
 \begin{lstlisting}[language=egison,numbers=none]
@@ -665,7 +668,16 @@ myId [|1,2,3|]_i -- [| 1, 2, 3 |]_i
 \end{lstlisting}
 テンソルを要素として運ぶ総称的な高階関数（リスト操作など）が期待どおり動くのは，この分類のおかげである．
 
-一方，明示的な型クラス制約が付いた仮引数はスカラー仮引数になる．
+制約が付いていても，\lstinline{Tensor}型がそのクラスのインスタンスをもつならテンソル互換のままである．
+たとえば\lstinline|{Eq a}|には\lstinline|instance {Eq a} Eq (Tensor a)|があるため，等値比較はテンソル全体に対しておこなわれる（成分ごとにはリフトされない）．
+\begin{lstlisting}[language=egison,numbers=none]
+def eqTest {Eq a} (x: a) (y: a) : Bool := x == y
+
+eqTest [|1,2|]_i [|1,2|]_i -- True
+eqTest [|1,2|]_i [|1,3|]_i -- False
+\end{lstlisting}
+
+一方，\lstinline{Tensor}型がインスタンスをもたないクラスの制約が付くと，スカラー仮引数になる．
 \begin{lstlisting}[language=egison,numbers=none]
 def double {AddSemigroup a} (x: a) : a := x + x
 
@@ -1050,7 +1062,7 @@ TensorMap挿入は以下の基本原則に基づいて行われる：
 
 \subsubsection{原則1: 型コンストラクタ内のスカラー型に対する演算への挿入}
 
-型コンストラクタ（リスト\lstinline{[a]}，タプル\lstinline{(a, b)}など）の内側にスカラー型または型クラス制約付き型変数がある場合，その型に対する演算には常に\lstinline{tensorMap}または\lstinline{tensorMap2}を挿入する．
+型コンストラクタ（リスト\lstinline{[a]}，タプル\lstinline{(a, b)}など）の内側にスカラー型，または\lstinline{Tensor}型がインスタンスをもたないクラスの制約が付いた型変数がある場合，その型に対する演算には常に\lstinline{tensorMap}または\lstinline{tensorMap2}を挿入する．
 
 たとえば，\lstinline{xs: [a]}という型をもつ変数\lstinline{xs}から取り出された要素\lstinline{x}に対して，スカラー型を期待する演算\lstinline{(+)}を適用する場合，\lstinline{tensorMap2 (+)}という形式に変換される．
 
