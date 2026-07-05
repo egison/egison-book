@@ -146,11 +146,21 @@ inspect byX2
 -- "4 * x^2 + (- i + 1) * x + 3 * i + 2 : Poly (Poly Integer [i]) [x]"
 \end{lstlisting}
 
-\section{部分型関係と暗黙の昇格}\label{cas-subtype}
+\section{昇格タワーとその拡張}\label{cas-subtype}
 
 CASの型は，値を保存する埋め込みによって順序づけられている．
-たとえば，整数は有理数に埋め込むことができ（\lstinline{Integer} $\subset$ \lstinline{Frac Integer}），有理数は有理数係数の多項式に定数として埋め込むことができる．
-異なる型の値を混ぜて演算すると，両方を含む最小の型（join）へ自動で昇格する．
+この順序の背骨は，代数学の包含$\mathbb{Z} \subset \mathbb{Q} \subset \mathbb{Z}[x] \subset \mathbb{Q}[x] \subset \mathbb{Q}(x)$をそのまま型の階段にした\emph{昇格タワー}（promotion tower）\index{しょうかくたわー@昇格タワー}である．
+\begin{lstlisting}[language=egison,numbers=none]
+Integer                        -- `整数`
+  <: Frac Integer              -- `有理数`
+  <: Poly Integer [..]         -- `整数係数多項式`
+  <: Poly (Frac Integer) [..]  -- `有理数係数多項式`
+  <: Frac (Poly Integer [..])  -- `有理式`
+  <: MathValue                 -- `すべての数式`
+\end{lstlisting}
+タワーの各段は真の部分集合としての埋め込みであり，値を一切変えない．
+これに加えて，原子集合の包含（\lstinline{Poly Integer [x] <: Poly Integer [x, y]}）と，係数位置を通じた埋め込みも順序に含まれる．
+異なる型の値を混ぜて演算すると，タワーを上へ昇り，両方を含む最小の型（join）へ自動で昇格する．
 \begin{lstlisting}[language=egison,numbers=none]
 def p : Poly Integer [x] := x + 1
 def q : Frac Integer := 1 / 2
@@ -171,14 +181,39 @@ inspect c -- "sqrt2 + i + 2 : Poly Integer [i, sqrt2]"
 \end{lstlisting}
 $\mathbb{Z}[i]$の値と$\mathbb{Z}[\sqrt{2}]$の値の和が，注釈なしで$\mathbb{Z}[i, \sqrt{2}]$に着地している．
 
-組み込みの順序は，前節の平坦形（\lstinline{Poly Integer [i, x]}）と入れ子形（\lstinline{Poly (Poly Integer [i]) [x]}）をあえて関係づけていない．
+ここまでのタワーは組み込みだが，タワーは固定ではなく，\textbf{ユーザーが拡張できる}．
+前節の\lstinline{declare cas-type}は正規形に名前を与え，\lstinline{declare cas-subtype}は新しい辺（埋め込み）をタワーに追加する．
+たとえば，組み込みの順序は，前節の平坦形（\lstinline{Poly Integer [i, x]}）と入れ子形（\lstinline{Poly (Poly Integer [i]) [x]}）をあえて関係づけていない．
 両者は同じ値の集合の異なる正規形であり，どちらへ昇格すべきかはユーザーの選択だからである．
-この関係は\lstinline{declare cas-subtype}文でユーザーが宣言できる．
+まさにこの選択こそが，ユーザーがタワーに書き加える情報である．
 \begin{lstlisting}[language=egison,numbers=none]
 declare cas-subtype Poly Integer [i, x] <: Poly (Poly Integer [i]) [x]
 \end{lstlisting}
-辺を宣言するたびに，順序全体で任意の2つの型のjoinが一意に定まること（join半束性）が検査される．
-一意性を壊す宣言は，先に宣言すべき辺の提案つきでエラーになるため，順序は常に健全に保たれる．
+この宣言のあとは，平坦形と入れ子形が混ざる演算は入れ子形へ昇格するようになる．
+
+勝手に辺を追加してもタワーが壊れないように，辺を宣言するたびに，
+順序全体で任意の2つの型のjoinが一意に定まること（join半束性）が検査される．
+一意性が壊れる宣言は，先に宣言すべき\emph{完備化辺}の提案つきでエラーになる．
+\begin{lstlisting}[language=egison,numbers=none]
+declare cas-subtype Poly Integer [x] <: Poly Integer [i, x]
+-- `冗長な辺（導出可能）: 警告つきで受理され，`
+-- `端点が検査対象のノードとして登録される`
+
+declare cas-subtype Poly Integer [i] <: Poly (Poly Integer [i]) [x]
+-- `エラー:` pair (Poly Integer [i], Poly Integer [x])
+--   `の極小上界が2つに分裂する:`
+--   {Poly Integer [i, x], Poly (Poly Integer [i]) [x]}
+-- `ヒント: 先に完備化辺を宣言せよ:`
+--   declare cas-subtype Poly Integer [i, x]
+--     <: Poly (Poly Integer [i]) [x]
+\end{lstlisting}
+$\mathbb{Z}[i]$を入れ子形の中に置こうとすると，$\mathbb{Z}[i]$と$\mathbb{Z}[x]$の共通の上界が
+平坦形と入れ子形の2つに分裂してしまうため，宣言は拒否される．
+提案される完備化辺は常に数学的に正しい埋め込みであり（平坦形は入れ子形に組み替えられる），
+それを先に宣言すれば元の辺も受理される．
+このように，拡張後のタワーの上でもjoinは常に一意のままであり，暗黙の昇格は決定的であり続ける．
+なお，この検査はそれまでの宣言に現れた型の上で行われる
+（上記の1行目の冗長な辺は，\lstinline{Poly Integer [x]}を検査対象に登録するために書いている）．
 
 \section{商の型}\label{cas-quotient}
 

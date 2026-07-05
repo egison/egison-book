@@ -146,11 +146,21 @@ inspect byX2
 -- "4 * x^2 + (- i + 1) * x + 3 * i + 2 : Poly (Poly Integer [i]) [x]"
 \end{lstlisting}
 
-\section{Subtyping and Implicit Promotion}\label{cas-subtype}
+\section{The Promotion Tower and Its Extension}\label{cas-subtype}
 
 The CAS types are ordered by value-preserving embeddings.
-For example, integers embed into rationals (\lstinline{Integer} $\subset$ \lstinline{Frac Integer}), and rationals embed into rational-coefficient polynomials as constants.
-When values of different types are mixed in one operation, they are automatically promoted to the least type containing both (their join).
+The backbone of this order is the \emph{promotion tower}\index{promotion tower}, which turns the algebraic inclusions $\mathbb{Z} \subset \mathbb{Q} \subset \mathbb{Z}[x] \subset \mathbb{Q}[x] \subset \mathbb{Q}(x)$ directly into a staircase of types.
+\begin{lstlisting}[language=egison,numbers=none]
+Integer                        -- integers
+  <: Frac Integer              -- rationals
+  <: Poly Integer [..]         -- integer-coefficient polynomials
+  <: Poly (Frac Integer) [..]  -- rational-coefficient polynomials
+  <: Frac (Poly Integer [..])  -- rational functions
+  <: MathValue                 -- all mathematical expressions
+\end{lstlisting}
+Each step of the tower is an embedding as a genuine subset; no value ever changes.
+In addition, atom-set inclusion (\lstinline{Poly Integer [x] <: Poly Integer [x, y]}) and embeddings through the coefficient position belong to the order as well.
+When values of different types are mixed in one operation, they climb the tower and are automatically promoted to the least type containing both (their join).
 \begin{lstlisting}[language=egison,numbers=none]
 def p : Poly Integer [x] := x + 1
 def q : Frac Integer := 1 / 2
@@ -171,14 +181,34 @@ inspect c -- "sqrt2 + i + 2 : Poly Integer [i, sqrt2]"
 \end{lstlisting}
 The sum of a $\mathbb{Z}[i]$ value and a $\mathbb{Z}[\sqrt{2}]$ value lands in $\mathbb{Z}[i, \sqrt{2}]$ without any annotation.
 
-The built-in order deliberately does not relate the flat form (\lstinline{Poly Integer [i, x]}) and the nested form (\lstinline{Poly (Poly Integer [i]) [x]}) of the previous section.
-They are different canonical forms of the same set of values, and which one to promote to is the user's choice.
-This relation can be declared by the user with the \lstinline{declare cas-subtype} statement.
+The tower shown so far is built in, but it is not fixed: \textbf{users can extend the tower}.
+The \lstinline{declare cas-type} statement of the previous section names canonical forms, and \lstinline{declare cas-subtype} adds new edges (embeddings) to the tower.
+For example, the built-in order deliberately does not relate the flat form (\lstinline{Poly Integer [i, x]}) and the nested form (\lstinline{Poly (Poly Integer [i]) [x]}) of the previous section.
+They are different canonical forms of the same set of values, and which one to promote to is the user's choice---and precisely this choice is the information a user writes into the tower.
 \begin{lstlisting}[language=egison,numbers=none]
 declare cas-subtype Poly Integer [i, x] <: Poly (Poly Integer [i]) [x]
 \end{lstlisting}
-Each declared edge is checked to keep the join of every pair of types unique over the whole order (the join-semilattice property).
-A declaration that would break uniqueness is rejected together with a suggestion of the edge to declare first, so the order always stays sound.
+After this declaration, operations mixing the flat and the nested form promote to the nested form.
+
+So that arbitrary edges cannot break the tower, every declared edge is checked to keep the join of every pair of types unique over the whole order (the join-semilattice property).
+A declaration that would break uniqueness is rejected together with a suggested \emph{completing edge} to declare first.
+\begin{lstlisting}[language=egison,numbers=none]
+declare cas-subtype Poly Integer [x] <: Poly Integer [i, x]
+-- redundant (derivable) edge: accepted with a warning;
+-- its endpoints are registered as nodes for the check
+
+declare cas-subtype Poly Integer [i] <: Poly (Poly Integer [i]) [x]
+-- Error: pair (Poly Integer [i], Poly Integer [x])
+--   would get two minimal upper bounds:
+--   {Poly Integer [i, x], Poly (Poly Integer [i]) [x]}
+-- hint: declare the completing edge first:
+--   declare cas-subtype Poly Integer [i, x]
+--     <: Poly (Poly Integer [i]) [x]
+\end{lstlisting}
+Placing $\mathbb{Z}[i]$ inside the nested form would split the common upper bounds of $\mathbb{Z}[i]$ and $\mathbb{Z}[x]$ into two---the flat and the nested form---so the declaration is rejected.
+The suggested completing edge is always a mathematically valid embedding (the flat form regroups into the nested one), and declaring it first makes the original edge acceptable.
+In this way joins remain unique over the extended tower, and implicit promotion stays deterministic.
+Note that the check runs over the types that have appeared in declarations so far (the redundant edge on the first line above is written to register \lstinline{Poly Integer [x]} for the check).
 
 \section{Quotient Types}\label{cas-quotient}
 
