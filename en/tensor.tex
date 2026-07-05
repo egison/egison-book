@@ -699,6 +699,35 @@ def (.) (t1: Tensor a) (t2: Tensor a) : Tensor a :=
 -- Result: 140
 \end{lstlisting}
 
+\subsection{Functions Passed to Higher-Order Functions}\label{tensor-hof}
+
+Insertion also applies to functions passed as arguments to higher-order functions.
+In this case, \lstinline{tensorMap} is inserted not at an application site but by \textbf{eta-expanding the function argument itself}: the supplied function \lstinline{f} is transformed into a wrapper such as \lstinline{\x -> tensorMap f x} or \lstinline{\x y -> tensorMap2 f x y}, and the component-wise application happens in the wrapper's body.
+\begin{lstlisting}[language=egison,numbers=none]
+def inc (x: Integer) : Integer := x + 1
+
+map inc [[|1,2|]_i, [|10,20|]_i]
+-- inc is eta-expanded to \x -> tensorMap inc x
+-- Result: [[|2,3|]_i, [|11,21|]_i]
+
+foldl1 (+) [[|1,2|]_i, [|10,20|]_i]
+-- (+) is eta-expanded to \x y -> tensorMap2 (+) x y
+-- Result: [|11,22|]_i
+\end{lstlisting}
+
+The condition for eta-expansion depends on the shape of the function argument.
+A unary scalar function is eta-expanded when the callback type expected by the call site mentions tensors (in the \lstinline{map} example above, the types reveal that the list elements are tensors).
+By contrast, \textbf{a binary scalar function is eta-expanded to its \lstinline{tensorMap2} version without exception, whether or not tensors are visible in the types}.
+Since \lstinline{tensorMap} and \lstinline{tensorMap2} act as the identity on scalar values, this unconditional wrapping is always safe.
+Thanks to this design, arguments that turn from scalars into tensors mid-computation --- such as the accumulator of \lstinline{foldl} --- are handled correctly.
+\begin{lstlisting}[language=egison,numbers=none]
+foldl (+) 0 [[|1,2|]_i, [|10,20|]_i]
+-- The accumulator starts as the scalar 0 and becomes
+-- a tensor at the first addition
+-- Result: [|11,22|]_i
+\end{lstlisting}
+Callbacks whose parameters have \lstinline{Tensor a} types, such as ``\lstinline{.}'', are not eta-expanded; tensors are passed to them as-is.
+
 \subsection{Optimization Techniques}
 
 In the actual implementation, a built-in function called \lstinline{tensorMap2} is also used for optimization.
@@ -1073,30 +1102,10 @@ For example, when an element \lstinline{x} extracted from a variable \lstinline{
 
 This property eliminates the need to insert conditional branches for determining at runtime whether arguments are scalars or tensors, greatly simplifying the implementation.
 
-\subsection{Insertion for Higher-Order Functions}
+\subsection{Handling of Eta-Expanded Type Class Methods}
 
-When a function is passed as an argument to a higher-order function, if that function is a binary function and both parameters are scalar types, it is automatically wrapped with \lstinline{tensorMap2}.
-
-\subsubsection{Detection of Binary Functions}
-
-A function is detected as a binary function to be wrapped with \lstinline{tensorMap2} when its type has the form \lstinline{a -> b -> c} (where \lstinline{c} is not a function type) and both \lstinline{a} and \lstinline{b} are scalar types.
-
-Whether a type is scalar is determined by checking whether it cannot be unified with \lstinline{Tensor a}:
-\begin{itemize}
-\item A type variable with type class constraints (e.g., \lstinline|{AddSemigroup a} a|) cannot be unified with \lstinline{Tensor a} because \lstinline{Tensor} does not have an instance of \lstinline{AddSemigroup}, so it is determined to be a scalar type.
-\item Concrete types (\lstinline{Integer}, \lstinline{Float}, etc.) also cannot be unified with \lstinline{Tensor a}, so they are determined to be scalar types.
-\item A tensor type like \lstinline{Tensor Integer} can be unified with \lstinline{Tensor a}, so it is not determined to be a scalar type.
-\end{itemize}
-
-\subsubsection{Wrapping with tensorMap2}
-
-A binary function \lstinline{f : a -> b -> c} is transformed as follows:
-\begin{lstlisting}[language=egison,numbers=none]
-f  --->  \x y -> tensorMap2 f x y
-\end{lstlisting}
-Here, the lambda arguments \lstinline{x} and \lstinline{y} have tensor types (\lstinline{Tensor a} and \lstinline{Tensor b}), and the result is also a tensor type (\lstinline{Tensor c}).
-
-\subsubsection{Handling of Eta-Expanded Lambdas}
+Eta-expansion of functions passed to higher-order functions --- the conditions and examples --- was explained in Section~\ref{tensor-hof}.
+This section supplements the implementation-level handling when type class methods are involved.
 
 At the TensorMap insertion stage, type class methods still appear in eta-expanded form.
 For example, the \lstinline{(+)} operator appears in the following form:

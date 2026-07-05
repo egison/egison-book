@@ -702,6 +702,36 @@ def (.) (t1: Tensor a) (t2: Tensor a) : Tensor a :=
 -- 結果: 140
 \end{lstlisting}
 
+\subsection{高階関数に渡される関数}\label{tensor-hof}
+
+高階関数の引数として渡される関数にも挿入は働く．
+このとき\lstinline{tensorMap}は関数の適用位置にではなく，\textbf{関数引数そのものをイータ展開して}挿入される．
+つまり，渡された関数\lstinline{f}が\lstinline{\x -> tensorMap f x}や\lstinline{\x y -> tensorMap2 f x y}のようなラッパに変換され，成分ごとの適用はラッパの本体でおこなわれる．
+\begin{lstlisting}[language=egison,numbers=none]
+def inc (x: Integer) : Integer := x + 1
+
+map inc [[|1,2|]_i, [|10,20|]_i]
+-- inc は \x -> tensorMap inc x にイータ展開される
+-- 結果: [[|2,3|]_i, [|11,21|]_i]
+
+foldl1 (+) [[|1,2|]_i, [|10,20|]_i]
+-- (+) は \x y -> tensorMap2 (+) x y にイータ展開される
+-- 結果: [|11,22|]_i
+\end{lstlisting}
+
+イータ展開が起こる条件は，関数引数のかたちによって異なる．
+1引数のスカラー関数は，適用先が期待するコールバックの型にテンソルが現れる場合にイータ展開される
+（上の\lstinline{map}の例では，リストの要素がテンソルであることが型からわかる）．
+一方，\textbf{2引数のスカラー関数は，型からテンソルが見えるかどうかによらず，例外なく\lstinline{tensorMap2}版にイータ展開される}．
+\lstinline{tensorMap}と\lstinline{tensorMap2}はスカラー値に対しては恒等に働くため，この無条件のラップは常に安全である．
+この設計のおかげで，\lstinline{foldl}の累積器のように，計算の途中でスカラーからテンソルに変わる引数も正しく処理される．
+\begin{lstlisting}[language=egison,numbers=none]
+foldl (+) 0 [[|1,2|]_i, [|10,20|]_i]
+-- 累積器はスカラー 0 から始まり，1要素目の加算でテンソルになる
+-- 結果: [|11,22|]_i
+\end{lstlisting}
+なお，``\lstinline{.}''のように仮引数が\lstinline{Tensor a}型のコールバックはイータ展開されず，テンソルのまま渡される．
+
 \subsection{効率化のための工夫}
 
 実際の実装では，効率化のために\lstinline{tensorMap2}という組み込み関数も使われる．
@@ -1077,30 +1107,10 @@ TensorMap挿入は以下の基本原則に基づいて行われる：
 
 この性質により，実行時に引数がスカラーかテンソルかを判定する条件分岐を挿入する必要がなくなり，実装が大幅に簡略化される．
 
-\subsection{高階関数の場合の挿入}
+\subsection{イータ展開された型クラスメソッドの処理}
 
-高階関数に関数を引数として渡す場合，その関数が二項関数であり，かつ両方のパラメータがスカラー型である場合，自動的に\lstinline{tensorMap2}でラップされる．
-
-\subsubsection{二項関数の検出}
-
-関数の型が\lstinline{a -> b -> c}の形式（ただし\lstinline{c}は関数型でない）であり，\lstinline{a}と\lstinline{b}がともにスカラー型である場合，その関数は\lstinline{tensorMap2}でラップすべき二項関数として検出される．
-
-スカラー型の判定は，型が\lstinline{Tensor a}と単一化（unification）できないかどうかで行われる：
-\begin{itemize}
-\item 型クラス制約付き型変数（たとえば\lstinline|{AddSemigroup a} a|）は，\lstinline{Tensor}型が\lstinline{AddSemigroup}のインスタンスをもたないため，\lstinline{Tensor a}と単一化できず，スカラー型と判定される．
-\item 具象型（\lstinline{Integer}，\lstinline{Float}など）も\lstinline{Tensor a}と単一化できず，スカラー型と判定される．
-\item \lstinline{Tensor Integer}のようなテンソル型は\lstinline{Tensor a}と単一化できるため，スカラー型とは判定されない．
-\end{itemize}
-
-\subsubsection{tensorMap2によるラッピング}
-
-二項関数\lstinline{f : a -> b -> c}は以下のように変換される：
-\begin{lstlisting}[language=egison,numbers=none]
-f  --->  \x y -> tensorMap2 f x y
-\end{lstlisting}
-ここで，ラムダ式の引数\lstinline{x}と\lstinline{y}はテンソル型（\lstinline{Tensor a}と\lstinline{Tensor b}）をもち，結果もテンソル型（\lstinline{Tensor c}）となる．
-
-\subsubsection{イータ展開されたラムダの処理}
+高階関数に渡された関数のイータ展開そのもの（挿入条件と例）は\ref{tensor-hof}節で解説した．
+本節では，型クラスメソッドが関わる場合の実装上の処理を補足する．
 
 型クラスメソッドは，TensorMap挿入の段階ではまだイータ展開された形式で現れる．
 たとえば，\lstinline{(+)}演算子は以下のような形式になっている：
