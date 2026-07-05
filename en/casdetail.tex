@@ -22,19 +22,20 @@ A \lstinline{term} rule is applied to each term (monomial), a \lstinline{poly} r
 In every case, the rule is also applied to subexpressions such as the arguments of function applications.
 The left-hand side can be a literal expression, or a pattern for mathematical expressions (Section~\ref{mexpr-pattern}) containing pattern variables \lstinline{$x} and value patterns \lstinline{#x}.
 
-For example, if we introduce a symbol \lstinline{sqrt2} representing $\sqrt{2}$ and register the automatic rule $\sqrt{2}^2 = 2$, the rule is applied automatically on every arithmetic operation.
+For example, the simplification of \lstinline{sqrt} we saw in Section~\ref{cas-simplify} of Chapter~\ref{cas} (such as $\sqrt{x} \cdot \sqrt{x} = x$) is declared in the standard library as a rule that uses a pattern variable \lstinline{$x} for the argument of \lstinline{sqrt}.
+Conceptually, it is the following rule.
 \begin{lstlisting}[language=egison,numbers=none]
-declare symbol sqrt2
-declare rule auto term sqrt2^2 = 2
-
-(1 + sqrt2)^2 -- 2 * sqrt2 + 3
+declare rule auto term (sqrt $x)^2 = x
 \end{lstlisting}
-Mathematically, this operation introduces the algebraic extension $\mathbb{Z}[\sqrt{2}]$, i.e., the quotient $\mathbb{Z}[X]/(X^2-2)$ of a polynomial ring.
-Simplification rules in Egison are global, but since symbols are globally unique, a rule can only act on expressions in which its symbol occurs.
-In other words, the uniqueness of symbols plays the role of scoping.
-The Gaussian integers $\mathbb{Z}[i]$ (with $i^2 = -1$), the dual numbers (with $\varepsilon^2 = 0$), and roots of unity are algebraic extensions introduced by the same pattern.
-The implementation also indexes simplification rules by the symbols occurring in their left-hand sides, and a rule is not even tried on expressions that do not contain those symbols.
-Therefore, declaring a rule hardly slows down computations unrelated to it.
+Because the left-hand side's \lstinline{$x} is a pattern variable, it matches whatever the argument of \lstinline{sqrt} is, whether a concrete number or a symbol.
+So this single rule makes, for example, all of the following hold.
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol a
+
+(sqrt a)^2 -- a
+(1 + sqrt 2)^2 -- 2 * 'sqrt 2 + 3
+\end{lstlisting}
+The actual library rule is a little more involved so that it handles not only $(\sqrt{x})^2$ but general powers $(\sqrt{x})^n$; its essence, however, is the single pattern-variable rule above.
 
 The built-in simplification rules are declared with the same \lstinline{declare rule} statement in the standard library file \texttt{lib/math/normalize.egi}.
 For example, the following is a part of the declarations realizing the simplifications introduced in Section~\ref{cas-simplify} of Chapter~\ref{cas}.
@@ -43,6 +44,13 @@ declare rule auto term i^2 = -1
 declare rule auto term log (exp $n) = n
 declare rule auto term (exp $x)^$n = exp (n * x)
 \end{lstlisting}
+The first rule, \lstinline{i^2 = -1}, is a rule about the imaginary unit $i$.
+Mathematically, it introduces the algebraic extension $\mathbb{Z}[i]$, i.e., the quotient $\mathbb{Z}[X]/(X^2+1)$ of a polynomial ring, on the symbol $i$.
+Simplification rules in Egison are global, but since symbols are globally unique, a rule can only act on expressions in which its symbol occurs.
+In other words, the uniqueness of symbols plays the role of scoping.
+The dual numbers (with $\varepsilon^2 = 0$) and roots of unity are algebraic extensions introduced on a symbol by the same pattern.
+The implementation also indexes simplification rules by the symbols occurring in their left-hand sides, and a rule is not even tried on expressions that do not contain those symbols.
+Therefore, declaring a rule hardly slows down computations unrelated to it.
 As in the second and third rules, rules whose left-hand sides contain pattern variables can also be declared.
 
 A named rule, declared with a rule name, is not applied automatically; it is applied to an expression \lstinline{e} only where one writes \lstinline{simplify e using name}.
@@ -130,6 +138,18 @@ inspect byX
 \end{lstlisting}
 The type \lstinline{Poly Integer [i, x]} denotes integer-coefficient polynomials over the atom set $\{i, x\}$.
 Nesting a polynomial type in the coefficient position, as in \lstinline{Poly (Poly Integer [i]) [x]}, denotes the canonical form ``polynomials in $x$ with coefficients in $\mathbb{Z}[i]$''.
+
+An atom set can be written by naming its symbols explicitly, as in \lstinline{[i, x]} or \lstinline{[x]} (a closed atom set), or left open by writing \lstinline{[..]}.
+An open atom set \lstinline{[..]} means ``read the atoms off the value'': the type does not fix which symbols become the polynomial's variables.
+The outer atom set of a nested polynomial type can likewise be \lstinline{[..]} (fixing the inner coefficients to $\mathbb{Z}[i]$ while leaving the outer variables to the value).
+\begin{lstlisting}[language=egison,numbers=none]
+def byX3 : Poly (Poly Integer [i]) [..] := v
+inspect byX3
+-- "4 * x^2 + (- i + 1) * x + 3 * i + 2 : Poly (Poly Integer [i]) [x]"
+\end{lstlisting}
+Here the outer atom set is filled with the \lstinline{x} occurring in the value \lstinline{v}, so the observed type is \lstinline{Poly (Poly Integer [i]) [x]} (it would become \lstinline{[x, y]} for a value containing $x$ and $y$).
+The promotion tower of the next section is likewise written with open atom sets such as \lstinline{Poly Integer [..]}, to denote general polynomials not tied to specific symbols.
+
 A type annotation does more than classify the value: it reorganizes the value's internal structure into the shape of the type (reshape).
 Reshaping never changes the value.
 Indeed, the difference of the two canonical forms computes to $0$.

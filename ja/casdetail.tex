@@ -22,19 +22,20 @@ declare rule (auto | name) (term | poly | frac) lhs = rhs
 いずれの場合も，関数適用の引数の内側のような部分式に対しても規則は適用される．
 左辺には，リテラルな数式のほかに，パターン変数\lstinline{$x}や値パターン\lstinline{#x}を含む数式に対するパターン（\ref{mexpr-pattern}節）を書くことができる．
 
-たとえば，$\sqrt{2}$を表すシンボル\lstinline{sqrt2}を導入し，$\sqrt{2}^2 = 2$という自動規則を登録すると，この規則は算術演算のたびに自動で適用される．
+たとえば，第\ref{cas}章\ref{cas-simplify}節でみた$\sqrt{x} \cdot \sqrt{x} = x$のような\lstinline{sqrt}の簡約は，標準ライブラリのなかで，\lstinline{sqrt}の引数を表すパターン変数\lstinline{$x}を使った規則として宣言されている．
+概念的には，次のような規則である．
 \begin{lstlisting}[language=egison,numbers=none]
-declare symbol sqrt2
-declare rule auto term sqrt2^2 = 2
-
-(1 + sqrt2)^2 -- 2 * sqrt2 + 3
+declare rule auto term (sqrt $x)^2 = x
 \end{lstlisting}
-これは数学的には$\mathbb{Z}[\sqrt{2}] = \mathbb{Z}[X]/(X^2-2)$という代数拡大（多項式環の商）を導入する操作である．
-Egisonの簡約規則は大域的であるが，シンボルは大域的に一意であるため，規則はそのシンボルが現れる数式にしか作用しない．
-つまり，シンボルの一意性がスコープの役割を果たしている．
-ガウス整数$\mathbb{Z}[i]$（$i^2 = -1$）や二重数（$\varepsilon^2 = 0$），1の冪根なども，同じパターンで導入されている代数拡大である．
-実装上も，簡約規則は左辺に現れるシンボルで索引づけられており，そのシンボルを含まない数式には規則の適用が試されない．
-そのため，規則を宣言しても，その規則と無関係な計算はほとんど遅くならない．
+左辺の\lstinline{$x}はパターン変数なので，\lstinline{sqrt}の引数が具体的な数でもシンボルでも同じようにマッチする．
+そのため，この1つの規則だけで，たとえば以下がすべて成り立つ．
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol a
+
+(sqrt a)^2 -- a
+(1 + sqrt 2)^2 -- 2 * 'sqrt 2 + 3
+\end{lstlisting}
+実際のライブラリの規則は，$(\sqrt{x})^2$だけでなく一般の冪$(\sqrt{x})^n$も扱えるよう，これよりもう少し複雑な形をしているが，本質は上のパターン変数を使った1つの規則である．
 
 組み込みの簡約規則も，同じ\lstinline{declare rule}文で標準ライブラリの\texttt{lib/math/normalize.egi}に宣言されている．
 たとえば，以下は第\ref{cas}章\ref{cas-simplify}節で紹介した簡約を実現している宣言の一部である．
@@ -43,6 +44,13 @@ declare rule auto term i^2 = -1
 declare rule auto term log (exp $n) = n
 declare rule auto term (exp $x)^$n = exp (n * x)
 \end{lstlisting}
+1つ目の\lstinline{i^2 = -1}は，虚数単位$i$についての規則である．
+これは数学的には$\mathbb{Z}[i] = \mathbb{Z}[X]/(X^2+1)$という代数拡大（多項式環の商）を，シンボル$i$の上に導入する操作にあたる．
+Egisonの簡約規則は大域的であるが，シンボルは大域的に一意であるため，規則はそのシンボルが現れる数式にしか作用しない．
+つまり，シンボルの一意性がスコープの役割を果たしている．
+二重数（$\varepsilon^2 = 0$），1の冪根なども，同じパターンでシンボルの上に導入される代数拡大である．
+実装上も，簡約規則は左辺に現れるシンボルで索引づけられており，そのシンボルを含まない数式には規則の適用が試されない．
+そのため，規則を宣言しても，その規則と無関係な計算はほとんど遅くならない．
 2つ目と3つ目の規則のように，左辺にパターン変数を含む規則も宣言できる．
 
 規則名を指定して宣言した名前付き規則は，自動では適用されず，\lstinline{simplify e using name}と書いた場所でだけ式\lstinline{e}に適用される．
@@ -130,6 +138,18 @@ inspect byX
 \end{lstlisting}
 型\lstinline{Poly Integer [i, x]}は「原子集合$\{i, x\}$の上の整数係数多項式」を表す型である．
 \lstinline{Poly (Poly Integer [i]) [x]}のように係数の位置に多項式型を入れ子にすると，「$\mathbb{Z}[i]$係数の$x$の多項式」という正規形を表す．
+
+原子集合は，\lstinline{[i, x]}や\lstinline{[x]}のように具体的なシンボルを明示して書く（閉じた原子集合）ほかに，\lstinline{[..]}と書いて開いたままにすることもできる．
+開いた原子集合\lstinline{[..]}は「原子は値から読み取る」という意味であり，どのシンボルが多項式の変数になるかを型の側では固定しない．
+入れ子の多項式型の外側の原子集合も，同じように\lstinline{[..]}にできる（内側を$\mathbb{Z}[i]$に固定したまま，外側の変数は値まかせにする）．
+\begin{lstlisting}[language=egison,numbers=none]
+def byX3 : Poly (Poly Integer [i]) [..] := v
+inspect byX3
+-- "4 * x^2 + (- i + 1) * x + 3 * i + 2 : Poly (Poly Integer [i]) [x]"
+\end{lstlisting}
+この場合，外側の原子集合には値\lstinline{v}に現れる\lstinline{x}が使われ，観察型は\lstinline{Poly (Poly Integer [i]) [x]}になる（$x$と$y$を含む値なら\lstinline{[x, y]}のように変わる）．
+次節の昇格タワーが\lstinline{Poly Integer [..]}のように開いた原子集合で書かれているのも，特定のシンボルに縛られない一般の多項式を表すためである．
+
 型注釈は値を分類するだけでなく，値の内部構造をその型のかたちに組み替える（reshape）．
 組み替えは値を変えない．
 実際，2つの正規形の差を計算すると$0$になる．
