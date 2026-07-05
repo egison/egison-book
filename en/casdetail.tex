@@ -1,0 +1,157 @@
+\chapter{The Simplification System in Detail}\label{casdetail}
+
+This chapter explains in detail how simplification in Egison's computer algebra system cooperates with the type system.
+Chapter~\ref{cas} introduced simplification as a built-in facility, but the simplification system is in fact assembled from several orthogonal, user-extensible mechanisms.
+This chapter walks through (1) declaring simplification rules, (2) selecting canonical forms with type annotations, (3) the promotion tower of types and its extension, and (4) quotient types, which live outside the tower.
+
+\section{Declaring Simplification Rules}\label{cas-rule}
+
+In addition to the built-in simplification rules introduced in Section~\ref{cas-simplify} of Chapter~\ref{cas}, users can declare their own simplification rules with the \lstinline{declare rule} statement.
+For example, if we introduce a symbol \lstinline{sqrt2} representing $\sqrt{2}$ and register the rule $\sqrt{2}^2 = 2$, the rule is applied automatically during every simplification.
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol sqrt2
+declare rule auto term sqrt2^2 = 2
+
+(1 + sqrt2)^2 -- 2 * sqrt2 + 3
+\end{lstlisting}
+Mathematically, this operation introduces the algebraic extension $\mathbb{Z}[\sqrt{2}]$, i.e., the quotient $\mathbb{Z}[X]/(X^2-2)$ of a polynomial ring.
+Simplification rules in Egison are global, but since symbols are globally unique, a rule can only act on expressions in which its symbol occurs.
+In other words, the uniqueness of symbols plays the role of scoping.
+The Gaussian integers $\mathbb{Z}[i]$ (with $i^2 = -1$), the dual numbers (with $\varepsilon^2 = 0$), and roots of unity are algebraic extensions introduced by the same pattern.
+
+\section{Selecting Canonical Forms with Types}\label{cas-tower}
+
+The same mathematical expression can be represented by several different data structures.
+For example,
+\[ (2+3i) + (1-i)x + 4x^2 \]
+can be held as a flat polynomial over the atoms $\{i, x\}$, or as a polynomial in $x$ whose coefficients are Gaussian integers in $\mathbb{Z}[i]$.
+Which canonical form is appropriate depends on what one intends to do next (differentiate with respect to $x$, or exploit properties of $\mathbb{Z}[i]$), so it cannot be determined from the value alone.
+In Egison, \textbf{type annotations select the canonical form}.
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol i, x
+
+def v := (2 + 3 * i) + (1 - i) * x + 4 * x^2
+
+def flat : Poly Integer [i, x] := v
+inspect flat
+-- "4 * x^2 - i x + x + 3 * i + 2 : Poly Integer [i, x]"
+
+def byX : Poly (Poly Integer [i]) [x] := v
+inspect byX
+-- "4 * x^2 + (- i + 1) * x + 3 * i + 2 : Poly (Poly Integer [i]) [x]"
+\end{lstlisting}
+The type \lstinline{Poly Integer [i, x]} denotes integer-coefficient polynomials over the atom set $\{i, x\}$.
+Nesting a polynomial type in the coefficient position, as in \lstinline{Poly (Poly Integer [i]) [x]}, denotes the canonical form ``polynomials in $x$ with coefficients in $\mathbb{Z}[i]$''.
+A type annotation does more than classify the value: it reorganizes the value's internal structure into the shape of the type (reshape).
+Reshaping never changes the value.
+Indeed, the difference of the two canonical forms computes to $0$.
+\begin{lstlisting}[language=egison,numbers=none]
+flat - byX -- 0
+\end{lstlisting}
+Arithmetic between differently shaped representations simplifies correctly because of the convention that \textbf{operations always return results in the default flat form}.
+Nested canonical forms appear exactly where annotations request them and never propagate silently across operations.
+
+The \lstinline{inspect} used above displays a value together with the type read off the value (its observed type).
+Frequently used types can be given names with the \lstinline{declare cas-type} statement.
+Aliases are transparent: displayed types use the expanded original form.
+\begin{lstlisting}[language=egison,numbers=none]
+declare cas-type GaussianPolyX := Poly (Poly Integer [i]) [x]
+
+def byX2 : GaussianPolyX := v
+inspect byX2
+-- "4 * x^2 + (- i + 1) * x + 3 * i + 2 : Poly (Poly Integer [i]) [x]"
+\end{lstlisting}
+
+\section{The Promotion Tower and Its Extension}\label{cas-subtype}
+
+The CAS types are ordered by value-preserving embeddings.
+The backbone of this order is the \emph{promotion tower}\index{promotion tower}, which turns the algebraic inclusions $\mathbb{Z} \subset \mathbb{Q} \subset \mathbb{Z}[x] \subset \mathbb{Q}[x] \subset \mathbb{Q}(x)$ directly into a staircase of types.
+\begin{lstlisting}[language=egison,numbers=none]
+Integer                        -- integers
+  <: Frac Integer              -- rationals
+  <: Poly Integer [..]         -- integer-coefficient polynomials
+  <: Poly (Frac Integer) [..]  -- rational-coefficient polynomials
+  <: Frac (Poly Integer [..])  -- rational functions
+  <: MathValue                 -- all mathematical expressions
+\end{lstlisting}
+Each step of the tower is an embedding as a genuine subset; no value ever changes.
+In addition, atom-set inclusion (\lstinline{Poly Integer [x] <: Poly Integer [x, y]}) and embeddings through the coefficient position belong to the order as well.
+When values of different types are mixed in one operation, they climb the tower and are automatically promoted to the least type containing both (their join).
+\begin{lstlisting}[language=egison,numbers=none]
+def p : Poly Integer [x] := x + 1
+def q : Frac Integer := 1 / 2
+
+def r := p + q
+inspect r -- "x + 3 / 2 : Poly (Frac Integer) [x]"
+\end{lstlisting}
+When the atom sets differ, values are promoted to the type over the union of the atom sets.
+\begin{lstlisting}[language=egison,numbers=none]
+declare cas-type GaussianInt := Poly Integer [i]
+declare cas-type Zsqrt2 := Poly Integer [sqrt2]
+
+def a : GaussianInt := 1 + i
+def b : Zsqrt2 := 1 + sqrt2
+
+def c := a + b
+inspect c -- "sqrt2 + i + 2 : Poly Integer [i, sqrt2]"
+\end{lstlisting}
+The sum of a $\mathbb{Z}[i]$ value and a $\mathbb{Z}[\sqrt{2}]$ value lands in $\mathbb{Z}[i, \sqrt{2}]$ without any annotation.
+
+The tower shown so far is built in, but it is not fixed: \textbf{users can extend the tower}.
+The \lstinline{declare cas-type} statement of the previous section names canonical forms, and \lstinline{declare cas-subtype} adds new edges (embeddings) to the tower.
+For example, the built-in order deliberately does not relate the flat form (\lstinline{Poly Integer [i, x]}) and the nested form (\lstinline{Poly (Poly Integer [i]) [x]}) of the previous section.
+They are different canonical forms of the same set of values, and which one to promote to is the user's choice---and precisely this choice is the information a user writes into the tower.
+\begin{lstlisting}[language=egison,numbers=none]
+declare cas-subtype Poly Integer [i, x] <: Poly (Poly Integer [i]) [x]
+\end{lstlisting}
+After this declaration, operations mixing the flat and the nested form promote to the nested form.
+
+So that arbitrary edges cannot break the tower, every declared edge is checked to keep the join of every pair of types unique over the whole order (the join-semilattice property).
+A declaration that would break uniqueness is rejected together with a suggested \emph{completing edge} to declare first.
+\begin{lstlisting}[language=egison,numbers=none]
+declare cas-subtype Poly Integer [x] <: Poly Integer [i, x]
+-- redundant (derivable) edge: accepted with a warning;
+-- its endpoints are registered as nodes for the check
+
+declare cas-subtype Poly Integer [i] <: Poly (Poly Integer [i]) [x]
+-- Error: pair (Poly Integer [i], Poly Integer [x])
+--   would get two minimal upper bounds:
+--   {Poly Integer [i, x], Poly (Poly Integer [i]) [x]}
+-- hint: declare the completing edge first:
+--   declare cas-subtype Poly Integer [i, x]
+--     <: Poly (Poly Integer [i]) [x]
+\end{lstlisting}
+Placing $\mathbb{Z}[i]$ inside the nested form would split the common upper bounds of $\mathbb{Z}[i]$ and $\mathbb{Z}[x]$ into two---the flat and the nested form---so the declaration is rejected.
+The suggested completing edge is always a mathematically valid embedding (the flat form regroups into the nested one), and declaring it first makes the original edge acceptable.
+In this way joins remain unique over the extended tower, and implicit promotion stays deterministic.
+Note that the check runs over the types that have appeared in declarations so far (the redundant edge on the first line above is written to register \lstinline{Poly Integer [x]} for the check).
+
+\section{Quotient Types}\label{cas-quotient}
+
+Quotients such as $\mathbb{Z}/7\mathbb{Z}$ (the world of remainders modulo 7) behave differently from the types so far.
+$12$ and $5$ are different values in $\mathbb{Z}$ but equal in $\mathbb{Z}/7\mathbb{Z}$.
+Since \textbf{equality itself depends on the type}, quotients cannot join the order of value-preserving embeddings of the previous section.
+In Egison, quotient types are declared outside the order with the \lstinline{declare cas-quotient} statement.
+\begin{lstlisting}[language=egison,numbers=none]
+declare cas-quotient Mod7 := Integer by (\n -> modulo n 7)
+
+def a : Mod7 := projMod7 5
+def b : Mod7 := projMod7 4
+
+a + b -- 2
+projMod7 12 == projMod7 5 -- True
+\end{lstlisting}
+The declaration automatically derives the projection \lstinline{projMod7} from integers into \lstinline{Mod7}, the representative extraction \lstinline{reprMod7}, the ring operations, and the equality test.
+Every operation reduces its representative, so values always stay in the range $0$ to $6$.
+At declaration time, the system also tests, on sample points, that the reduction function is idempotent and compatible with addition and multiplication (a congruence).
+
+Mixing a \lstinline{Mod7} value with a raw integer (as in \lstinline{a + 10}) is a type error.
+This prevents silently confusing equality in $\mathbb{Z}$ with equality in $\mathbb{Z}/7\mathbb{Z}$; crossing between the two worlds is explicit, via \lstinline{projMod7} and \lstinline{reprMod7}.
+Functions can also be defined directly on the quotient.
+For example, the inverse in $\mathbb{F}_7$ is one line by Fermat's little theorem ($z^{-1} = z^5$).
+\begin{lstlisting}[language=egison,numbers=none]
+def inv7 (z : Mod7) : Mod7 := z * z * z * z * z
+
+reprMod7 (inv7 (projMod7 3)) -- 5
+\end{lstlisting}
+

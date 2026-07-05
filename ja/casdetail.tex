@@ -1,0 +1,162 @@
+\chapter{簡約システム詳細}\label{casdetail}
+
+本章は，Egisonの数式処理システムの簡約が型システムとどのように連携しているかを詳しく解説する．
+第\ref{cas}章では数式の簡約を組み込みの機能として紹介したが，簡約システムは実際には，ユーザーが拡張できるいくつかの直交した仕組みから組み立てられている．
+本章では，（1）簡約規則の宣言，（2）型注釈による正規形の指定，（3）型の昇格タワーとその拡張，（4）タワーの外に置かれる商の型，の4つを順にみていく．
+
+\section{簡約規則の宣言}\label{cas-rule}
+
+第\ref{cas}章\ref{cas-simplify}節で紹介した組み込みの簡約規則に加えて，ユーザーが\lstinline{declare rule}文で簡約規則を宣言することもできる．
+たとえば，$\sqrt{2}$を表すシンボル\lstinline{sqrt2}を導入し，$\sqrt{2}^2 = 2$という規則を登録すると，この規則は簡約のたびに自動で適用される．
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol sqrt2
+declare rule auto term sqrt2^2 = 2
+
+(1 + sqrt2)^2 -- 2 * sqrt2 + 3
+\end{lstlisting}
+これは数学的には$\mathbb{Z}[\sqrt{2}] = \mathbb{Z}[X]/(X^2-2)$という代数拡大（多項式環の商）を導入する操作である．
+Egisonの簡約規則は大域的であるが，シンボルは大域的に一意であるため，規則はそのシンボルが現れる数式にしか作用しない．
+つまり，シンボルの一意性がスコープの役割を果たしている．
+ガウス整数$\mathbb{Z}[i]$（$i^2 = -1$）や二重数（$\varepsilon^2 = 0$），1の冪根なども，同じパターンで導入されている代数拡大である．
+
+\section{型による正規形の指定}\label{cas-tower}
+
+同じ数式は，複数の異なるデータ構造で表現できる．
+たとえば，
+\[ (2+3i) + (1-i)x + 4x^2 \]
+は，原子$\{i, x\}$の上の平坦な多項式としても，係数がガウス整数$\mathbb{Z}[i]$であるような$x$の多項式としても保持できる．
+どちらの正規形が適切かは，つぎに何をしたいか（$x$について微分したいのか，$\mathbb{Z}[i]$の性質を使いたいのか）に依存するため，値だけからは決められない．
+Egisonでは，\textbf{型注釈でこの正規形を指定する}．
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol i, x
+
+def v := (2 + 3 * i) + (1 - i) * x + 4 * x^2
+
+def flat : Poly Integer [i, x] := v
+inspect flat
+-- "4 * x^2 - i x + x + 3 * i + 2 : Poly Integer [i, x]"
+
+def byX : Poly (Poly Integer [i]) [x] := v
+inspect byX
+-- "4 * x^2 + (- i + 1) * x + 3 * i + 2 : Poly (Poly Integer [i]) [x]"
+\end{lstlisting}
+型\lstinline{Poly Integer [i, x]}は「原子集合$\{i, x\}$の上の整数係数多項式」を表す型である．
+\lstinline{Poly (Poly Integer [i]) [x]}のように係数の位置に多項式型を入れ子にすると，「$\mathbb{Z}[i]$係数の$x$の多項式」という正規形を表す．
+型注釈は値を分類するだけでなく，値の内部構造をその型のかたちに組み替える（reshape）．
+組み替えは値を変えない．
+実際，2つの正規形の差を計算すると$0$になる．
+\begin{lstlisting}[language=egison,numbers=none]
+flat - byX -- 0
+\end{lstlisting}
+形の異なる表現同士の演算が正しく簡約されるのは，\textbf{演算の結果は常に既定の平坦形で返る}という規約があるためである．
+入れ子の正規形は型注釈を書いた場所にだけ現れ，演算をまたいで勝手に伝播することはない．
+
+上の例で使った\lstinline{inspect}は，値と一緒にその値から読み取れる型（観察型）を表示する．
+よく使う型には\lstinline{declare cas-type}文で別名をつけられる．
+別名は透明であり，型の表示では展開されたもとの型が使われる．
+\begin{lstlisting}[language=egison,numbers=none]
+declare cas-type GaussianPolyX := Poly (Poly Integer [i]) [x]
+
+def byX2 : GaussianPolyX := v
+inspect byX2
+-- "4 * x^2 + (- i + 1) * x + 3 * i + 2 : Poly (Poly Integer [i]) [x]"
+\end{lstlisting}
+
+\section{昇格タワーとその拡張}\label{cas-subtype}
+
+CASの型は，値を保存する埋め込みによって順序づけられている．
+この順序の背骨は，代数学の包含$\mathbb{Z} \subset \mathbb{Q} \subset \mathbb{Z}[x] \subset \mathbb{Q}[x] \subset \mathbb{Q}(x)$をそのまま型の階段にした\emph{昇格タワー}（promotion tower）\index{しょうかくたわー@昇格タワー}である．
+\begin{lstlisting}[language=egison,numbers=none]
+Integer                        -- `整数`
+  <: Frac Integer              -- `有理数`
+  <: Poly Integer [..]         -- `整数係数多項式`
+  <: Poly (Frac Integer) [..]  -- `有理数係数多項式`
+  <: Frac (Poly Integer [..])  -- `有理式`
+  <: MathValue                 -- `すべての数式`
+\end{lstlisting}
+タワーの各段は真の部分集合としての埋め込みであり，値を一切変えない．
+これに加えて，原子集合の包含（\lstinline{Poly Integer [x] <: Poly Integer [x, y]}）と，係数位置を通じた埋め込みも順序に含まれる．
+異なる型の値を混ぜて演算すると，タワーを上へ昇り，両方を含む最小の型（join）へ自動で昇格する．
+\begin{lstlisting}[language=egison,numbers=none]
+def p : Poly Integer [x] := x + 1
+def q : Frac Integer := 1 / 2
+
+def r := p + q
+inspect r -- "x + 3 / 2 : Poly (Frac Integer) [x]"
+\end{lstlisting}
+原子集合が異なる場合も，原子集合を合併した型へ昇格する．
+\begin{lstlisting}[language=egison,numbers=none]
+declare cas-type GaussianInt := Poly Integer [i]
+declare cas-type Zsqrt2 := Poly Integer [sqrt2]
+
+def a : GaussianInt := 1 + i
+def b : Zsqrt2 := 1 + sqrt2
+
+def c := a + b
+inspect c -- "sqrt2 + i + 2 : Poly Integer [i, sqrt2]"
+\end{lstlisting}
+$\mathbb{Z}[i]$の値と$\mathbb{Z}[\sqrt{2}]$の値の和が，注釈なしで$\mathbb{Z}[i, \sqrt{2}]$に着地している．
+
+ここまでのタワーは組み込みだが，タワーは固定ではなく，\textbf{ユーザーが拡張できる}．
+前節の\lstinline{declare cas-type}は正規形に名前を与え，\lstinline{declare cas-subtype}は新しい辺（埋め込み）をタワーに追加する．
+たとえば，組み込みの順序は，前節の平坦形（\lstinline{Poly Integer [i, x]}）と入れ子形（\lstinline{Poly (Poly Integer [i]) [x]}）をあえて関係づけていない．
+両者は同じ値の集合の異なる正規形であり，どちらへ昇格すべきかはユーザーの選択だからである．
+まさにこの選択こそが，ユーザーがタワーに書き加える情報である．
+\begin{lstlisting}[language=egison,numbers=none]
+declare cas-subtype Poly Integer [i, x] <: Poly (Poly Integer [i]) [x]
+\end{lstlisting}
+この宣言のあとは，平坦形と入れ子形が混ざる演算は入れ子形へ昇格するようになる．
+
+勝手に辺を追加してもタワーが壊れないように，辺を宣言するたびに，
+順序全体で任意の2つの型のjoinが一意に定まること（join半束性）が検査される．
+一意性が壊れる宣言は，先に宣言すべき\emph{完備化辺}の提案つきでエラーになる．
+\begin{lstlisting}[language=egison,numbers=none]
+declare cas-subtype Poly Integer [x] <: Poly Integer [i, x]
+-- `冗長な辺（導出可能）: 警告つきで受理され，`
+-- `端点が検査対象のノードとして登録される`
+
+declare cas-subtype Poly Integer [i] <: Poly (Poly Integer [i]) [x]
+-- `エラー:` pair (Poly Integer [i], Poly Integer [x])
+--   `の極小上界が2つに分裂する:`
+--   {Poly Integer [i, x], Poly (Poly Integer [i]) [x]}
+-- `ヒント: 先に完備化辺を宣言せよ:`
+--   declare cas-subtype Poly Integer [i, x]
+--     <: Poly (Poly Integer [i]) [x]
+\end{lstlisting}
+$\mathbb{Z}[i]$を入れ子形の中に置こうとすると，$\mathbb{Z}[i]$と$\mathbb{Z}[x]$の共通の上界が
+平坦形と入れ子形の2つに分裂してしまうため，宣言は拒否される．
+提案される完備化辺は常に数学的に正しい埋め込みであり（平坦形は入れ子形に組み替えられる），
+それを先に宣言すれば元の辺も受理される．
+このように，拡張後のタワーの上でもjoinは常に一意のままであり，暗黙の昇格は決定的であり続ける．
+なお，この検査はそれまでの宣言に現れた型の上で行われる
+（上記の1行目の冗長な辺は，\lstinline{Poly Integer [x]}を検査対象に登録するために書いている）．
+
+\section{商の型}\label{cas-quotient}
+
+$\mathbb{Z}/7\mathbb{Z}$（7で割った余りの世界）のような商は，これまでの型とは性質が異なる．
+$12$と$5$は$\mathbb{Z}$では異なる値だが，$\mathbb{Z}/7\mathbb{Z}$では等しい．
+つまり\textbf{等しさそのものが型に依存する}ため，値を保存する埋め込みの順序（前節）には入れられない．
+Egisonでは，商の型は\lstinline{declare cas-quotient}文で順序の外に宣言する．
+\begin{lstlisting}[language=egison,numbers=none]
+declare cas-quotient Mod7 := Integer by (\n -> modulo n 7)
+
+def a : Mod7 := projMod7 5
+def b : Mod7 := projMod7 4
+
+a + b -- 2
+projMod7 12 == projMod7 5 -- True
+\end{lstlisting}
+宣言すると，整数から\lstinline{Mod7}への射影\lstinline{projMod7}，代表元を取り出す\lstinline{reprMod7}，環としての演算，等値判定が自動で導出される．
+演算は毎回代表元を簡約するので，値は常に$0$から$6$の範囲に保たれる．
+また宣言時には，簡約関数が冪等であることと，加算・乗算と両立する（合同である）ことが，サンプル点の上で検査される．
+
+\lstinline{Mod7}の値と生の整数の混在（\lstinline{a + 10}など）は型エラーになる．
+これは$\mathbb{Z}$の等しさと$\mathbb{Z}/7\mathbb{Z}$の等しさを暗黙に混同しないためであり，世界を横断するときは\lstinline{projMod7}・\lstinline{reprMod7}を明示的に使う．
+商の上に直接関数を定義することもできる．
+たとえば$\mathbb{F}_7$における逆元は，フェルマーの小定理（$z^{-1} = z^5$）を使って1行で書ける．
+\begin{lstlisting}[language=egison,numbers=none]
+def inv7 (z : Mod7) : Mod7 := z * z * z * z * z
+
+reprMod7 (inv7 (projMod7 3)) -- 5
+\end{lstlisting}
+
