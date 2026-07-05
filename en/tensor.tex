@@ -524,6 +524,38 @@ remove(2, [{i, 1}, {j, -1}])        = [{i, 1}]
 update(2, 0, [{i, 1}, {j, -1}])     = [{i, 1}, {j, 0}]
 \end{lstlisting}
 
+\section{Differences from Classical Index Notation --- Unified Index Rules}\label{tensor-unified}
+
+In classical tensor index notation, the validity conditions for indices differ from operation to operation.
+For example, $u_i + v_i$ is valid but $u_i + v_j$ is not, and under the Einstein summation convention $u^i v_i$ denotes a contraction while the same-variance repetition $u_i v_i$ is invalid.
+Egison simplifies and unifies these rules:
+\textbf{every operation is treated by one semantics --- element-wise lifting (\lstinline{tensorMap} insertion) followed by index reduction}.
+As a result, expressions valid in the classical notation keep their meaning, and formerly invalid expressions receive a consistent meaning as well.
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol i, j
+
+[|1,2,3|]_i + [|10,20,30|]_j
+-- [| [| 11, 21, 31 |], [| 12, 22, 32 |], [| 13, 23, 33 |] |]_i_j
+
+[|1,2,3|]_i + [|10,20,30|]_i
+-- [| 11, 22, 33 |]_i
+
+[|1,2,3|]_i * [|10,20,30|]_j
+-- [| [| 10, 20, 30 |], [| 20, 40, 60 |], [| 30, 60, 90 |] |]_i_j
+
+[|1,2,3|]_i * [|10,20,30|]_i
+-- [| 10, 40, 90 |]_i
+
+[|1,2,3|]~i . [|10,20,30|]_i
+-- 140
+\end{lstlisting}
+Note that \lstinline{+} and \lstinline{*} follow \emph{exactly the same rules}.
+With distinct indices the result takes the shape of a tensor product (all combinations); a repeated subscript extracts the diagonal (for \lstinline{*} this coincides with the Hadamard product).
+The classically invalid $u_i + v_j$ becomes a tensor with the natural meaning ``all combinations of the sum''.
+Contraction happens when a superscript--subscript pair is passed to a tensor function such as \lstinline{.} (Section~\ref{tensor-tensorfunc}).
+
+In the repeated-index case, the intermediate form right after lifting is a square array holding all combinations, but index reduction (Section~\ref{tensor-rules}) extracts the diagonal immediately, so the user only ever observes the reduced value.
+
 \section{Application of Tensor Functions}\label{tensor-tensorfunc}
 
 When an indexed tensor is passed to a tensor function, it is applied to the tensor function together with its indices.
@@ -1139,3 +1171,19 @@ Through the TensorMap insertion mechanism, Egison achieves the following:
 \end{itemize}
 
 This design allows Egison's computer algebra system to handle scalars and tensors uniformly, while providing an intuitive and user-friendly interface.
+
+\subsection{Properties of the Insertion (Guarantees)}
+
+Type-directed \lstinline{tensorMap} insertion is designed to satisfy the following properties.
+
+\begin{itemize}
+\item \textbf{Conservativity}: programs that use no tensors are entirely unaffected by insertion.
+The meaning of scalar-only programs is exactly what it was before the insertion mechanism existed.
+\item \textbf{Determinism}: where \lstinline{tensorMap} is inserted is determined uniquely by the functions' principal types alone.
+Type annotations are not needed to control insertion; the same inferred types yield the same insertion.
+\item \textbf{Confluence}: multi-argument lifting via \lstinline{tensorMap2} or nested \lstinline{tensorMap} yields the same result no matter which argument is processed first (the nesting order carries no semantic difference).
+\item \textbf{Idempotence of the \lstinline{Tensor} type}: at the type level, \lstinline{Tensor (Tensor a)} is identified with \lstinline{Tensor a}.
+This corresponds to the fact that an Egison tensor is a flat multi-dimensional array with an index list; no nested tensor-of-tensor structure exists at the value level.
+\end{itemize}
+
+Together with type preservation and type safety, these properties are established as theorems in the theory of Egison's typed tensor calculus.

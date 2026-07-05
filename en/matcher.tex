@@ -329,3 +329,126 @@ matchAll [(1, 4), (2, 3), (3, 1)] as assocMultiset eq with
   | $x ^ #3 :: $rs -> (x, rs)
 -- [(1, [(1, 1), (2, 3), (3, 2)]), (2, [(1, 4), (3, 2)])]
 \end{lstlisting}
+
+\section{Types of Matchers and Patterns}\label{matcher-types}
+
+The matcher definitions so far carried type annotations such as \lstinline{Matcher (Integer, Integer)}.
+From this section on, we explain how pattern matching is checked by the type system.
+
+In Egison's type system, matchers and patterns each have types.
+\lstinline{Matcher a} is the type of matchers whose targets have type \lstinline{a}, and \lstinline{Pattern a} is the type of patterns that match values of type \lstinline{a}.
+Matchers are first-class values, so functions such as \lstinline{multiset} that take a matcher and return a matcher also have types.
+Argument-matcher positions use the \emph{slot type} \lstinline{MatcherSlot a b}.
+The first component \lstinline{a} is the type of the target at that position, and the second component \lstinline{b} is the type of the decomposition demanded by the pattern there; when the two coincide, as in \lstinline{list} and \lstinline{multiset}, one may read it as ``takes roughly a \lstinline{Matcher a}''.
+For example, the basic collection matchers have the following types.
+\begin{lstlisting}[language=egison,numbers=none]
+something : Matcher a
+eq        : {Eq a} => Matcher a
+list      : MatcherSlot a a -> Matcher [a]
+multiset  : MatcherSlot a a -> Matcher [a]
+set       : MatcherSlot a a -> Matcher [a]
+\end{lstlisting}
+
+One design point hides in this list of types: the types of \lstinline{list} and \lstinline{multiset} carry \emph{no} \lstinline{Eq} constraint.
+Value patterns (such as \lstinline{#5}) are handled at the level of \lstinline{something} by structural equality, so the collection matchers themselves demand no equality on the elements.
+Thanks to this, matchers such as \lstinline{multiset} can be used as-is even at types without a defined equality (symbolic mathematical expressions, abstract syntax trees, and so on).
+Using the \lstinline{eq} matcher explicitly, as in \lstinline{intersect} of Section~\ref{quick-matcher-composition} of Chapter~\ref{quick}, is for matching with the custom equality of an \lstinline{Eq} type-class instance.
+
+\section{Type Checking of Patterns}\label{matcher-pattern-typing}
+
+Patterns are typed independently of the matcher they are used with (\emph{matcher polymorphism}).
+For example, \lstinline{$x :: $xs} has type \lstinline{Pattern [a]}, which is exactly why the same pattern can be used with both \lstinline{list integer} and \lstinline{multiset integer}.
+
+Type checking of value patterns involves the order of bindings.
+A pattern is checked from left to right with a growing set of bindings, and the expression \lstinline{e} of a value pattern \lstinline{#e} may refer to the pattern variables bound so far.
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll [1, 2, 3, 1] as multiset integer with
+  | $x :: #x :: _ -> x
+-- [1, 1]
+\end{lstlisting}
+This non-linear pattern expresses ``some element \lstinline{x} together with another occurrence of the same value'', and \lstinline{#x} is type-checked under the binding of the preceding \lstinline{$x} (of type \lstinline{Integer}).
+
+The type checker detects statically the mistakes that a dynamic implementation would answer only with a silent match failure.
+First, type errors inside a value pattern's expression are reported directly.
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll [1, 2, 3] as multiset integer with
+  | $x :: #(x ++ [1]) :: _ -> x
+-- Type error: (++) expects [Integer] but x is Integer
+\end{lstlisting}
+Second, a value pattern placed at the wrong position is detected.
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll [1, 2, 3] as multiset integer with
+  | $x :: #x -> x
+-- Type error: the second argument of :: requires
+--   Pattern [Integer], but #x has type Pattern Integer
+\end{lstlisting}
+The programmer's intent was ``\lstinline{x} appears again in the rest'', but the second argument of \lstinline{::} is the position matching the whole remaining list; the correct pattern is \lstinline{$x :: #x :: _}.
+A dynamic implementation would simply fail to match, reporting nothing.
+Finally, referring to a variable to the left of its binding is detected as an unbound-variable warning (and as a type error in strict mode).
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll [1, 2, 3] as multiset integer with
+  | #x :: $x :: _ -> x
+-- Warning: unbound variable x
+--   (#x refers to x left of its binding $x)
+\end{lstlisting}
+
+\section{Type Checking of \texttt{match} Expressions}\label{matcher-match-typing}
+
+In \lstinline{match} and \lstinline{matchAll} expressions, the types of the target, the matcher, the patterns, and the bodies must all agree.
+If the target has type \lstinline{a}, the matcher must have type \lstinline{Matcher a}, every match clause's pattern must have type \lstinline{Pattern a}, and the bodies of all match clauses must share one type.
+
+For example, combining a collection pattern constructor with an integer matcher is a type error.
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll 5 as integer with
+  | $x :: _ -> x
+-- Type error: :: targets collections [a], but the
+--   target and the matcher are for Integer
+\end{lstlisting}
+Body type mismatches are detected as well.
+In the \lstinline{twin} example of Section~\ref{quick-pat-fun} of Chapter~\ref{quick}, writing the body as \lstinline{[n, ns]} is a type error because the list would mix \lstinline{Integer} and \lstinline{[Integer]}; a tuple \lstinline{(n, ns)} is used instead.
+
+In addition, the checker verifies that the matcher can provide the \emph{decomposition} the pattern demands (the admissibility check).
+A pattern using only variable and value patterns demands no decomposition, so it combines with \lstinline{something} at any type; a pattern using a constructor such as \lstinline{::} needs a matcher that can decompose it.
+This check is computed from the structure of the pattern alone, so wrong combinations are rejected statically, without running the matcher.
+
+\section{Consistency of Matcher Definitions}\label{matcher-consistency}
+
+Matcher definitions themselves are also type-checked.
+For each matcher clause, besides the type agreement of the primitive pattern pattern, the next-matcher expression, and the primitive data patterns, the \emph{exhaustiveness of the data-pattern arms} is required.
+Once a clause's primitive pattern pattern matches the pattern, the target is matched against that clause's arms alone, and missing all of them is a runtime error.
+A matcher definition whose arm set is not exhaustive is therefore rejected as a type error.
+\begin{lstlisting}[language=egison]
+def bad {a} (m : MatcherSlot a a) : Matcher [a] :=
+  matcher
+    | $ :: $ as (m, bad m) with
+      | $x :: $xs -> [(x, xs)]    -- missing final | _ -> []
+    | $ as something with
+      | $tgt -> [tgt]
+-- Type error: the data-pattern arms of matcher
+--   clause :: $ $ are non-exhaustive
+\end{lstlisting}
+If the cons clause has only the arm \lstinline{$x :: $xs}, an empty-list target matches no arm and fails at runtime.
+Appending \lstinline{| _ -> []} means ``match failure (no candidates) when the target cannot be decomposed'' and makes the arms exhaustive.
+The recognized exhaustive arm shapes are (1) a trailing wildcard arm, (2) the pair of \lstinline{[]} and \lstinline{::} (complete for collections), and (3) a single irrefutable arm (such as \lstinline{$tgt}).
+
+\section{Types of Pattern Functions}\label{matcher-patfun-types}
+
+Pattern functions, introduced in Section~\ref{quick-pat-fun} of Chapter~\ref{quick}, are typed as well.
+\begin{lstlisting}[language=egison,numbers=none]
+def pattern twin {a} (pat1: a) (pat2: [a]) : [a] :=
+  (~pat1 & $x) :: #x :: ~pat2
+\end{lstlisting}
+In this definition, the parameter annotation \lstinline{(pat1: a)} says ``\lstinline{pat1} is a pattern matching values of type \lstinline{a}'', and the result position \lstinline{: [a]} says ``the application is a pattern matching values of type \lstinline{[a]}''.
+That is, the type of \lstinline{twin} reads roughly as \lstinline{Pattern a -> Pattern [a] -> Pattern [a]}.
+Argument patterns are checked at application sites.
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll [1, 2] as multiset integer with
+  | twin ($y :: _) _ -> y
+-- Type error: the first argument requires
+--   Pattern Integer, but $y :: _ is Pattern [Integer]
+\end{lstlisting}
+
+For the admissibility check (Section~\ref{matcher-match-typing}), an application of a pattern function behaves as the \emph{skeleton of its body pattern}.
+The body of \lstinline{twin} is nested cons patterns, so a match expression using \lstinline{twin} needs a matcher that can decompose cons (\lstinline{list} or \lstinline{multiset}).
+Conversely, a pattern function whose body is just a parameter imposes no structure of its own; only the demands of the argument patterns propagate.
+In this way, ``which matchers this pattern needs'' is tracked statically even through pattern functions.

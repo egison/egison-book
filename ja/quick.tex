@@ -362,21 +362,25 @@ def singleCommonElem xs ys := match (xs, ys) as (multiset eq, multiset eq) with
 
 %\todo{もっとpattern functionによるモジュール化の嬉しさがわかる例だと良い？} そのような例を追加するのは今後の課題にします．
 
-パターン関数を定義する構文はラムダ式の構文と似ているが，矢印に\lstinline{->}の代わりに\lstinline{=>}を使う点が異なる．
+パターン関数は\lstinline{def pattern}文で定義する．
+名前のあとに，型引数（\lstinline|{a}|），型注釈つきの仮引数，そして\lstinline{:}に続けて適用結果のパターンが対象とする型を書く．
 以下で定義されているパターン関数\lstinline{twin}は，それぞれの第一引数が同じ値である場合にマッチするような，二重にネストしたコンス・パターンをモジュール化している．
 パターン関数の仮引数は\emph{変数パターン}（\emph{variable pattern}）\index{へんすうぱたーん@変数パターン}と呼ばれる．
 この例の変数パターンは，\lstinline{pat1}と\lstinline{pat2}である．
+仮引数の型注釈\lstinline{(pat1: a)}は，\lstinline{pat1}が\lstinline{a}型の値にマッチするパターンであることを表す．
 パターン関数のボディで，変数パターンの中身を参照するときは，\lstinline{~}を変数パターンの先頭に付加する．
 これは変数パターンをパターン・コンストラクタと区別するためである．
 \begin{lstlisting}[language=egison,numbers=none]
-def twin := \pat1 pat2 => (~pat1 & $x) :: #x :: ~pat2
+def pattern twin {a} (pat1: a) (pat2: [a]) : [a] :=
+  (~pat1 & $x) :: #x :: ~pat2
 \end{lstlisting}
 この\lstinline{twin}パターン関数は，以下のように動作する．
 \begin{lstlisting}[language=egison,numbers=none]
 match [1, 1, 2, 3] as list integer with
-| twin $n $ns -> [n, ns]
--- [1, [2, 3]]
+| twin $n $ns -> (n, ns)
+-- (1, [2, 3])
 \end{lstlisting}
+パターン関数の型検査については第\ref{matcher}章\ref{matcher-patfun-types}節で解説する．
 
 \section{マッチャー合成による新しいマッチャーの生成}\label{quick-matcher-composition}
 
@@ -392,7 +396,7 @@ match [1, 1, 2, 3] as list integer with
 def intersect xs ys := matchAll (xs,ys) as (set eq, set eq) with
   | ($x :: _, #x :: _) -> x
 \end{lstlisting}
-上記で使われている\lstinline{eq}マッチャーは，同値性が定義されたデータ型\footnote{現在のEgisonには静的な型はないが，Haskellでいうと\lstinline{Eq}型クラスに属するデータ型}のパターンマッチに使えるユーザー定義マッチャーである．
+上記で使われている\lstinline{eq}マッチャーは，同値性が定義されたデータ型\footnote{\lstinline{eq}マッチャーの型は\lstinline|{Eq a} => Matcher a|であり，\lstinline{Eq}型クラスのインスタンスをもつ型に使える（第\ref{matcher}章\ref{matcher-types}節）．}のパターンマッチに使えるユーザー定義マッチャーである．
 \lstinline{eq}マッチャーに対して，値パターンが使われた場合，同値性のチェックによりパターンマッチがおこなわれる．
 
 また，タプル・マッチャーと，マッチャーを引数にとってマッチャーを返す関数を組み合わせると，さまざまな非自由データ型に対するマッチャーが定義できる．

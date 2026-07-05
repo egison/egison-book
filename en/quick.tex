@@ -362,21 +362,25 @@ To do this, one uses a \emph{pattern function}\index{pattern function}, which ta
 
 %\todo{A better example that shows the benefit of modularization by pattern functions?} Adding such an example is left as a future task.
 
-The syntax for defining a pattern function is similar to that of lambda expressions, but differs in that it uses \lstinline{=>} instead of \lstinline{->} for the arrow.
+A pattern function is defined with the \lstinline{def pattern} statement.
+After the name come type parameters (\lstinline|{a}|), parameters with type annotations, and, after \lstinline{:}, the type targeted by the pattern that the application produces.
 The pattern function \lstinline{twin} defined below modularizes a doubly nested cons pattern that matches when the first elements are equal.
 The formal parameters of a pattern function are called \emph{variable patterns}\index{variable pattern}.
 In this example, the variable patterns are \lstinline{pat1} and \lstinline{pat2}.
+The parameter annotation \lstinline{(pat1: a)} says that \lstinline{pat1} is a pattern that matches values of type \lstinline{a}.
 When referencing the content of a variable pattern in the body of a pattern function, \lstinline{~} is prefixed to the variable pattern.
 This is to distinguish variable patterns from pattern constructors.
 \begin{lstlisting}[language=egison,numbers=none]
-def twin := \pat1 pat2 => (~pat1 & $x) :: #x :: ~pat2
+def pattern twin {a} (pat1: a) (pat2: [a]) : [a] :=
+  (~pat1 & $x) :: #x :: ~pat2
 \end{lstlisting}
 This \lstinline{twin} pattern function behaves as follows.
 \begin{lstlisting}[language=egison,numbers=none]
 match [1, 1, 2, 3] as list integer with
-| twin $n $ns -> [n, ns]
--- [1, [2, 3]]
+| twin $n $ns -> (n, ns)
+-- (1, [2, 3])
 \end{lstlisting}
+Type checking of pattern functions is explained in Section~\ref{matcher-patfun-types} of Chapter~\ref{matcher}.
 
 \section{Generating New Matchers via Matcher Composition}\label{quick-matcher-composition}
 
@@ -392,7 +396,7 @@ It uses a matcher for a tuple of two sets to extract common elements of collecti
 def intersect xs ys := matchAll (xs,ys) as (set eq, set eq) with
   | ($x :: _, #x :: _) -> x
 \end{lstlisting}
-The \lstinline{eq} matcher used above is a user-defined matcher that can be used for pattern matching on data types with defined equality.\footnote{Although Egison now has a static type system, in Haskell terms this would be a data type belonging to the \lstinline{Eq} type class.}
+The \lstinline{eq} matcher used above is a user-defined matcher that can be used for pattern matching on data types with defined equality.\footnote{The type of the \lstinline{eq} matcher is \lstinline|{Eq a} => Matcher a|; it is usable at any type with an \lstinline{Eq} instance (Section~\ref{matcher-types} of Chapter~\ref{matcher}).}
 When a value pattern is used with the \lstinline{eq} matcher, pattern matching is performed by checking equality.
 
 Furthermore, by combining tuple matchers with functions that take matchers as arguments and return matchers, one can define matchers for various non-free data types.
