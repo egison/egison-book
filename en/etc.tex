@@ -9,22 +9,22 @@ Lambda expressions let you omit the naming of the function itself.
 Anonymous parameter functions, which also let you omit the naming of arguments, can be thought of as taking this idea one step further.
 For example, an anonymous parameter function that multiplies the first argument by 10 and adds the second argument can be defined as follows.
 \begin{lstlisting}[language=egison,numbers=none]
-2#(%1 * 10 + %2) 1 2
+2#($1 * 10 + $2) 1 2
 -- 12
 \end{lstlisting}
 The \lstinline{2} before \lstinline{#} indicates that this defines a 2-argument function.
-The \lstinline{%1} and \lstinline{%2} appearing in the function body represent the first and second arguments, respectively.
+The \lstinline{$1} and \lstinline{$2} appearing in the function body represent the first and second arguments, respectively.
 
 Anonymous parameter functions have two variants: one that takes a tuple as its argument and one that takes a list.
 These two variants are defined by enclosing the number before \lstinline{#} in parentheses or brackets.
 Enclosing the number before \lstinline{#} in \lstinline{()} defines an anonymous parameter function that takes a tuple as its argument.
 \begin{lstlisting}[language=egison,numbers=none]
-(2)#(%1, %2) (10, 20)
+(2)#($1, $2) (10, 20)
 -- (10, 20)
 \end{lstlisting}
 Enclosing the number before \lstinline{#} in \lstinline{[]} defines an anonymous parameter function that takes a list as its argument.
 \begin{lstlisting}[language=egison,numbers=none]
-[2]#(%2, %1) [10, 20]
+[2]#($2, $1) [10, 20]
 -- (20, 10)
 \end{lstlisting}
 
@@ -198,32 +198,32 @@ instance Eq Integer where
   (/=) x y := not (x == y)
 \end{lstlisting}
 
-An example of making the \lstinline{MathExpr} type an instance of the algebraic type class hierarchy is as follows.
+An example of making the \lstinline{MathValue} type an instance of the algebraic type class hierarchy is as follows.
 Each level of the hierarchy requires its own instance definition.
 \begin{lstlisting}[language=egison,numbers=none]
-instance AddSemigroup MathExpr where
-  (+) x y := plusForMathExpr x y
+instance AddSemigroup MathValue where
+  (+) x y := plusForMathValue x y
 
-instance AddMonoid MathExpr where
+instance AddMonoid MathValue where
   zero := 0
 
-instance AddGroup MathExpr where
-  neg x := minusForMathExpr 0 x
+instance AddGroup MathValue where
+  neg x := minusForMathValue 0 x
 
-instance MulSemigroup MathExpr where
-  (*) x y := multForMathExpr x y
+instance MulSemigroup MathValue where
+  (*) x y := multForMathValue x y
 
-instance MulMonoid MathExpr where
+instance MulMonoid MathValue where
   one := 1
 
-instance MulGroup MathExpr where
-  inv x := divForMathExpr 1 x
+instance MulGroup MathValue where
+  inv x := divForMathValue 1 x
 \end{lstlisting}
 
 Marker class instances (classes with no methods) can be declared without a \lstinline{where} clause.
 \begin{lstlisting}[language=egison,numbers=none]
-instance Ring MathExpr
-instance Field MathExpr
+instance Ring MathValue
+instance Field MathValue
 \end{lstlisting}
 
 Type class instance definitions can also include type class constraints.
@@ -553,7 +553,7 @@ Built-in functions for type conversion and type checking are provided (Table~\re
     \label{tab:typeFunctions}
 \end{table}
 
-Note: In Egison, \lstinline{MathExpr}, \lstinline{Integer}, and \lstinline{Rational} are identified with each other, so \lstinline{isInteger} and \lstinline{isRational} are used to determine properties of numerical values in the computer algebra system.
+Note: In Egison, \lstinline{MathValue}, \lstinline{Integer}, and \lstinline{Rational} are identified with each other, so \lstinline{isInteger} and \lstinline{isRational} are used to determine properties of numerical values in the computer algebra system.
 
 \subsection{Tensor-Related Functions}
 

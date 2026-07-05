@@ -338,8 +338,6 @@ From this section on, we explain how pattern matching is checked by the type sys
 In Egison's type system, matchers and patterns each have types.
 \lstinline{Matcher a} is the type of matchers whose targets have type \lstinline{a}, and \lstinline{Pattern a} is the type of patterns that match values of type \lstinline{a}.
 Matchers are first-class values, so functions such as \lstinline{multiset} that take a matcher and return a matcher also have types.
-Argument-matcher positions use the \emph{slot type} \lstinline{MatcherSlot a b}.
-The first component \lstinline{a} is the type of the target at that position, and the second component \lstinline{b} is the type of the decomposition demanded by the pattern there; when the two coincide, as in \lstinline{list} and \lstinline{multiset}, one may read it as ``takes roughly a \lstinline{Matcher a}''.
 For example, the basic collection matchers have the following types.
 \begin{lstlisting}[language=egison,numbers=none]
 something : Matcher a
@@ -348,6 +346,12 @@ list      : MatcherSlot a a -> Matcher [a]
 multiset  : MatcherSlot a a -> Matcher [a]
 set       : MatcherSlot a a -> Matcher [a]
 \end{lstlisting}
+Argument-matcher positions use the \emph{slot type} \lstinline{MatcherSlot a b}, not \lstinline{Matcher}.
+A slot type takes two types.
+The first component \lstinline{a} is the type of the decomposition (structure) demanded by the pattern used at that position, and the second component \lstinline{b} is the type of the target (the value being decomposed) there.
+When the two coincide, as at the element position of \lstinline{list} and \lstinline{multiset}, one may read it as ``takes roughly a \lstinline{Matcher a}''.
+The reason a slot type carries the decomposition type and the target type separately is to check, \textbf{per use site, whether the matcher supplied there can actually decompose the pattern at that position}.
+We return to this check in Section~\ref{matcher-match-typing}.
 
 One design point hides in this list of types: the types of \lstinline{list} and \lstinline{multiset} carry \emph{no} \lstinline{Eq} constraint.
 Value patterns (such as \lstinline{#5}) are handled at the level of \lstinline{something} by structural equality, so the collection matchers themselves demand no equality on the elements.
@@ -409,6 +413,18 @@ In the \lstinline{twin} example of Section~\ref{quick-pat-fun} of Chapter~\ref{q
 
 In addition, the checker verifies that the matcher can provide the \emph{decomposition} the pattern demands (the admissibility check).
 A pattern using only variable and value patterns demands no decomposition, so it combines with \lstinline{something} at any type; a pattern using a constructor such as \lstinline{::} needs a matcher that can decompose it.
+Since \lstinline{something} only matches any value as a whole and offers no means of decomposition, combining it with a cons pattern is a type error.
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll [1, 2, 3] as something with
+  | $x :: $xs -> (x, xs)
+-- Type error: something (Matcher a) does not fit
+--   MatcherSlot [_] [Integer]
+--   (something offers no way to decompose a list)
+\end{lstlisting}
+This is why matcher-receiving positions are typed with a slot type rather than \lstinline{Matcher}.
+Here the cons pattern demands \lstinline{[_]} (list decomposition) in the slot's decomposition component, which \lstinline{something} cannot provide.
+A naive type system that treats \lstinline{something} as \lstinline{Matcher [Integer]} would accept this expression and then get stuck at runtime, where \lstinline{something} cannot decompose a cons.
+Egison's type system checks decomposition admissibility per use site, so it rejects the error statically.
 This check is computed from the structure of the pattern alone, so wrong combinations are rejected statically, without running the matcher.
 
 \section{Consistency of Matcher Definitions}\label{matcher-consistency}

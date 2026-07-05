@@ -9,22 +9,22 @@
 引数の命名まで省略できる無名パラメーター関数は，これをさらにおしすすめたものと考えることができる．
 たとえば，第一引数を10倍して第二引数と足し合わせる無名パラメーター関数は以下のように定義できる．
 \begin{lstlisting}[language=egison,numbers=none]
-2#(%1 * 10 + %2) 1 2
+2#($1 * 10 + $2) 1 2
 -- 12
 \end{lstlisting}
 \lstinline{#}の前の\lstinline{2}は$2$引数の関数を定義していることを意味する．
-関数のボディの中で現れる\lstinline{%1}と\lstinline{%2}はそれぞれ第一引数と第二引数を表している．
+関数のボディの中で現れる\lstinline{$1}と\lstinline{$2}はそれぞれ第一引数と第二引数を表している．
 
 無名パラメータ関数には，引数にタプルをとるものとリストをとるものの2つの変種がある．
 この2つの変種は\lstinline{#}の前に指定する引数の数を括弧で囲むことによって定義する．
 \lstinline{#}の前の数を\lstinline{()}で囲むとタプルを引数に取る無名パラメーター関数を定義できる．
 \begin{lstlisting}[language=egison,numbers=none]
-(2)#(%1, %2) (10, 20)
+(2)#($1, $2) (10, 20)
 -- (10, 20)
 \end{lstlisting}
 \lstinline{#}の前の数を\lstinline{[]}で囲むとリストを引数に取る無名パラメーター関数を定義できる．
 \begin{lstlisting}[language=egison,numbers=none]
-[2]#(%2, %1) [10, 20]
+[2]#($2, $1) [10, 20]
 -- (20, 10)
 \end{lstlisting}
 
@@ -198,32 +198,32 @@ instance Eq Integer where
   (/=) x y := not (x == y)
 \end{lstlisting}
 
-\lstinline{MathExpr}型を代数的型クラス階層のインスタンスにする例は以下のとおりである．
+\lstinline{MathValue}型を代数的型クラス階層のインスタンスにする例は以下のとおりである．
 階層の各レベルごとにインスタンス定義が必要になる．
 \begin{lstlisting}[language=egison,numbers=none]
-instance AddSemigroup MathExpr where
-  (+) x y := plusForMathExpr x y
+instance AddSemigroup MathValue where
+  (+) x y := plusForMathValue x y
 
-instance AddMonoid MathExpr where
+instance AddMonoid MathValue where
   zero := 0
 
-instance AddGroup MathExpr where
-  neg x := minusForMathExpr 0 x
+instance AddGroup MathValue where
+  neg x := minusForMathValue 0 x
 
-instance MulSemigroup MathExpr where
-  (*) x y := multForMathExpr x y
+instance MulSemigroup MathValue where
+  (*) x y := multForMathValue x y
 
-instance MulMonoid MathExpr where
+instance MulMonoid MathValue where
   one := 1
 
-instance MulGroup MathExpr where
-  inv x := divForMathExpr 1 x
+instance MulGroup MathValue where
+  inv x := divForMathValue 1 x
 \end{lstlisting}
 
 メソッドをもたないマーカークラスのインスタンスは\lstinline{where}句なしで宣言できる．
 \begin{lstlisting}[language=egison,numbers=none]
-instance Ring MathExpr
-instance Field MathExpr
+instance Ring MathValue
+instance Field MathValue
 \end{lstlisting}
 
 型クラスのインスタンス定義には型クラス制約を含めることもできる．
@@ -553,7 +553,7 @@ Egisonには多数の組み込み関数（primitive functions）\index{くみこ
     \label{tab:typeFunctions}
 \end{table}
 
-注：Egisonでは\lstinline{MathExpr}，\lstinline{Integer}，\lstinline{Rational}が同一視されるため，\lstinline{isInteger}と\lstinline{isRational}は数式処理システムで数値の性質を判定するために使われる．
+注：Egisonでは\lstinline{MathValue}，\lstinline{Integer}，\lstinline{Rational}が同一視されるため，\lstinline{isInteger}と\lstinline{isRational}は数式処理システムで数値の性質を判定するために使われる．
 
 \subsection{テンソル関連関数}
 

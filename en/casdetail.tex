@@ -2,12 +2,27 @@
 
 This chapter explains in detail how simplification in Egison's computer algebra system cooperates with the type system.
 Chapter~\ref{cas} introduced simplification as a built-in facility, but the simplification system is in fact assembled from several orthogonal, user-extensible mechanisms.
-This chapter walks through (1) declaring simplification rules, (2) selecting canonical forms with type annotations, (3) the promotion tower of types and its extension, and (4) quotient types, which live outside the tower.
+This chapter walks through (1) declaring simplification rules, (2) declaring mathematical functions, (3) selecting canonical forms with type annotations, (4) the promotion tower of types and its extension, and (5) quotient types, which live outside the tower.
 
 \section{Declaring Simplification Rules}\label{cas-rule}
 
-In addition to the built-in simplification rules introduced in Section~\ref{cas-simplify} of Chapter~\ref{cas}, users can declare their own simplification rules with the \lstinline{declare rule} statement.
-For example, if we introduce a symbol \lstinline{sqrt2} representing $\sqrt{2}$ and register the rule $\sqrt{2}^2 = 2$, the rule is applied automatically during every simplification.
+As we saw in Section~\ref{cas-simplify} of Chapter~\ref{cas}, built-in simplification rules such as $i^2 = -1$ are not embedded in the Haskell code of the interpreter; they are declared in the standard library with the \lstinline{declare rule} statement.
+Users can declare new simplification rules with exactly the same \lstinline{declare rule} statement.
+In other words, built-in rules and user rules rest on the same mechanism.
+
+A \lstinline{declare rule} statement is written in the following form.
+\begin{lstlisting}[language=egison,numbers=none]
+declare rule (auto | name) (term | poly | frac) lhs = rhs
+\end{lstlisting}
+The first specifier determines how the rule is applied.
+A rule declared with \lstinline{auto} (an automatic rule) is incorporated into the normalization procedure: it is applied automatically, repeatedly until it no longer applies, on every arithmetic operation (\lstinline{+}, \lstinline{*}, \lstinline{/}, and so on) on mathematical expressions.
+Rules declared with a rule name (named rules) are described at the end of this section.
+The second specifier determines against which structure of an expression the left-hand side is matched.
+A \lstinline{term} rule is applied to each term (monomial), a \lstinline{poly} rule to each (sub-)polynomial, and a \lstinline{frac} rule to each (sub-)fraction.
+In every case, the rule is also applied to subexpressions such as the arguments of function applications.
+The left-hand side can be a literal expression, or a pattern for mathematical expressions (Section~\ref{mexpr-pattern}) containing pattern variables \lstinline{$x} and value patterns \lstinline{#x}.
+
+For example, if we introduce a symbol \lstinline{sqrt2} representing $\sqrt{2}$ and register the automatic rule $\sqrt{2}^2 = 2$, the rule is applied automatically on every arithmetic operation.
 \begin{lstlisting}[language=egison,numbers=none]
 declare symbol sqrt2
 declare rule auto term sqrt2^2 = 2
@@ -18,6 +33,79 @@ Mathematically, this operation introduces the algebraic extension $\mathbb{Z}[\s
 Simplification rules in Egison are global, but since symbols are globally unique, a rule can only act on expressions in which its symbol occurs.
 In other words, the uniqueness of symbols plays the role of scoping.
 The Gaussian integers $\mathbb{Z}[i]$ (with $i^2 = -1$), the dual numbers (with $\varepsilon^2 = 0$), and roots of unity are algebraic extensions introduced by the same pattern.
+The implementation also indexes simplification rules by the symbols occurring in their left-hand sides, and a rule is not even tried on expressions that do not contain those symbols.
+Therefore, declaring a rule hardly slows down computations unrelated to it.
+
+The built-in simplification rules are declared with the same \lstinline{declare rule} statement in the standard library file \texttt{lib/math/normalize.egi}.
+For example, the following is a part of the declarations realizing the simplifications introduced in Section~\ref{cas-simplify} of Chapter~\ref{cas}.
+\begin{lstlisting}[language=egison,numbers=none]
+declare rule auto term i^2 = -1
+declare rule auto term log (exp $n) = n
+declare rule auto term (exp $x)^$n = exp (n * x)
+\end{lstlisting}
+As in the second and third rules, rules whose left-hand sides contain pattern variables can also be declared.
+
+A named rule, declared with a rule name, is not applied automatically; it is applied to an expression \lstinline{e} only where one writes \lstinline{simplify e using name}.
+For example, the addition formula for sine is a directional equation: applied from left to right it expands an expression, and applied from right to left it contracts one.
+Making such an equation an automatic rule would trigger the expansion in unintended places.
+Declaring it as a named rule instead lets us apply it explicitly, exactly where we want the expansion.
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol a, b
+declare rule sinAdd term sin ($x + $y) = sin x * cos y + cos x * sin y
+
+sin (a + b) -- 'sin (b + a)
+simplify (sin (a + b)) using sinAdd
+-- ('cos b) * ('sin a) + ('cos a) * ('sin b)
+\end{lstlisting}
+
+\section{Declaring Mathematical Functions}\label{casdetail-mathfunc}
+
+Mathematical functions such as \lstinline{sqrt} and \lstinline{exp}, introduced in Section~\ref{cas-symbol2}, are also defined with dedicated declaration statements.
+The \lstinline{declare mathfunc} statement declares a mathematical function whose applications remain as symbolic values.
+An application of a function that has only been declared is not simplified; it simply becomes a symbolic value.
+Combining it with the \lstinline{declare apply} statement defines a simplification that is executed once, at application time.
+For example, the logarithm function \lstinline{log} is declared in the standard library as follows.
+\begin{lstlisting}[language=egison,numbers=none]
+declare mathfunc log
+declare apply log x :=
+  match x as mathValue with
+    | #1 -> 0
+    | #e -> 1
+    | _ -> 'log x
+\end{lstlisting}
+The body of a \lstinline{declare apply} can be an arbitrary Egison expression; for inputs that cannot be simplified, it returns a symbolic value such as \lstinline{'log x} using the single quote (Section~\ref{mexpr-squote}).
+The simplification $\sqrt{8} \rightarrow 2\sqrt{2}$ we saw in Section~\ref{cas-symbol2} is also defined by the \lstinline{declare apply} of \lstinline{sqrt}.
+
+While the simplification of a \lstinline{declare apply} runs only once at function application time, the simplification rules of \lstinline{declare rule} are applied repeatedly, until convergence, on every normalization.
+The division of labor is as follows: algorithmic simplifications that inspect the argument's value and compute, such as $\sqrt{8} \rightarrow 2\sqrt{2}$, are defined with \lstinline{declare apply}, while rewrites on the shape of expressions, such as $i^2 = -1$, are defined with \lstinline{declare rule}.
+
+Furthermore, the \lstinline{declare derivative} statement extends the differentiation operator \lstinline{d/d} (Section~\ref{cas-derivative}) to new mathematical functions.
+The built-in differentiation formulas of the standard library are also declared with this statement.
+\begin{lstlisting}[language=egison,numbers=none]
+declare derivative sin = cos
+declare derivative cos = \z -> - sin z
+declare derivative exp = exp
+declare derivative log = \z -> 1 / z
+declare derivative sqrt = \z -> 1 / (2 * sqrt z)
+\end{lstlisting}
+
+Combining these declarations, a new mathematical function can be added to the computer algebra system in a few lines.
+For example, the hyperbolic secant function $\mathrm{sech}$ can be introduced as follows.
+The derivative of composite functions (the chain rule) is handled by \lstinline{d/d} itself, so only the shape of the derivative needs to be declared.
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol x
+
+declare mathfunc sech
+declare apply sech x :=
+  match x as mathValue with
+    | #0 -> 1
+    | _ -> 'sech x
+declare derivative sech = \z -> - sech z * tanh z
+
+sech 0 -- 1
+sech x -- 'sech x
+d/d (sech (x^2)) x -- -2 * ('sech (x^2)) * ('tanh (x^2)) * x
+\end{lstlisting}
 
 \section{Selecting Canonical Forms with Types}\label{cas-tower}
 
@@ -110,16 +198,17 @@ So that arbitrary edges cannot break the tower, every declared edge is checked t
 A declaration that would break uniqueness is rejected together with a suggested \emph{completing edge} to declare first.
 \begin{lstlisting}[language=egison,numbers=none]
 declare cas-subtype Poly Integer [x] <: Poly Integer [i, x]
--- redundant (derivable) edge: accepted with a warning;
--- its endpoints are registered as nodes for the check
+-- Warning: this edge is already derivable (redundant edge);
+--   its endpoints are still registered as nodes for the check
 
 declare cas-subtype Poly Integer [i] <: Poly (Poly Integer [i]) [x]
--- Error: pair (Poly Integer [i], Poly Integer [x])
---   would get two minimal upper bounds:
+-- Error: join would become ambiguous (D1 semilattice check).
+--   pair (Poly Integer [i], Poly Integer [x]) would get
+--   minimal upper bounds
 --   {Poly Integer [i, x], Poly (Poly Integer [i]) [x]}
--- hint: declare the completing edge first:
---   declare cas-subtype Poly Integer [i, x]
---     <: Poly (Poly Integer [i]) [x]
+--   hint: declare the completing edge first:
+--     declare cas-subtype Poly Integer [i, x]
+--       <: Poly (Poly Integer [i]) [x]
 \end{lstlisting}
 Placing $\mathbb{Z}[i]$ inside the nested form would split the common upper bounds of $\mathbb{Z}[i]$ and $\mathbb{Z}[x]$ into two---the flat and the nested form---so the declaration is rejected.
 The suggested completing edge is always a mathematically valid embedding (the flat form regroups into the nested one), and declaring it first makes the original edge acceptable.
@@ -154,4 +243,32 @@ def inv7 (z : Mod7) : Mod7 := z * z * z * z * z
 
 reprMod7 (inv7 (projMod7 3)) -- 5
 \end{lstlisting}
+
+The base of a quotient need not be the integers; it can be a polynomial ring.
+This lets us declare, as a single type, the quotient $\mathbb{Z}[x]/(x^3)$ that treats $x^3 = 0$ and drops every term of degree $3$ or higher --- power series truncated below degree $3$.
+The reduction function scans the terms and keeps only those whose $x$-degree is below $3$.
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol x
+
+-- keep a term only when its x-degree is below 3
+def dropHigh (t : MathValue) : MathValue :=
+  match t as mathValue with
+    | term _ ((#x, $k) :: []) -> if k < 3 then t else 0
+    | _ -> t
+
+declare cas-quotient Series3 := Poly Integer [x] by
+  (\p -> match p as mathValue with
+           | poly $ts -> sum (map dropHigh ts)
+           | _ -> p)
+
+def s : Series3 := projSeries3 (1 + x)
+
+reprSeries3 (s * s) -- x^2 + 2 * x + 1
+reprSeries3 (projSeries3 ((1 + x)^4)) -- 6 * x^2 + 4 * x + 1
+\end{lstlisting}
+The $x^3$ and $x^4$ terms of $(1 + x)^4 = 1 + 4x + 6x^2 + 4x^3 + x^4$ vanish, leaving $6x^2 + 4x + 1$.
+Apart from the base being $\mathbb{Z}[x]$, the mechanism is exactly the same as for \lstinline{Mod7}.
+This $x^3 = 0$ could also be expressed by the global simplification rule \lstinline{declare rule auto term x^3 = 0}, but then the truncation would happen everywhere \lstinline{x} occurs.
+Declaring it as a quotient confines the truncation to values of type \lstinline{Series3}, while ordinary \lstinline{Poly Integer [x]} values keep their terms of degree $3$ and above.
+This is the benefit of treating a coefficient-domain quotient as an independent type outside the tower.
 

@@ -747,23 +747,26 @@ Superscript-subscript indices remain as superscript-subscript indices even after
 
 The \lstinline[mathescape]!$\partial$/$\partial$! function is defined using \lstinline{flipIndices} as follows.
 \begin{lstlisting}[language=egison,numbers=none]
-def `$\partial$`/`$\partial$` (f: Tensor MathExpr) (x: Tensor MathExpr)
-    : Tensor MathExpr :=
-  tensorMap2 (\f x -> `$\partial$`/`$\partial$`' f x) f (flipIndices x)
+def `$\partial$`/`$\partial$` (f: Tensor MathValue) (x: Tensor MathValue)
+    : Tensor MathValue :=
+  tensorMap2 partialDiffMV f (flipIndices x)
 
--- `$\partial$`/`$\partial$`' is an auxiliary function that computes partial differentiation on scalar values
-def `$\partial$`/`$\partial$`' (f: MathExpr) (x: MathExpr) : MathExpr := ...
+-- partialDiffMV is an auxiliary function that computes
+-- partial differentiation on scalar values
+def partialDiffMV (f: MathValue) (x: MathValue) : MathValue := ...
 \end{lstlisting}
 
-Through \lstinline{tensorMap2}, the \lstinline[mathescape]!$\partial$/$\partial$'! function is applied to each component of \lstinline{f} and \lstinline{flipIndices x}.
+Through \lstinline{tensorMap2}, the \lstinline{partialDiffMV} function is applied to each component of \lstinline{f} and \lstinline{flipIndices x}.
 Since \lstinline{flipIndices x} reverses the indices of the second argument, the indices of the result tensor are also reversed.
 
 Below is a usage example of \lstinline[mathescape]!$\partial$/$\partial$!.
 \begin{lstlisting}[language=egison,numbers=none]
+declare symbol r, `$\theta$`, i, j
+
 `$\partial$`/`$\partial$` [|(r * (sin `$\theta$`)),(r * (cos `$\theta$`))|]_i [|r,`$\theta$`|]_j
--- [|[|(sin `$\theta$`),(r * (cos `$\theta$`))|],[|(cos `$\theta$`),(-1 * r * (sin `$\theta$`))|]|]_i~j
+-- [| [| 'sin `$\theta$`, ('cos `$\theta$`) * r |], [| 'cos `$\theta$`, - ('sin `$\theta$`) * r |] |]_i~j
 `$\partial$`/`$\partial$` [|(r * (sin `$\theta$`)),(r * (cos `$\theta$`))|]_i [|r,`$\theta$`|]_i
--- [|(sin `$\theta$`),(-1 * r * (sin `$\theta$`))|]~_i
+-- [| 'sin `$\theta$`, - ('sin `$\theta$`) * r |]~_i
 \end{lstlisting}
 
 In the first example, the index of the second argument is reversed from \lstinline{_j} to \lstinline{~j}, and the result has indices \lstinline{_i~j}.
@@ -801,10 +804,11 @@ A -- [| [| 11, 12 |], [| 21, 22 |] |]
 In mathematics and physics, it is common to assign different values to tensors with the same variable name but different index types (superscript vs.\ subscript).
 Egison supports this convention by allowing different tensors to be defined for each index type.
 When referencing a variable, Egison uses both the variable name and the index type.
-The index type is specified by writing the index type after the variable name in the variable definition.
+The index type is specified by writing indices after the variable name in the variable definition.
 \begin{lstlisting}[language=egison,numbers=none]
-def g__ : Tensor MathExpr := [| [| 2, 2 |], [| 2, 2 |] |]
-def g~~ : Tensor MathExpr := [| [| 1 / 2, 1 / 2 |], [| 1 / 2, 1 / 2 |] |]
+def g_i_j : Tensor MathValue := [| [| 2, 2 |], [| 2, 2 |] |]_i_j
+def g~i~j : Tensor MathValue :=
+  [| [| 1 / 2, 1 / 2 |], [| 1 / 2, 1 / 2 |] |]~i~j
 
 g_1_1 -- 2
 g~1~1 -- 1 / 2
@@ -813,23 +817,19 @@ g~1~1 -- 1 / 2
 To reference a variable that has been bound with a specified index type, it is convenient to use \emph{dummy symbols}\index{dummy symbol} (\emph{dummy symbol}).
 Dummy symbols are represented by \lstinline{#}, and each occurrence is treated as a unique symbol.
 Dummy symbols are a mechanism built into Egison.
-Using dummy symbols, \lstinline{g~~} and \lstinline{g__} defined above can be referenced as follows.
+Using dummy symbols, \lstinline{g~i~j} and \lstinline{g_i_j} defined above can be referenced as follows.
 \begin{lstlisting}[language=egison,numbers=none]
 g_#_# -- [| [| 2, 2 |], [| 2, 2 |] |]_#_#
 g~#~# -- [| [| 1 / 2, 1 / 2 |], [| 1 / 2, 1 / 2 |] |]~#~#
 \end{lstlisting}
-You can also specify the index type using regular symbols to reference tensors, but using dummy symbols is less prone to the mistake of accidentally using a defined variable as a symbol.
+You can also specify the index type using declared symbols to reference tensors, but using dummy symbols is more convenient since it requires no declaration.
 \begin{lstlisting}[language=egison,numbers=none]
-g_i_j -- [| [| 2, 2 |], [| 2, 2 |] |]_i_j
-g~i~j -- [| [| 1 / 2, 1 / 2 |], [| 1 / 2, 1 / 2 |] |]_i_j
-\end{lstlisting}
+declare symbol i, j
 
-Dummy symbols are not intended for any use other than as tensor indices, but they can be treated like ordinary symbols.
-Below, two dummy symbols are added together.
-When two dummy symbols are added, they cannot be combined as shown below, because each dummy symbol is treated as a distinct symbol.
-\begin{lstlisting}[language=egison,numbers=none]
-# + # -- # + #
+g_i_j -- [| [| 2, 2 |], [| 2, 2 |] |]_i_j
+g~i~j -- [| [| 1 / 2, 1 / 2 |], [| 1 / 2, 1 / 2 |] |]~i~j
 \end{lstlisting}
+Note that multiple dummy symbols appearing in a single expression are each treated as distinct symbols.
 
 As in mathematical notation for tensors, symbols can also be written as indices on the left-hand side variable.
 \begin{lstlisting}[language=egison,numbers=none]
@@ -847,16 +847,6 @@ def A_i_j := ...
 \end{lstlisting}
 The \lstinline{transpose} function is a built-in function that transposes tensor components in the order specified by the first argument.
 
-When no tensor with the same variable name and index type exists in the environment, the reference is performed by removing index types from the end one by one.
-For example, as shown below, when \lstinline{T~} and \lstinline{T_} are defined and \lstinline{T~#_#} is referenced, since \lstinline{T~_} does not exist in the environment, the last index type is removed and \lstinline{T~} is referenced instead.
-Since \lstinline{T~} is defined, its value is returned.
-\begin{lstlisting}[language=egison,numbers=none]
-def T~ : Tensor Integer := [| [| 11, 12 |], [| 21, 22 |] |]
-def T_ : Tensor Integer := [| [| -11, -12 |], [| -21, -22 |] |]
-
-T~#_# -- [| [| 11, 12 |], [| 21, 22 |] |]
-\end{lstlisting}
-
 \section{Convenient Syntax for Attaching Indices}\label{tensor-refs}
 
 For a tensor $A$ whose rank varies with a parameter $n$, one may want to attach indices like $A_{i_{1}...i_{n}}$.
@@ -864,8 +854,8 @@ For this purpose, Egison provides built-in functions \lstinline{subrefs} and \ls
 These functions attach the list of indices given as the second argument to the tensor given as the first argument.
 \lstinline{subrefs} appends the index list from the second argument to the existing indices of the first argument's tensor, while \lstinline{subrefs!} removes the existing indices and attaches new ones.
 \begin{lstlisting}[language=egison,numbers=none]
-subrefs! A (map 1#i_%1 [1..n])
-subrefs  A (map 1#i_%1 [1..n])
+subrefs! A (map 1#i_$1 [1..n])
+subrefs  A (map 1#i_$1 [1..n])
 \end{lstlisting}
 Since tensors of the form $A_{i_{1}...i_{n}}$ appear frequently in mathematical expressions, the following syntactic sugar is provided for the programs using \lstinline{subrefs!} and \lstinline{subrefs} above.
 \begin{lstlisting}[language=egison,numbers=none]
@@ -929,13 +919,13 @@ In Egison, the Riemann curvature tensor $R_{abcd}$ can be defined as follows.
 The right-hand side contains a complex expression, but it can be ignored for this section.
 Please focus only on the left-hand side.
 \begin{lstlisting}[language=egison,numbers=none]
-def R_a_b_c_d : Tensor MathExpr := withSymbols [i, j]
+def R_a_b_c_d : Tensor MathValue := withSymbols [i, j]
   g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
            `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
 \end{lstlisting}
 To declare the antisymmetry $R_{abcd} = -R_{abdc}$, enclose the indices \lstinline{_a_b} in curly braces \lstinline|{}|.
 \begin{lstlisting}[language=egison,numbers=none]
-def R{_a_b}_c_d : Tensor MathExpr := withSymbols [i, j]
+def R{_a_b}_c_d : Tensor MathValue := withSymbols [i, j]
   g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
            `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
 \end{lstlisting}
@@ -943,7 +933,7 @@ When $R_{abcd}$ is defined this way, referencing $R_{21cd}$ will return the sign
 Multiple symmetries can be declared simultaneously.
 To declare both $R_{abcd} = -R_{abdc}$ and $R_{abcd} = -R_{bacd}$, enclose both \lstinline{_a_b} and \lstinline{_c_d} in curly braces \lstinline|{}|.
 \begin{lstlisting}[language=egison,numbers=none]
-def R{_a_b}{_c_d} : Tensor MathExpr := withSymbols [i, j]
+def R{_a_b}{_c_d} : Tensor MathValue := withSymbols [i, j]
   g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
            `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
 \end{lstlisting}
@@ -954,14 +944,14 @@ To express this symmetry, enclose \lstinline{_a_b} and \lstinline{_c_d} each in 
 Then enclose them in square brackets \lstinline|[]|.
 While curly braces \lstinline|{}| are used to declare antisymmetry, square brackets \lstinline|[]| are used to declare symmetry.
 \begin{lstlisting}[language=egison,numbers=none]
-def R[(_a_b)(_c_d)] : Tensor MathExpr := withSymbols [i, j]
+def R[(_a_b)(_c_d)] : Tensor MathValue := withSymbols [i, j]
   g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
            `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
 \end{lstlisting}
 
 All three symmetries $R_{abcd} = -R_{abdc}$, $R_{abcd} = -R_{bacd}$, and $R_{abcd} = R_{cdab}$ can also be declared simultaneously.
 \begin{lstlisting}[language=egison,numbers=none]
-def R[{_a_b}{_c_d}] : Tensor MathExpr := withSymbols [i, j]
+def R[{_a_b}{_c_d}] : Tensor MathValue := withSymbols [i, j]
   g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
            `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)
 \end{lstlisting}
@@ -980,7 +970,7 @@ A nice aspect of this notation is that symmetry can be declared without changing
 Earlier, we mentioned that an advantage of this approach is that no changes to the program on the right-hand side of \lstinline{:=} are needed, but there are also cases where the program on the right-hand side can be simplified.
 For example, this occurs for tensors whose values are defined using different expressions for each block, as shown below.
 \begin{lstlisting}[language=egison,numbers=none]
-def R'_i_j_k_l : Tensor MathExpr :=
+def R'_i_j_k_l : Tensor MathValue :=
   generateTensor
     (\match as list integer with
        | [#1, #1, _, _] -> 0
@@ -1001,7 +991,7 @@ def R'_i_j_k_l : Tensor MathExpr :=
 \end{lstlisting}
 Symmetry can greatly reduce the number of conditional branches.
 \begin{lstlisting}[language=egison,numbers=none]
-def R'[{_i_j}{_k_l}] : Tensor MathExpr :=
+def R'[{_i_j}{_k_l}] : Tensor MathValue :=
   generateTensor
     (\match as list integer with
        | [#1, #1, _, _] -> 0

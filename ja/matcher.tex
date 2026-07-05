@@ -92,8 +92,8 @@ def unorderedIntegerPair : Matcher (Integer, Integer) := matcher
 \lstinline{matcher}は，マッチャーを生成するための組み込み構文である．
 \begin{lstlisting}[language=egison,numbers=none]
 matcher
-| `原始パターンパターン` as `ネクスト・マッチャー式` with
-  | `原始データパターン` -> `ボディ`
+| `primitive pattern-pattern` as `next matcher expression` with
+  | `primitive data pattern` -> `body`
   ...
 ...
 \end{lstlisting}
@@ -190,13 +190,13 @@ def eq {Eq a} : Matcher a := matcher
 
 原始パターンパターンは，ここまでにでてきた3つの構成要素であるパターン・ホール，原始パターンパターンコンストラクタの適用，原始値パターンと，原始ワイルドカードからなる．
 \begin{lstlisting}[language=egison,numbers=none]
-`原始パターンパターン` ::= $ | c `原始パターンパターン`* | #$`ID` | _
+`primitive pattern-pattern` ::= $ | c `primitive pattern-pattern`* | #$`ID` | _
 \end{lstlisting}
 原始ワイルドカードについては，\ref{matcher-wildcard}節で用例を紹介する．
 
 原始データパターンは，ワイルドカード，パターン変数，原始データパターンコンストラクタの適用からなる．
 \begin{lstlisting}[language=egison,numbers=none]
-`原始データパターン` ::= _ | $`ID` | C `原始データパターン`*
+`primitive data pattern` ::= _ | $`ID` | C `primitive data pattern`*
 \end{lstlisting}
 
 \section{\texttt{multiset}マッチャーの定義}\label{matcher-multiset}
@@ -338,9 +338,6 @@ matchAll [(1, 4), (2, 3), (3, 1)] as assocMultiset eq with
 Egisonの型システムでは，マッチャーとパターンにそれぞれ型が付く．
 \lstinline{Matcher a}は\lstinline{a}型の値を対象とするマッチャーの型であり，\lstinline{Pattern a}は\lstinline{a}型の値にマッチするパターンの型である．
 マッチャーは第一級の値なので，\lstinline{multiset}のようにマッチャーを引数にとってマッチャーを返す関数も型をもつ．
-引数マッチャーの位置には\emph{スロット型}\lstinline{MatcherSlot a b}が使われる．
-第一成分\lstinline{a}はその位置のターゲットの型，第二成分\lstinline{b}はその位置のパターンが要求する分解の型を表すが，
-\lstinline{list}や\lstinline{multiset}のように両者が一致する場合は「おおよそ\lstinline{Matcher a}を受け取る」と読んでよい．
 たとえば，コレクションの基本マッチャーは以下の型をもつ．
 \begin{lstlisting}[language=egison,numbers=none]
 something : Matcher a
@@ -349,6 +346,13 @@ list      : MatcherSlot a a -> Matcher [a]
 multiset  : MatcherSlot a a -> Matcher [a]
 set       : MatcherSlot a a -> Matcher [a]
 \end{lstlisting}
+引数マッチャーの位置には，\lstinline{Matcher}ではなく\emph{スロット型}\lstinline{MatcherSlot a b}が使われる．
+スロット型は2つの型をとる．
+第一成分\lstinline{a}はその位置で使われるパターンが要求する分解（構造）の型，
+第二成分\lstinline{b}はその位置のターゲット（分解される値）の型である．
+\lstinline{list}や\lstinline{multiset}の要素位置のように両者が一致する場合は，「おおよそ\lstinline{Matcher a}を受け取る」と読んでよい．
+スロット型が分解の型とターゲットの型を別々にもつのは，\textbf{そこに渡されるマッチャーがその位置のパターンを実際に分解できるか}を，
+渡された場所ごとに検査するためである．この検査については\ref{matcher-match-typing}節で改めて扱う．
 
 この型の一覧には設計上の要点がひとつ隠れている．
 \lstinline{list}や\lstinline{multiset}の型に\lstinline{Eq}制約が\emph{付いていない}ことである．
@@ -381,14 +385,14 @@ matchAll [1, 2, 3, 1] as multiset integer with
 \begin{lstlisting}[language=egison,numbers=none]
 matchAll [1, 2, 3] as multiset integer with
   | $x :: #(x ++ [1]) :: _ -> x
--- `型エラー: (++)は[Integer]を期待するがxはInteger`
+-- Type error: (++) expects [Integer] but x is Integer
 \end{lstlisting}
 つぎに，値パターンを置く位置の誤りも検出される．
 \begin{lstlisting}[language=egison,numbers=none]
 matchAll [1, 2, 3] as multiset integer with
   | $x :: #x -> x
--- `型エラー: ::の第二引数の位置はPattern [Integer]だが`
--- #x`はPattern Integer`
+-- Type error: the second argument of :: requires
+--   Pattern [Integer], but #x has type Pattern Integer
 \end{lstlisting}
 プログラマの意図は「\lstinline{x}が残りにも現れる」だったはずだが，\lstinline{::}の第二引数はリスト全体にマッチする位置である．
 正しくは\lstinline{$x :: #x :: _}と書く．
@@ -398,7 +402,8 @@ matchAll [1, 2, 3] as multiset integer with
 \begin{lstlisting}[language=egison,numbers=none]
 matchAll [1, 2, 3] as multiset integer with
   | #x :: $x :: _ -> x
--- `警告: 未束縛変数`x`（束縛`$x`より左で`#x`を参照している）`
+-- Warning: unbound variable x
+--   (#x refers to x left of its binding $x)
 \end{lstlisting}
 
 \section{\texttt{match}式の型検査}\label{matcher-match-typing}
@@ -411,8 +416,8 @@ matchAll [1, 2, 3] as multiset integer with
 \begin{lstlisting}[language=egison,numbers=none]
 matchAll 5 as integer with
   | $x :: _ -> x
--- `型エラー: ::はコレクション[a]を対象とするが`
--- `ターゲットとマッチャーの対象はInteger`
+-- Type error: :: targets collections [a], but the
+--   target and the matcher are for Integer
 \end{lstlisting}
 ボディの型の不一致も検出される．
 たとえば第\ref{quick}章\ref{quick-pat-fun}節の\lstinline{twin}の例で
@@ -422,6 +427,21 @@ matchAll 5 as integer with
 さらに，パターンが要求する\emph{分解}をマッチャーが提供できるかも検査される（適合性検査）．
 変数パターンと値パターンしか使わないパターンは分解を要求しないので，任意の型で\lstinline{something}と組み合わせられる．
 一方，\lstinline{::}のようなパターンコンストラクタを使うパターンには，それを分解できるマッチャーが必要である．
+\lstinline{something}は任意の値に単一のマッチをするだけで分解の手段をもたないため，
+コンスパターンと組み合わせると型エラーになる．
+\begin{lstlisting}[language=egison,numbers=none]
+matchAll [1, 2, 3] as something with
+  | $x :: $xs -> (x, xs)
+-- Type error: something (Matcher a) does not fit
+--   MatcherSlot [_] [Integer]
+--   (something offers no way to decompose a list)
+\end{lstlisting}
+これが，マッチャーを受け取る位置を\lstinline{Matcher}ではなくスロット型で型付けする理由である．
+ここでは，コンスパターンがスロットの分解成分に\lstinline{[_]}（リストの分解）を要求するのに対し，
+\lstinline{something}はそれを提供できない．
+素朴に\lstinline{something}を\lstinline{Matcher [Integer]}とみなす型システムでは，この式は型検査を通ってしまい，
+実行時に\lstinline{something}がコンスを分解できずに行き詰まる．
+Egisonの型システムは，マッチャーが渡された場所ごとに分解の適合を検査するので，この誤りを静的に弾く．
 この検査はパターンの構造だけから計算されるため，マッチャーを実行しなくても誤った組み合わせが静的に弾かれる．
 
 \section{マッチャー定義の整合性検査}\label{matcher-consistency}
@@ -436,11 +456,11 @@ matchAll 5 as integer with
 def bad {a} (m : MatcherSlot a a) : Matcher [a] :=
   matcher
     | $ :: $ as (m, bad m) with
-      | $x :: $xs -> [(x, xs)]    -- `末尾の`| _ -> []`がない`
+      | $x :: $xs -> [(x, xs)]    -- missing final | _ -> []
     | $ as something with
       | $tgt -> [tgt]
--- `型エラー: マッチャー節`:: $ $`のデータパターンの`
--- `アームが網羅的でない`
+-- Type error: the data-pattern arms of matcher
+--   clause :: $ $ are non-exhaustive
 \end{lstlisting}
 コンス・パターンの節のアームが\lstinline{$x :: $xs}だけだと，空リストがターゲットに来たときにどのアームにもマッチせず，
 実行時に失敗してしまう．
@@ -462,8 +482,8 @@ def pattern twin {a} (pat1: a) (pat2: [a]) : [a] :=
 \begin{lstlisting}[language=egison,numbers=none]
 matchAll [1, 2] as multiset integer with
   | twin ($y :: _) _ -> y
--- `型エラー: 第一引数はPattern Integerを期待するが`
--- $y :: _`はPattern [Integer]`
+-- Type error: the first argument requires
+--   Pattern Integer, but $y :: _ is Pattern [Integer]
 \end{lstlisting}
 
 パターン関数の適用は，適合性検査（\ref{matcher-match-typing}節）では\emph{本体のパターンの骨格}として扱われる．

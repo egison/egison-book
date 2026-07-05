@@ -2,12 +2,27 @@
 
 本章は，Egisonの数式処理システムの簡約が型システムとどのように連携しているかを詳しく解説する．
 第\ref{cas}章では数式の簡約を組み込みの機能として紹介したが，簡約システムは実際には，ユーザーが拡張できるいくつかの直交した仕組みから組み立てられている．
-本章では，（1）簡約規則の宣言，（2）型注釈による正規形の指定，（3）型の昇格タワーとその拡張，（4）タワーの外に置かれる商の型，の4つを順にみていく．
+本章では，（1）簡約規則の宣言，（2）数学関数の宣言，（3）型注釈による正規形の指定，（4）型の昇格タワーとその拡張，（5）タワーの外に置かれる商の型，の5つを順にみていく．
 
 \section{簡約規則の宣言}\label{cas-rule}
 
-第\ref{cas}章\ref{cas-simplify}節で紹介した組み込みの簡約規則に加えて，ユーザーが\lstinline{declare rule}文で簡約規則を宣言することもできる．
-たとえば，$\sqrt{2}$を表すシンボル\lstinline{sqrt2}を導入し，$\sqrt{2}^2 = 2$という規則を登録すると，この規則は簡約のたびに自動で適用される．
+第\ref{cas}章\ref{cas-simplify}節でみたように，$i^2 = -1$のような組み込みの簡約規則は，処理系のHaskellコードに埋め込まれているのではなく，標準ライブラリのなかで\lstinline{declare rule}文により宣言されている．
+ユーザーもまったく同じ\lstinline{declare rule}文で，新しい簡約規則を宣言できる．
+つまり，組み込みの簡約規則とユーザーの簡約規則は同じ仕組みの上に載っている．
+
+\lstinline{declare rule}文は，次の形で書く．
+\begin{lstlisting}[language=egison,numbers=none]
+declare rule (auto | name) (term | poly | frac) lhs = rhs
+\end{lstlisting}
+最初の指定子は，規則の適用のされ方を決める．
+\lstinline{auto}を指定した規則（自動規則）は正規化処理に組み込まれ，数式に対する算術演算（\lstinline{+}・\lstinline{*}・\lstinline{/}など）のたびに，適用できなくなるまで繰り返し自動で適用される．
+規則名を指定した規則（名前付き規則）については，本節の最後で述べる．
+2つ目の指定子は，左辺のパターンを数式のどの構造に対してマッチさせるかを決める．
+\lstinline{term}は各項（単項式）に，\lstinline{poly}は各（部分）多項式に，\lstinline{frac}は各（部分）分数式に規則を適用する．
+いずれの場合も，関数適用の引数の内側のような部分式に対しても規則は適用される．
+左辺には，リテラルな数式のほかに，パターン変数\lstinline{$x}や値パターン\lstinline{#x}を含む数式に対するパターン（\ref{mexpr-pattern}節）を書くことができる．
+
+たとえば，$\sqrt{2}$を表すシンボル\lstinline{sqrt2}を導入し，$\sqrt{2}^2 = 2$という自動規則を登録すると，この規則は算術演算のたびに自動で適用される．
 \begin{lstlisting}[language=egison,numbers=none]
 declare symbol sqrt2
 declare rule auto term sqrt2^2 = 2
@@ -18,6 +33,79 @@ declare rule auto term sqrt2^2 = 2
 Egisonの簡約規則は大域的であるが，シンボルは大域的に一意であるため，規則はそのシンボルが現れる数式にしか作用しない．
 つまり，シンボルの一意性がスコープの役割を果たしている．
 ガウス整数$\mathbb{Z}[i]$（$i^2 = -1$）や二重数（$\varepsilon^2 = 0$），1の冪根なども，同じパターンで導入されている代数拡大である．
+実装上も，簡約規則は左辺に現れるシンボルで索引づけられており，そのシンボルを含まない数式には規則の適用が試されない．
+そのため，規則を宣言しても，その規則と無関係な計算はほとんど遅くならない．
+
+組み込みの簡約規則も，同じ\lstinline{declare rule}文で標準ライブラリの\texttt{lib/math/normalize.egi}に宣言されている．
+たとえば，以下は第\ref{cas}章\ref{cas-simplify}節で紹介した簡約を実現している宣言の一部である．
+\begin{lstlisting}[language=egison,numbers=none]
+declare rule auto term i^2 = -1
+declare rule auto term log (exp $n) = n
+declare rule auto term (exp $x)^$n = exp (n * x)
+\end{lstlisting}
+2つ目と3つ目の規則のように，左辺にパターン変数を含む規則も宣言できる．
+
+規則名を指定して宣言した名前付き規則は，自動では適用されず，\lstinline{simplify e using name}と書いた場所でだけ式\lstinline{e}に適用される．
+たとえば正弦の加法定理は，左から右に使うと式を展開し，右から左に使うと式をまとめる，方向性のある等式である．
+このような等式を自動規則にすると，意図しない場所でも展開が起きてしまう．
+名前付き規則として宣言しておけば，展開したい場所でだけ明示的に適用できる．
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol a, b
+declare rule sinAdd term sin ($x + $y) = sin x * cos y + cos x * sin y
+
+sin (a + b) -- 'sin (b + a)
+simplify (sin (a + b)) using sinAdd
+-- ('cos b) * ('sin a) + ('cos a) * ('sin b)
+\end{lstlisting}
+
+\section{数学関数の宣言}\label{casdetail-mathfunc}
+
+\ref{cas-symbol2}節で紹介した\lstinline{sqrt}や\lstinline{exp}のような数学関数も，専用の宣言文で定義されている．
+\lstinline{declare mathfunc}文は，適用がシンボリックな値として残る数学関数を宣言する．
+宣言しただけの関数の適用は，簡約されずそのままシンボリックな値になる．
+これに\lstinline{declare apply}文を組み合わせると，その関数の適用時に一度だけ実行される簡約を定義できる．
+たとえば，標準ライブラリの対数関数\lstinline{log}は以下のように宣言されている．
+\begin{lstlisting}[language=egison,numbers=none]
+declare mathfunc log
+declare apply log x :=
+  match x as mathValue with
+    | #1 -> 0
+    | #e -> 1
+    | _ -> 'log x
+\end{lstlisting}
+\lstinline{declare apply}の本体には任意のEgison式を書くことができ，簡約できない入力に対しては，シングルクオート（\ref{mexpr-squote}節）を使って\lstinline{'log x}のようにシンボリックな値を返す．
+\ref{cas-symbol2}節でみた$\sqrt{8} \rightarrow 2\sqrt{2}$のような簡約も，\lstinline{sqrt}の\lstinline{declare apply}で定義されている．
+
+\lstinline{declare apply}の簡約が関数の適用時に一度だけ実行されるのに対し，\lstinline{declare rule}の簡約規則は正規化のたびに収束するまで繰り返し適用される．
+$\sqrt{8} \rightarrow 2\sqrt{2}$のように引数の値を調べて計算するアルゴリズム的な簡約は\lstinline{declare apply}で，$i^2 = -1$のように式の形に対する書き換えは\lstinline{declare rule}で定義する，という使い分けである．
+
+さらに，\lstinline{declare derivative}文を使うと，微分演算子\lstinline{d/d}（\ref{cas-derivative}節）を新しい数学関数に拡張できる．
+標準ライブラリの組み込みの微分公式も，この文で宣言されている．
+\begin{lstlisting}[language=egison,numbers=none]
+declare derivative sin = cos
+declare derivative cos = \z -> - sin z
+declare derivative exp = exp
+declare derivative log = \z -> 1 / z
+declare derivative sqrt = \z -> 1 / (2 * sqrt z)
+\end{lstlisting}
+
+これらの宣言を組み合わせると，新しい数学関数を数行で数式処理システムに追加できる．
+たとえば，双曲線正割関数$\mathrm{sech}$は以下のように導入できる．
+合成関数の微分（連鎖律）は\lstinline{d/d}の側が処理するため，導関数の形だけを宣言すればよい．
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol x
+
+declare mathfunc sech
+declare apply sech x :=
+  match x as mathValue with
+    | #0 -> 1
+    | _ -> 'sech x
+declare derivative sech = \z -> - sech z * tanh z
+
+sech 0 -- 1
+sech x -- 'sech x
+d/d (sech (x^2)) x -- -2 * ('sech (x^2)) * ('tanh (x^2)) * x
+\end{lstlisting}
 
 \section{型による正規形の指定}\label{cas-tower}
 
@@ -67,12 +155,12 @@ inspect byX2
 CASの型は，値を保存する埋め込みによって順序づけられている．
 この順序の背骨は，代数学の包含$\mathbb{Z} \subset \mathbb{Q} \subset \mathbb{Z}[x] \subset \mathbb{Q}[x] \subset \mathbb{Q}(x)$をそのまま型の階段にした\emph{昇格タワー}（promotion tower）\index{しょうかくたわー@昇格タワー}である．
 \begin{lstlisting}[language=egison,numbers=none]
-Integer                        -- `整数`
-  <: Frac Integer              -- `有理数`
-  <: Poly Integer [..]         -- `整数係数多項式`
-  <: Poly (Frac Integer) [..]  -- `有理数係数多項式`
-  <: Frac (Poly Integer [..])  -- `有理式`
-  <: MathValue                 -- `すべての数式`
+Integer                        -- integers
+  <: Frac Integer              -- rationals
+  <: Poly Integer [..]         -- integer-coefficient polynomials
+  <: Poly (Frac Integer) [..]  -- rational-coefficient polynomials
+  <: Frac (Poly Integer [..])  -- rational functions
+  <: MathValue                 -- all mathematical expressions
 \end{lstlisting}
 タワーの各段は真の部分集合としての埋め込みであり，値を一切変えない．
 これに加えて，原子集合の包含（\lstinline{Poly Integer [x] <: Poly Integer [x, y]}）と，係数位置を通じた埋め込みも順序に含まれる．
@@ -112,16 +200,17 @@ declare cas-subtype Poly Integer [i, x] <: Poly (Poly Integer [i]) [x]
 一意性が壊れる宣言は，先に宣言すべき\emph{完備化辺}の提案つきでエラーになる．
 \begin{lstlisting}[language=egison,numbers=none]
 declare cas-subtype Poly Integer [x] <: Poly Integer [i, x]
--- `冗長な辺（導出可能）: 警告つきで受理され，`
--- `端点が検査対象のノードとして登録される`
+-- Warning: this edge is already derivable (redundant edge);
+--   its endpoints are still registered as nodes for the check
 
 declare cas-subtype Poly Integer [i] <: Poly (Poly Integer [i]) [x]
--- `エラー:` pair (Poly Integer [i], Poly Integer [x])
---   `の極小上界が2つに分裂する:`
+-- Error: join would become ambiguous (D1 semilattice check).
+--   pair (Poly Integer [i], Poly Integer [x]) would get
+--   minimal upper bounds
 --   {Poly Integer [i, x], Poly (Poly Integer [i]) [x]}
--- `ヒント: 先に完備化辺を宣言せよ:`
---   declare cas-subtype Poly Integer [i, x]
---     <: Poly (Poly Integer [i]) [x]
+--   hint: declare the completing edge first:
+--     declare cas-subtype Poly Integer [i, x]
+--       <: Poly (Poly Integer [i]) [x]
 \end{lstlisting}
 $\mathbb{Z}[i]$を入れ子形の中に置こうとすると，$\mathbb{Z}[i]$と$\mathbb{Z}[x]$の共通の上界が
 平坦形と入れ子形の2つに分裂してしまうため，宣言は拒否される．
@@ -159,4 +248,35 @@ def inv7 (z : Mod7) : Mod7 := z * z * z * z * z
 
 reprMod7 (inv7 (projMod7 3)) -- 5
 \end{lstlisting}
+
+商の底は整数に限らず，多項式環をとることもできる．
+これを使うと，$x^3 = 0$とみなして$3$次以上の項を捨てる商$\mathbb{Z}[x]/(x^3)$
+——べき級数を$3$次の手前で打ち切った世界——を，ひとつの型として宣言できる．
+簡約関数は，各項を走査して$x$の次数が$3$未満のものだけを残す．
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol x
+
+-- keep a term only when its x-degree is below 3
+def dropHigh (t : MathValue) : MathValue :=
+  match t as mathValue with
+    | term _ ((#x, $k) :: []) -> if k < 3 then t else 0
+    | _ -> t
+
+declare cas-quotient Series3 := Poly Integer [x] by
+  (\p -> match p as mathValue with
+           | poly $ts -> sum (map dropHigh ts)
+           | _ -> p)
+
+def s : Series3 := projSeries3 (1 + x)
+
+reprSeries3 (s * s) -- x^2 + 2 * x + 1
+reprSeries3 (projSeries3 ((1 + x)^4)) -- 6 * x^2 + 4 * x + 1
+\end{lstlisting}
+$(1 + x)^4 = 1 + 4x + 6x^2 + 4x^3 + x^4$から$x^3$と$x^4$の項が消え，$6x^2 + 4x + 1$になっている．
+底が$\mathbb{Z}[x]$になった点を除けば，仕組みは\lstinline{Mod7}とまったく同じである．
+なお，この$x^3 = 0$は大域的な簡約規則\lstinline{declare rule auto term x^3 = 0}でも表せるが，
+その場合は\lstinline{x}が現れるすべての場所で打ち切りが起きる．
+商として宣言すると，打ち切りは\lstinline{Series3}型の値だけに閉じ込められ，
+ふつうの\lstinline{Poly Integer [x]}の値は$3$次以上の項を保ったままになる．
+これが，係数領域の商をタワーの外の独立した型として扱うことの利点である．
 

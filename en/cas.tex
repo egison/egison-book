@@ -10,9 +10,9 @@ This chapter explores what kinds of computations are possible with a computer al
 
 A computer algebra system treats unbound variables as symbols.
 In Egison, symbols must be declared using the \lstinline{declare symbol} statement before use.
-Types can be specified for symbols; if omitted, the \lstinline{MathExpr} type is used by default.
+A type can also be specified for a symbol, as in \lstinline{declare symbol x : MathValue} (the relationship between mathematical expressions and types is explained in Chapter~\ref{casdetail}).
 \begin{lstlisting}[language=egison,numbers=none]
-declare symbol x, y, z : MathExpr
+declare symbol x, y, z
 
 x -- x
 \end{lstlisting}
@@ -20,59 +20,71 @@ x -- x
 Egison, as a computer algebra system, has built-in definitions for addition and multiplication of symbols.
 Therefore, computations such as $x + x \rightarrow 2x$ and $(x + y)^2 \rightarrow x^2 + 2 x y + y^2$ are possible.
 \begin{lstlisting}[language=egison,numbers=none]
-x + x -- 2x
-(x + y)^2 -- x^2 + 2 * x * y + y^2
+x + x -- 2 * x
+(x + y)^2 -- y^2 + x^2 + 2 * x y
 \end{lstlisting}
 
 Egison automatically expands mathematical expressions into sum-of-products normal form.
 Sum-of-products normal form is a form of expression where multiplication appears on the inside and addition on the outside.
-Therefore, $(x + y)^2$ is expanded to $x^2 + 2 x y + y^2$.
+Therefore, $(x + y)^2$ is expanded into the form $x^2 + 2 x y + y^2$.
+In the output, multiplication between a coefficient and factors is displayed with \lstinline{*}, while multiplication between symbols is displayed with whitespace.
 
-The ordering of symbol factors in the output expression is implemented to follow the order in which they appear in the user's input expression.
-For example, if we swap $x$ and $y$ in $(x + y)^2$ above and compute $(y + x)^2$, the second term becomes $2 y x$.
+The ordering of terms and factors in the output expression does not follow the order in which they appear in the user's input expression; they are sorted into a canonical order determined by the interpreter.
+For example, if we swap $x$ and $y$ in $(x + y)^2$ above and compute $(y + x)^2$, the output stays the same.
 \begin{lstlisting}[language=egison,numbers=none]
-(y + x)^2 -- y^2 + 2 * y * x + x^2
+(y + x)^2 -- y^2 + x^2 + 2 * x y
 \end{lstlisting}
 
 \section{Symbolic Function Application}\label{cas-symbol2}
 
 For functions such as \lstinline{sqrt x} and \lstinline{exp x} that may take symbols as arguments, the library defines them to halt evaluation and return the expression as a symbolic value.
+A function application that remains as a symbolic value is displayed with a leading single quote (\lstinline{'}).
 \begin{lstlisting}[language=egison,numbers=none]
-declare symbol x : MathExpr
+declare symbol x
 
 sqrt 4 -- 2
-sqrt x -- sqrt x
+sqrt x -- 'sqrt x
 exp 1 -- e
-exp x -- exp x
+exp x -- 'exp x
 \end{lstlisting}
 
 For function applications that cannot be further evaluated, such as \lstinline{sqrt 2}, the library also defines them to halt evaluation and return the expression as is.
 Simplifications such as $\sqrt{8} \rightarrow 2 \sqrt{2}$ are also defined in the library.
 \begin{lstlisting}[language=egison,numbers=none]
-sqrt 2 -- sqrt 2
-sqrt 8 -- 2 * sqrt 2
+sqrt 2 -- 'sqrt 2
+sqrt 8 -- 2 * 'sqrt 2
 \end{lstlisting}
-These definitions use single quotes, which are introduced in Section~\ref{mexpr-squote}.
+Such mathematical functions are declared with the \lstinline{declare mathfunc} statement, and their simplification at application time is defined with the \lstinline{declare apply} statement.
+These declaration statements are explained in Section~\ref{casdetail-mathfunc} of Chapter~\ref{casdetail}, and the single quote used in their definitions is explained in Section~\ref{mexpr-squote}.
 
 
 \section{Simplification of Expressions}\label{cas-simplify}
 
 Simplifications that one performs when working with mathematical expressions on paper, such as $\sqrt{x} \cdot \sqrt{x} = x$ and $sin^2\theta + cos^2\theta = 1$, are implemented in many computer algebra systems including Egison.
 \begin{lstlisting}[language=egison,numbers=none]
-declare symbol x, `$\theta$` : MathExpr
+declare symbol x, `$\theta$`
 
 sqrt x * sqrt x -- x
 (sin `$\theta$`)^2 + (cos `$\theta$`)^2 -- 1
 \end{lstlisting}
-In Egison, such simplification functionality is built into the language, implemented in Haskell using Sweet Egison (a Haskell library that provides Egison's pattern matching capabilities).
+Egison's simplification functionality is implemented in two layers.
+The internal representation of mathematical expressions and their normalization into sum-of-products normal form are implemented in Haskell inside the Egison interpreter, using Sweet Egison (a Haskell library that provides Egison's pattern matching capabilities, Chapter~\ref{sweet}).
+On the other hand, most of the individual simplification rules, such as the ones above, are defined not as Haskell code but as simplification rule declarations written with Egison's own \lstinline{declare rule} statement in the standard library.
 
-In addition to the above, simplification rules for complex numbers and other entities are also implemented.
+Simplification rules for complex numbers and other entities are defined in the same way.
 \begin{lstlisting}[language=egison,numbers=none]
 i^2 -- -1
-w^3 -- 1  
-w + w^2 -- -1  
+w^3 -- 1
+w + w^2 -- -1
 \end{lstlisting}
-The simplification rules are defined at \url{https://github.com/egison/egison/blob/master/hs-src/Language/Egison/Math/Normalize.hs}.
+For example, the simplifications above for the imaginary unit $i$ and the primitive cube root of unity $w$ are realized by the following declarations in the standard library file \texttt{lib/math/normalize.egi} (\url{https://github.com/egison/egison/blob/master/lib/math/normalize.egi}).
+\begin{lstlisting}[language=egison,numbers=none]
+declare rule auto term i^2 = -1
+declare rule auto term w^3 = 1
+declare rule auto term w^2 = -1 - w
+\end{lstlisting}
+Users can declare their own simplification rules with exactly the same \lstinline{declare rule} statement (Section~\ref{cas-rule} of Chapter~\ref{casdetail}).
+Only a few simplification rules for which performance is critical, such as those used in computations with differential forms, are exceptionally implemented on the Haskell side (\texttt{hs-src/Language/Egison/Math/Rewrite.hs}).
 
 Automating the simplification of mathematical expressions is extremely difficult, and Egison provides only simple algorithms.
 For example, algorithms based on Gr\"obner basis theory are useful for polynomial division, but they are not implemented in Egison.
@@ -84,30 +96,39 @@ Running the Egison interpreter with the ``\texttt{-M mathematica}'' option outpu
 By feeding this output to the Wolfram Language interpreter, one can leverage its advanced simplification capabilities.
 \begin{lstlisting}[language=egison,numbers=none]
 $ egison -M mathematica
+> declare symbol x
 > x + sqrt 2
 #mathematica|x + Sqrt[2]|#
 \end{lstlisting}
 
-How users declare simplification rules, select canonical forms with type annotations, extend the promotion tower of types, and work with quotient types --- the details of the simplification system --- is explained in Chapter~\ref{casdetail}.
+How users declare simplification rules and mathematical functions, select canonical forms with type annotations, extend the promotion tower of types, and work with quotient types --- the details of the simplification system --- is explained in Chapter~\ref{casdetail}.
 
 \section{A Program to Solve Quadratic Equations -- Writing Algorithms that Process Expressions}\label{cas-quadratic}
 
 In this section, we will write an algorithm to solve quadratic equations as a program.
 We define a function \lstinline{qF} that takes a quadratic equation and returns its solutions, as shown below.
 \begin{lstlisting}[language=egison,numbers=none]
+declare symbol x, a, b, c
+
 qF (x ^ 2 + x + 1) x
--- ((-1 + i * sqrt 3) / 2, (-1 - i * sqrt 3) / 2)
+-- ((1 / 2) * ('sqrt 3) * i + -1 / 2,
+--  (-1 / 2) * ('sqrt 3) * i + -1 / 2)
 
 qF (x ^ 2 + b * x + c) x
--- ((- b + sqrt (b^2 - 4 * c)) / 2, (- b - sqrt (b^2 - 4 * c)) / 2)
+-- ((-1 / 2) * b + (1 / 2) * 'sqrt (b^2 - 4 * c),
+--  (-1 / 2) * b + (-1 / 2) * 'sqrt (b^2 - 4 * c))
 
 qF (a * x ^ 2 + b * x + c) x
--- ((- b + sqrt (b^2 - 4 * a * c)) / (2 * a), (- b - sqrt (b^2 - 4 * a * c)) / (2 * a))
+-- ((-1 / 2) * a^-1 b + (1 / 2) * ('sqrt (b^2 - 4 * a c)) * a^-1,
+--  (-1 / 2) * a^-1 b + (-1 / 2) * ('sqrt (b^2 - 4 * a c)) * a^-1)
 
 qF (a * x ^ 2 + 2 * b * x + c) x
--- ((- b + sqrt (b^2 - a * c)) / a, (- b - sqrt (b^2 - a * c)) / a)
+-- (- a^-1 b + ('sqrt (b^2 - a c)) * a^-1,
+--  - a^-1 b - ('sqrt (b^2 - a c)) * a^-1)
 \end{lstlisting}
-\lstinline{qF} can be defined by simply writing out the quadratic formula $\frac{-b \pm \sqrt{b^2 - 4 a c}}{2 a}$ directly.
+The output is displayed in sum-of-products normal form, with the fraction of the quadratic formula $\frac{-b \pm \sqrt{b^2 - 4 a c}}{2 a}$ distributed over the terms.
+Furthermore, $\frac{1}{a}$ is displayed as the negative power $a^{-1}$ (the internal representation of mathematical expressions in Egison is a Laurent polynomial, which permits negative exponents).
+\lstinline{qF} can be defined by simply writing out the quadratic formula directly.
 The following program defines \lstinline{qF} using an auxiliary function \lstinline{qF'}.
 \lstinline{qF'} takes the quadratic coefficient as the first argument, the linear coefficient as the second, and the constant term as the third.
 For example, \lstinline{qF' 1 0 2} returns the solutions of the quadratic equation $x^2 + 2 = 0$.
@@ -115,28 +136,28 @@ For example, \lstinline{qF' 1 0 2} returns the solutions of the quadratic equati
 \lstinline{qF'} is simply defined as a function that returns a tuple consisting of $\frac{-b + \sqrt{b^2 - 4 a c}}{2 a}$ and $\frac{-b - \sqrt{b^2 - 4 a c}}{2 a}$.
 \begin{lstlisting}[language=egison,numbers=none]
 def qF f x :=
-  match coefficients f x as list mathExpr with
+  match coefficients f x as list mathValue with
     | [$a_0, $a_1, $a_2] -> qF' a_2 a_1 a_0
 
 def qF' a b c :=
-  ( ((- b) + sqrt (b ^ 2 - 4 * a * c)) / 2 * a
-  , ((- b) - sqrt (b ^ 2 - 4 * a * c)) / 2 * a )
+  ( ((- b) + sqrt (b ^ 2 - 4 * a * c)) / (2 * a)
+  , ((- b) - sqrt (b ^ 2 - 4 * a * c)) / (2 * a) )
 \end{lstlisting}
 However, since the above formulation lacks an algorithmic feel, we will instead write an algorithm that derives the quadratic formula through completing the square.
 Completing the square is the operation of transforming a quadratic expression such as $x^2 + b x + c$ into the form $(x + b / 2)^2 - b^2 / 4 + c$.
 \begin{lstlisting}[language=egison]
 def qF' a b c :=
-  match (a, b, c) as (mathExpr, mathExpr, mathExpr) with
+  match (a, b, c) as (mathValue, mathValue, mathValue) with
     | (#1, #0, _) -> (sqrt (- c), - sqrt (- c))
     | (#1, _, _) ->
-      (2)#((- (b / 2)) + %1, (- (b / 2)) + %2)
-        (withSymbols [x, y]
-          qF (substitute [(x, y - b / 2)] (x ^ 2 + b * x + c)) y)
+      let (r1, r2) := withSymbols [x, y]
+                        qF (substitute [(x, y - b / 2)] (x ^ 2 + b * x + c)) y
+       in ((- (b / 2)) + r1, (- (b / 2)) + r2)
     | (_, _, _) -> qF' 1 (b / a) (c / a)
 \end{lstlisting}
 When describing the algorithm for solving quadratic equations using completing the square, \lstinline{qF'} becomes a function with three match clauses.
 The match clause on line 3 handles quadratic equations of the form $x^2 + c = 0$.
-This clause returns the result $\sqrt{c}$ and $-\sqrt{c}$.
+This clause returns the result $\sqrt{-c}$ and $-\sqrt{-c}$.
 The match clause on lines 4--7 handles quadratic equations of the form $x^2 + b x + c = 0$, where the leading coefficient is $1$.
 This clause is the core of the function, performing the completing-the-square operation.
 \lstinline{substitute} is an Egison library function.
@@ -164,39 +185,41 @@ Egison allows \lstinline{/} to be used in variable names.
 \begin{lstlisting}[language=egison,numbers=none]
 d/d x x -- 1
 d/d (x^2) x -- 2 * x
-d/d (exp x) x -- exp x
-d/d (log x) x -- 1 / x
-d/d (x * log x) x -- log x + 1
-d/d (1 / log x) x -- -1 / (x * (log x)^2)
+d/d (exp x) x -- 'exp x
+d/d (log x) x -- x^-1
+d/d (x * log x) x -- 'log x + 1
+d/d (1 / log x) x -- - 'log x^-2 * x^-1
 \end{lstlisting}
-This section presents the implementation of this function.
+The library \lstinline{d/d} is organized with type classes so that it can also be applied directly to tensors (Chapter~\ref{tensor}), and differentiation formulas for new mathematical functions can be added with the \lstinline{declare derivative} statement introduced in Section~\ref{casdetail-mathfunc}.
+At its core, however, lies pattern matching on mathematical expressions.
+In this section, we extract this core and define a function \lstinline{d/d'} that behaves like \lstinline{d/d}.
 
-\lstinline{d/d} is defined as follows.
+\lstinline{d/d'} can be defined as follows.
 \begin{lstlisting}[language=egison]
-def d/d f x :=
-  match f as mathExpr with
+def d/d' (f: MathValue) (x: MathValue) : MathValue :=
+  match f as mathValue with
     -- Differentiation of symbols
     | #x -> 1
-    | ?isSymbol -> 0
+    | symbol _ _ -> 0
     -- Differentiation of function applications
-    | #'exp $g -> exp g * d/d g x
-    | #'log $g -> 1 / g * d/d g x
-    | #'sqrt $g -> 1 / (2 * sqrt g) * d/d g x
-    | #'(^) $g $h -> f * d/d (log g * h) x
-    | #'cos $g -> (- sin g) * d/d g x
-    | #'sin $g -> cos g * d/d g x
+    | apply1 #exp $g -> exp g * d/d' g x
+    | apply1 #log $g -> 1 / g * d/d' g x
+    | apply1 #sqrt $g -> 1 / (2 * sqrt g) * d/d' g x
+    | apply2 #(^) $g $h -> f * d/d' (log g * h) x
+    | apply1 #cos $g -> (- sin g) * d/d' g x
+    | apply1 #sin $g -> cos g * d/d' g x
     -- Differentiation of constants
     | #0 -> 0
     | _ * #1 -> 0
     -- Differentiation of terms
-    | #1 * $fx ^ $n -> n * fx ^ (n - 1) * d/d fx x
-    | $a * $fx ^ $n * $r -> a * d/d (fx ^' n) x * r + a * fx ^' n * d/d r x
+    | #1 * $fx ^ $n -> n * fx ^ (n - 1) * d/d' fx x
+    | $a * $fx ^ $n * $r -> a * d/d' (fx ^' n) x * r + a * fx ^' n * d/d' r x
     -- Differentiation of polynomials
-    | poly $ts -> sum (map 1#(d/d %1 x) ts)
+    | poly $ts -> sum (map 1#(d/d' $1 x) ts)
     -- Differentiation of quotients
     | $p1 / $p2 ->
-      let p1' := d/d p1 x
-          p2' := d/d p2 x
+      let p1' := d/d' p1 x
+          p2' := d/d' p2 x
        in (p1' * p2 - p2' * p1) / p2 ^ 2
 \end{lstlisting}
 The first argument $f$ is pattern-matched as a mathematical expression.
@@ -225,9 +248,12 @@ This is because Egison supports tensor index notation as a programming language 
 Index notation expresses various kinds of tensor multiplication by attaching indices to tensors.
 For example, there are three types of multiplication between vectors: the tensor product, the Hadamard product, and the inner product. These are expressed by using different index patterns as follows.
 \begin{lstlisting}[language=egison,numbers=none]
-[| x1, x2 |]_i .[| y1, y2 |]_j -- [| [| x1 * y1, x1 * y2 |], [| x2 * y1, x2 * y2 |] |]_i_j
-[| x1, x2 |]_i .[| y1, y2 |]_i -- [| x1 * y1, x2 * y2 |]_i
-[| x1, x2 |]~i .[| y1, y2 |]_i -- x1 * y1 + x2 * y2
+declare symbol x1, x2, y1, y2, i, j
+
+[| x1, x2 |]_i .[| y1, y2 |]_j
+-- [| [| x1 y1, x1 y2 |], [| x2 y1, x2 y2 |] |]_i_j
+[| x1, x2 |]_i .[| y1, y2 |]_i -- [| x1 y1, x2 y2 |]_i
+[| x1, x2 |]~i .[| y1, y2 |]_i -- x2 y2 + x1 y1
 \end{lstlisting}
 As shown above, in Egison, vectors are represented by enclosing their components in \lstinline{[| |]}.
 Matrices are represented as vectors of vectors.
@@ -249,20 +275,22 @@ The output format can be specified using the ``\texttt{-M}'' option.
 Running ``\texttt{egison -M latex}'' outputs results in LaTeX format.
 \begin{lstlisting}[language=egison,numbers=none]
 $ egison -M latex
-Egison Version 3.7.14 (C) 2011-2018 Satoshi Egi
+Egison Version 5.0.0
 https://www.egison.org
 Welcome to Egison Interpreter!
-> (+ (sqrt a) b)
-#latex|\sqrt{a} + b|#
+> declare symbol x
+> x + sqrt 2
+#latex|x + \sqrt{2}|#
 \end{lstlisting}
 Running ``\texttt{egison -M mathematica}'' outputs results in Mathematica format.
 \begin{lstlisting}[language=egison,numbers=none]
 $ egison -M mathematica
-Egison Version 3.7.14 (C) 2011-2018 Satoshi Egi
+Egison Version 5.0.0
 https://www.egison.org
 Welcome to Egison Interpreter!
-> (+ (sqrt a) b)
-#mathematica|Sqrt[a] + b|#
+> declare symbol x
+> x + sqrt 2
+#mathematica|x + Sqrt[2]|#
 \end{lstlisting}
 
 The LaTeX output also integrates with Jupyter Notebook.

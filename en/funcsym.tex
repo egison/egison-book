@@ -8,12 +8,12 @@ Although the motivation for function symbols is simple, since they are a languag
 
 Function symbols are particularly powerful when dealing with computations involving differentiation.
 In the following, we define a function symbol \lstinline{f} that takes \lstinline{x} and \lstinline{y} as arguments.
-Function symbols are treated as mathematical expressions of type \lstinline{MathExpr}.
+Function symbols are treated as mathematical expressions of type \lstinline{MathValue}.
 
 \begin{lstlisting}[language=egison,numbers=none]
-declare symbol x, y : MathExpr
+declare symbol x, y, z
 
-def f : MathExpr := function (x, y)
+def f : MathValue := function (x, y)
 \end{lstlisting}
 
 When a function symbol is displayed with \lstinline{show}, the argument values are always shown.
@@ -54,7 +54,7 @@ show (f 0 1)   -- "f 0 1"
 show (f x 0)   -- "f x 0"
 \end{lstlisting}
 
-The result of substituting arguments is also a mathematical expression of type \lstinline{MathExpr}, so it can be further differentiated.
+The result of substituting arguments is also a mathematical expression of type \lstinline{MathValue}, so it can be further differentiated.
 When a concrete numerical value is substituted for an argument, differentiation with respect to that argument yields \lstinline{0}.
 
 \begin{lstlisting}[language=egison,numbers=none]
@@ -77,17 +77,18 @@ Also assume the relations $x=r \cos \theta, y= r \sin \theta$.
 Then, differentiating $g$ with respect to $r$ returns the result $\frac{\partial g}{\partial x_1} \cos \theta + \frac{\partial g}{\partial x_2} \sin \theta$ by the chain rule.
 
 \begin{lstlisting}[language=egison,numbers=none]
-declare symbol r, `$\theta$` : MathExpr
+declare symbol r, `$\theta$`
 
-def x : MathExpr := r * cos `$\theta$`
-def y : MathExpr := r * sin `$\theta$`
-def g : MathExpr := function (x, y)
+def x : MathValue := r * cos `$\theta$`
+def y : MathValue := r * sin `$\theta$`
+def g : MathValue := function (x, y)
 
 show g
--- "g (r * 'cos θ) (r * 'sin θ)"
+-- "g (('cos θ) * r) (('sin θ) * r)"
 
 show (`$\partial$`/`$\partial$` g r)
--- "g|1 (r * 'cos θ) (r * 'sin θ) * 'cos θ + g|2 (r * 'cos θ) (r * 'sin θ) * 'sin θ"
+-- "('sin θ) * (g|2 (('cos θ) * r) (('sin θ) * r))
+--    + ('cos θ) * (g|1 (('cos θ) * r) (('sin θ) * r))"
 \end{lstlisting}
 
 The symbols \verb!g|1! and \verb!g|2! appearing in the result of partial differentiation represent $\frac{\partial g}{\partial x_1}$ and $\frac{\partial g}{\partial x_2}$ respectively (the argument number is appended using the \verb!|! symbol).
@@ -101,9 +102,9 @@ Egison allows function symbols to be used as components of tensors.
 As shown in the following example, when a tensor's components are function symbols, function symbols are generated with names formed by appending the component position indices to the variable name to which the tensor is bound.
 
 \begin{lstlisting}[language=egison,numbers=none]
-declare symbol x, y, z : MathExpr
+declare symbol x, y, z
 
-def g_i_j : Tensor MathExpr := generateTensor
+def g_i_j : Tensor MathValue := generateTensor
       (\match as list integer with
          | [$n, #n] -> function (x, y, z)
          | _ -> 0)
@@ -118,43 +119,36 @@ show (withSymbols [i, j] (`$\partial$`/`$\partial$` g_i_j x))
 
 \section{Internal Representation and Pattern Matching of Function Symbols}\label{funcsym-data}
 
-Function symbols are internally represented in Egison using the \lstinline{Function} data constructor.
-The \lstinline{Function} data constructor takes two arguments.
-The first argument contains the name of the function symbol (of type \lstinline{ScalarData}).
-The second argument contains the list of argument values of the function symbol (of type \lstinline{[ScalarData]}).
-
-\begin{lstlisting}[language=egison,numbers=none]
-declare symbol x, y : MathExpr
-def f : MathExpr := function (x, y)
-
-fromMathExpr f
--- Div (Plus [Term 1 [(Function f [x, y], 1)]]) (Plus [Term 1 []])
-\end{lstlisting}
+Function symbols are internally represented in Egison as factors that have a name and a list of argument values (they are one kind of factor of the mathematical expression data introduced in Section~\ref{mexpr-expr}).
 
 The \lstinline{func} pattern constructor can be used to pattern match on function symbols.
-This pattern extracts the function name and the list of argument values.
+The first argument of this pattern matches the function name, and the second argument matches the list of argument values.
 
 \begin{lstlisting}[language=egison,numbers=none]
-match f as mathExpr with
+declare symbol x, y
+def f : MathValue := function (x, y)
+
+match f as mathValue with
   | func $name $args -> (name, args)
-  -- (f, [x, y])
+-- (f, [x, y])
 \end{lstlisting}
 
-In the chain rule implementation, the number of arguments is used to extract the partial derivative coefficient for each argument using integer indices.
+In the differentiation implementation of the library, the number of arguments is used to extract the partial derivative coefficient for each argument using integer indices.
+The following is an excerpt of the part of the library (\texttt{lib/math/analysis/derivative.egi}) that differentiates function symbols.
 
 \begin{lstlisting}[language=egison,numbers=none]
-def `$\partial$`/`$\partial$` $f *$x :=
-  match f as mathExpr with
-    ...
+def chainPartialDiffBuiltin (v : MathValue) (dx : MathValue)
+  : MathValue :=
+  match v as mathValue with
     | func _ $args ->
-      sum (map2 (\s r -> (userRefs f [s]) * `$\partial$`/`$\partial$` r x)
-               (between 1 (length args))
-               args)
+       sum (map2 (\s r -> (userRefs v [s]) * partialDiff r dx)
+                 (between 1 (length args))
+                 args)
     ...
 \end{lstlisting}
 
 Here, \lstinline{between 1 (length args)} generates the list of integers \lstinline{[1, 2, ..., n]}.
-\lstinline{userRefs f [1]} returns the expression \lstinline{f|1}, which is the name symbol of \lstinline{f} with the integer index \lstinline{1} appended.
+\lstinline{userRefs f [1]} returns the expression \lstinline{f|1 x y}, which applies the name symbol of \lstinline{f} with the integer index \lstinline{1} appended.
 
 \section{Implementation of Function Symbols}
 
@@ -162,4 +156,4 @@ An important aspect of the function symbol implementation is that function symbo
 For this purpose, the Egison interpreter keeps track of the name of the variable currently being defined.
 Additionally, to support function symbols appearing as tensor components as described in Section~\ref{funcsym-tensor}, it is necessary to track the position of the tensor component currently being defined.
 For this purpose, the Egison interpreter also keeps track of the position of the tensor component being defined.
-These are managed as additional arguments to the \lstinline{eval} function in the Egison interpreter implementation.
+In the Egison interpreter implementation, these are managed as additional components of the environment threaded through the evaluator.

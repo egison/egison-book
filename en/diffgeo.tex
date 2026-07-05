@@ -123,11 +123,16 @@ Here, by appropriately inserting backquotes, the computation process and the fin
 Furthermore, by changing the metric to the Schwarzschild metric defined below, one can perform general relativity calculations for a universe with a single massive celestial body at the origin.
 This computation result represents ``spacetime curvature = gravity.''
 \begin{lstlisting}[language=egison,numbers=none,escapechar=']
-def g_i_j : Tensor MathExpr := [| [| `(c^2 * r - 2 * G * M) / c^2 * r, 0, 0, 0 |]
-                [| 0, -1 * c^2 * r / `(c^2 * r - 2 * G * M), 0, 0 |]
-                [| 0, 0, -1 * r^2, 0 |]
-                [| 0, 0, 0, -1 * r^2 * (sin `$\theta$`)^2 |] |]
+declare symbol G, M, c, t, r, `$\theta$`, `$\phi$`
+
+def g_i_j : Tensor MathValue :=
+  [| [| `(c^2 * r - 2 * G * M) / (c^2 * r), 0, 0, 0 |]
+   , [| 0, (-1) / (`(c^2 * r - 2 * G * M) / (c^2 * r)), 0, 0 |]
+   , [| 0, 0, -r^2, 0 |]
+   , [| 0, 0, 0, -r^2 * (sin `$\theta$`)^2 |]
+   |]
 \end{lstlisting}
+The complete program is available at \texttt{sample/math/geometry/riemann-curvature-tensor-of-Schwarzschild-metric.egi} in the Egison source code.
 
 \section{Computing the Curvature Form -- Computation Using Differential Forms (1)}\label{diffgeo-curvature}
 
@@ -161,10 +166,16 @@ The Euler class is a well-known characteristic class: it is a characteristic cla
 The following program computes the Euler form of the torus $T^2$.
 
 \begin{lstlisting}[language=egison,numbers=none]
-def eulerForm : Tensor MathExpr := (1 / (2 * `$\pi$`)) * (`$\Omega$`~1_2 - `$\Omega$`~2_1)
+def eulerForm : Tensor MathValue :=
+  (1 / (4 * `$\pi$`)) * withSymbols [t1, t2]
+    (`$\Omega$`~1_2_t1_t2 - `$\Omega$`~2_1_t1_t2)
 
-eulerForm -- [| [| 0, (cos `$\theta$`) / (* 2 `$\pi$`)) |], [| ((-1 * (cos `$\theta$`)) / (* 2 `$\pi$`)), 0 |] |]
+eulerForm
+-- [| [| 0, (1 / 2) * ('cos `$\theta$`) * `$\pi$`^-1 |],
+--    [| (-1 / 2) * ('cos `$\theta$`) * `$\pi$`^-1, 0 |] |]
 \end{lstlisting}
+Here, \lstinline[mathescape]{$\Omega$} is the curvature form antisymmetrized over its indices.
+The complete program is available at \texttt{sample/math/geometry/euler-form-of-T2.egi} in the Egison source code.
 
 Since Egison does not have an integration function, we record the result of integrating this by hand.
 Integration yields $0$, which is the Euler number of $T^2$.
@@ -210,14 +221,15 @@ As with the Riemann curvature tensor explained in Section~\ref{diffgeo-riemann},
 
 We briefly introduce that the interior product and Lie derivative can also be concisely defined in Egison.
 These operators are used, for example, in expressing the law of conservation of mass in fluid dynamics and the Navier-Stokes equations using differential forms.
-The interior product can be defined as follows.
+The interior product is defined in the library (\texttt{lib/math/geometry/differential-form.egi}) as follows.
+\lstinline{DiffForm a} is a built-in type representing differential forms.
 \begin{lstlisting}[language=egison,numbers=none]
-def `$\iota$` (X: Tensor MathExpr) (Y: Tensor MathExpr) : Tensor MathExpr :=
-  withSymbols [i] dfOrder Y * X...~i . (antisymmetrize Y..._i)
+def `$\iota$` {Field a} (X: DiffForm a) (Y: DiffForm a) : DiffForm a :=
+  withSymbols [i] dfOrder Y * (X...~i . dfNormalize Y..._i)
 \end{lstlisting}
-The Lie derivative can be defined as follows.
+The Lie derivative can be defined as follows (\lstinline{N} is the dimension of the manifold).
 \begin{lstlisting}[language=egison,numbers=none]
-def Lie (X: Tensor MathExpr) (Y: Tensor MathExpr) : Tensor MathExpr :=
+def Lie {Field a} (X: DiffForm a) (Y: DiffForm a) : DiffForm a :=
   match dfOrder Y as integer with
     | #0 -> `$\iota$` X (d Y)
     | #N -> d (`$\iota$` X Y)

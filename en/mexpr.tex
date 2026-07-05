@@ -4,53 +4,41 @@ This chapter introduces Egison's features for handling symbolic computation.
 
 \section{Internal Representation of Mathematical Expression Data}\label{mexpr-expr}
 
-Mathematical expressions are directly implemented as a built-in data type within the Egison interpreter using Haskell's algebraic data types.
-By using the built-in function \lstinline{fromMathExpr}, this mathematical expression data can be converted into an Egison algebraic data type.
-\begin{lstlisting}[language=egison,numbers=none]
-fromMathExpr  (x - sqrt 2)
--- Div (Plus [Term 1 [(Symbol x [], 1)], Term -1 [(Apply sqrt [Div (Plus [Term 2 []])
---     (Plus [Term 1 []])], 1)]]) (Plus [Term 1 []])
-\end{lstlisting}
-This section explains the internal algebraic data type that represents mathematical expression data.
+Mathematical expressions are directly implemented as a built-in data type within the Egison interpreter using Haskell data types.
+This section explains the internal data structure that represents mathematical expression data.
 
-As can be seen from the algebraic data type in the output above, the mathematical expression data type is defined as a fraction that takes polynomials in sum-of-products normal form for both the numerator and denominator.
-\lstinline{Div} is the data constructor for creating this fraction, and \lstinline{Plus} is the data constructor for creating polynomials.
-Therefore, for example, the result of adding two fractions is combined into a single fraction.
+Mathematical expression data is represented as a fraction that takes polynomials in sum-of-products normal form for both the numerator and denominator.
+Therefore, for example, the result of adding two fractions whose denominators are polynomials is combined into a single fraction over the common denominator.
 \begin{lstlisting}[language=egison,numbers=none]
-a / b + x / y
--- (a * y + x * b) / (b * y)
+declare symbol x, y, a, b, c
+
+a / (b + 1) + x / (y + 1)
+-- (b x + a y + x + a) / (b y + y + b + 1)
 \end{lstlisting}
-As can be seen from the fact that the argument of \lstinline{Plus} is a list, a polynomial is defined as a data type consisting of a list of terms.
-A term is defined as a data type consisting of a coefficient and a list of factors.
-Terms are created using the \lstinline{Term} data constructor.
-\lstinline{Term} takes a coefficient as the first argument and a list of factors as the second.
-The coefficient can be an integer, and factors can be symbols, among other things.
-For example, the term \lstinline{3 * x^2 * sqrt 2} has \lstinline{3} as the coefficient and \lstinline{[x^2, sqrt 2]} as the list of factors.
-Factors can include not only symbols but also terms like $\sqrt{2}$.
-The list of factors is an association list of bases (e.g., $x$ for $x^2$) and exponents (e.g., $2$ for $x^2$).
-There is a restriction that exponents can only be natural numbers.
+A polynomial is represented as data consisting of a list of terms.
+A term is represented as data consisting of a coefficient and an association list of factors and exponents.
+For example, the term \lstinline{3 * x^2 * sqrt 2} has \lstinline{3} as the coefficient and \lstinline{[(x, 2), (sqrt 2, 1)]} as the association list.
+Exponents can also be negative integers.
+That is, polynomials in Egison are Laurent polynomials.
+A fraction whose denominator consists of a single term is not kept as a fraction; it is folded into the terms using negative exponents.
 \begin{lstlisting}[language=egison,numbers=none]
-fromMathExpr (3 * x^2 * sqrt 2)
--- Div (Plus [Term 3 [(Symbol x [], 2), (Apply sqrt [Div (Plus [Term 2 []]) (Plus [Term 1 []])], 1)]]) (Plus [Term 1 []])
+a / b + x / y -- x y^-1 + a b^-1
 \end{lstlisting}
-As shown in the example above, factors are created using data constructors such as \lstinline{Symbol} and \lstinline{Apply}.
-The \lstinline{Symbol} data constructor takes the symbol itself as the first argument and a list of indices as the second.
-The reason for placing the symbol itself as the first argument of the \lstinline{Symbol} data constructor is to make the result of \lstinline{fromMathExpr} easier to work with.
-Since having the symbol itself within the data structure representing a symbol would create an infinite circular definition, the internal Haskell representation of symbols uses a string as the first argument of the \lstinline{Symbol} data constructor.
+
+Besides symbols, factors can be the symbolic function applications introduced in Section~\ref{cas-symbol2}, the quoted expressions introduced in Section~\ref{mexpr-backquote}, and the function symbols explained in Chapter~\ref{funcsym}.
+A symbol consists of its name string and a list of indices.
 Indices are explained in Chapter~\ref{tensor}, which covers tensors.
-The \lstinline{Apply} data constructor takes a function name symbol as the first argument and a list of argument expressions as the second.
-There are also \lstinline{Quote} and \lstinline{Function} as factor data constructors.
-The \lstinline{Quote} data constructor is introduced in Section~\ref{mexpr-backquote}.
-The \lstinline{Function} data constructor is introduced in Chapter~\ref{funcsym}.
 
-A \lstinline{toMathExpr} function, which is the inverse of \lstinline{fromMathExpr}, is also provided to convert mathematical expressions represented as Egison algebraic data types back into Egison's internal mathematical expression data.
-Using \lstinline{toMathExpr}, after processing mathematical expressions as Egison algebraic data types, the data can be converted back to Egison's internal mathematical expression data.
+This internal structure can be decomposed by pattern matching with the \lstinline{mathValue} matcher defined in the Egison library.
+For example, a polynomial can be decomposed into its list of terms.
 \begin{lstlisting}[language=egison,numbers=none]
-toMathExpr (fromMathExpr  (x - sqrt 2))
--- x - sqrt 2
+match (x - sqrt 2) as mathValue with
+  | poly $ts -> ts
+-- [x, - 'sqrt 2]
 \end{lstlisting}
-However, built-in functions like \lstinline{fromMathExpr} and \lstinline{toMathExpr} rarely need to be used directly by the user, as the \lstinline{mathExpr} matcher defined in the Egison library can be used instead.
-\lstinline{fromMathExpr} and \lstinline{toMathExpr} are used in the implementation of the \lstinline{mathExpr} matcher.
+Patterns for mathematical expressions are introduced in detail in Section~\ref{mexpr-pattern}.
+Furthermore, the same mathematical expression can be represented by several different internal structures (for example, a flat polynomial and a nested polynomial), and the structure can be selected with type annotations.
+This is explained in Chapter~\ref{casdetail}.
 
 Numbers are a complex data type.
 Up to natural numbers, they can be elegantly defined as algebraic data types.
@@ -58,10 +46,10 @@ However, when considering subtraction, the inverse of addition over natural numb
 Furthermore, considering the inverse of multiplication, which is obtained by repeated addition, leads to the concept of rational numbers.
 Moreover, considering the inverse of exponentiation, which is obtained by repeated multiplication, leads to the concepts of square roots, imaginary numbers, and algebraic numbers that include them.
 
-\section{Controlling Expression Expansion with Backquote (\texttt{`})}\label{mexpr-backquote}
+\section{Controlling Expression Expansion with Backquotes (\texttt{`})}\label{mexpr-backquote}
 
-As mentioned in Section~\ref{cas-symbol}, Egison automatically expands mathematical expressions into sum-of-products normal form, but this expansion can be controlled using the backquote (\lstinline{`}).
-An expression following a backquote is treated as a single symbol.
+As mentioned in Section~\ref{cas-symbol}, Egison automatically expands mathematical expressions into sum-of-products normal form, but this expansion can be controlled using backquotes (\lstinline{`}).
+An expression following a backquote is treated like a single symbol.
 \begin{lstlisting}[language=egison,numbers=none,escapechar=']
 `(x + 1)^2
 --  `(x + 1)^2
@@ -70,116 +58,109 @@ An expression following a backquote is treated as a single symbol.
 --  2 * `(x + 1)
 
 `(x + 1) + (x + 1)
--- `(x + 1) + x + 1
+-- x + `(x + 1) + 1
 \end{lstlisting}
 
-Backquotes are mainly useful in computations involving polynomial division, as shown below.
+Backquotes are useful mainly in computations involving polynomial division.
+For univariate polynomials, reduction by the Euclidean algorithm mentioned in Section~\ref{cas-simplify} is implemented, but reduction of multivariate polynomials is not implemented.
 \begin{lstlisting}[language=egison,numbers=none,escapechar=']
-(x + 1)^2 / (x + 1)
--- (x^2 + 2 * x + 1) / (x + 1)
-
-`(x + 1)^2 / `(x + 1)
--- '(x + 1)
+(x + 1)^2 / (x + 1) -- x + 1
+(x^2 - y^2) / (x - y) -- (- y^2 + x^2) / (- y + x)
 \end{lstlisting}
-
-A quoted term is treated as a factor within Egison's internal mathematical expression data.
-\lstinline{Quote} is defined as a data constructor at the same level as \lstinline{Symbol} and \lstinline{Apply}.
+If the factored form is preserved using backquotes, such expressions can also be reduced.
 \begin{lstlisting}[language=egison,numbers=none,escapechar=']
-fromMathExpr (`(x + 1)^2)
--- Div (Plus [Term 1 [(Quote (Div (Plus [Term 1 [(Symbol x [], 1)], Term 1 []]) (Plus [Term 1 []])), 2)]]) (Plus [Term 1 []])fromMathExpr `(x + 1)^2
+`(x - y) * `(x + y) / `(x - y) -- `(y + x)
 \end{lstlisting}
 
-\section{Controlling Function Application with Single Quote (\texttt{'})}\label{mexpr-squote}
+An expression quoted with a backquote is treated as a factor, on the same footing as a symbol, within Egison's internal mathematical expression data.
+This is why \lstinline{`(x + 1)^2} above is kept as a power of a single factor without being expanded.
 
-Egison returns a symbolic result when a symbol is applied as a function.
-For example, function application of an undefined variable \lstinline{f} behaves as follows.
+\section{Controlling Function Application with Single Quotes (\texttt{'})}\label{mexpr-squote}
+
+For applications of defined functions, we sometimes want to return a symbolic result without evaluating the function application.
+For example, we want the \lstinline{sqrt} function to behave as follows, as we saw in Section~\ref{cas-symbol2}.
 \begin{lstlisting}[language=egison,numbers=none]
-f a -- f a
-\end{lstlisting}
-Sometimes we want defined functions to also return symbolic results as above.
-For example, for the \lstinline{sqrt} function, we want the following behavior.
-\begin{lstlisting}[language=egison,numbers=none]
+declare symbol x, a
+
 sqrt 4 -- 2
-sqrt 5 -- sqrt 5
+sqrt x -- 'sqrt x
 \end{lstlisting}
-To achieve this behavior, Egison provides the single quote (\lstinline{'}) as a built-in syntax.
-A single quote is followed by a variable, and it returns the symbol with that variable's name, even if the variable is already defined.
-By prefixing a function with a single quote, symbolic function application can be expressed even for defined functions.
+To realize this behavior, Egison provides single quotes (\lstinline{'}) as a built-in syntax.
+A single quote is followed by a function, and even if that function is defined, the application is returned as a symbolic function application without being evaluated.
 \begin{lstlisting}[language=egison,numbers=none]
-def f (x: MathExpr) : MathExpr := x + 1
+def f (x: MathValue) : MathValue := x + 1
 
 f a -- a + 1
-'f a -- f a
+'f a -- 'f a
 \end{lstlisting}
-Beyond the implementation of \lstinline{sqrt} for computing square roots, single quotes are also used in the Egison library for implementing trigonometric functions such as \lstinline{sin} and \lstinline{cos}.
-
-\begin{lstlisting}[language=egison,numbers=none]
-fromMathExpr x
--- Div (Plus [Term 1 [(Symbol x [], 1)]]) (Plus [Term 1 []])
-fromMathExpr 'x
--- Div (Plus [Term 1 [(Symbol x [], 1)]]) (Plus [Term 1 []])
-\end{lstlisting}
+Symbolic function applications are also displayed with a leading single quote in the output.
+Single quotes are used in the bodies of the \lstinline{declare apply} statements introduced in Section~\ref{casdetail-mathfunc} --- for example in the definitions of \lstinline{sqrt} and the trigonometric functions \lstinline{sin} and \lstinline{cos} --- to return symbolic values for inputs that cannot be simplified further.
 
 \section{Declaring Local Symbols with \texttt{withSymbols} Expressions}\label{mexpr-withsym}
 
-The specification that undefined variables are treated as symbols tends to lead to mistakes where users attempt to use already-defined variables as symbols.
-To solve this problem, Egison provides the \lstinline{withSymbols} expression syntax for declaring local symbols.
+Symbols declared with the \lstinline{declare symbol} statement are global.
+For cases where symbols are needed only temporarily, Egison provides the \lstinline{withSymbols} expression, a syntax for declaring local symbols.
 The \lstinline{withSymbols} expression takes a list of variables as its first argument, and these variables are treated as symbols during the evaluation of the expression in the second argument.
+Even if a variable is already defined, it is treated as a symbol inside the \lstinline{withSymbols} expression.
 \begin{lstlisting}[language=egison,numbers=none]
-def i : Integer := 10
+def k : Integer := 10
 
-i -- 10
-withSymbols [i] i -- i
-i + withSymbols [i] i -- 10 + i
+k -- 10
+withSymbols [k] k -- k
+k + withSymbols [k] k -- k + 10
 \end{lstlisting}
 
-Local symbols declared with \lstinline{withSymbols} are treated as independent symbols from global symbols generated from undefined variables.
+Local symbols declared with a \lstinline{withSymbols} expression are processed as symbols independent of the global symbols declared with the \lstinline{declare symbol} statement.
+The two \lstinline{j}s below are displayed with the same name, but since they are different symbols, they are not combined into \lstinline{2 * j}.
 \begin{lstlisting}[language=egison,numbers=none]
+declare symbol j
+
 j + withSymbols [j] j -- j + j
 \end{lstlisting}
 
 \section{Pattern Matching on Mathematical Expression Data}\label{mexpr-pattern}
 
-This section introduces the patterns available for mathematical expression data.
-The matcher \lstinline{mathExpr} for mathematical expressions is implemented in the Egison library.
-The definition of \lstinline{mathExpr} can be found in \texttt{lib/math/expression.egi}.
-Additionally, several syntactic sugar constructs are built in to allow patterns on mathematical expressions to be written in a form closer to mathematical notation.
-This section also introduces these syntactic sugar constructs.
+This section introduces the patterns provided for mathematical expression data.
+The matcher \lstinline{mathValue} for mathematical expressions is implemented in the Egison library.
+The definition of \lstinline{mathValue} can be found in \texttt{lib/math/expression.egi}.
+In addition, several syntactic sugars are built in for writing patterns for mathematical expressions in a form closer to mathematical notation.
+This section also introduces these syntactic sugars.
 Pattern matching on mathematical expressions is demonstrated in Section~\ref{cas-derivative}.
-Please refer to the program in Section~\ref{cas-derivative} for concrete examples of pattern usage.
+Please refer to the program in Section~\ref{cas-derivative} for concrete examples of using these patterns.
 
 \subsection{Pattern Matching on Factors}
 
-There are four pattern constructors for factors: \lstinline{symbol}, \lstinline{apply}, \lstinline{quote}, and \lstinline{func}.
-\lstinline{symbol} matches symbols, \lstinline{apply} matches symbolic function applications introduced in Section~\ref{cas-symbol2}, \lstinline{quote} matches backquoted expressions introduced in Section~\ref{mexpr-backquote}, and \lstinline{func} matches objects called function symbols, which are explained in Chapter~\ref{funcsym}.
+The pattern constructors for factors are \lstinline{symbol}, \lstinline{apply1} through \lstinline{apply4}, \lstinline{quote}, and \lstinline{func}.
+\lstinline{symbol} pattern-matches symbols; \lstinline{apply1} through \lstinline{apply4} pattern-match the symbolic function applications introduced in Section~\ref{cas-symbol2}; \lstinline{quote} pattern-matches backquoted expressions introduced in Section~\ref{mexpr-backquote}; and \lstinline{func} pattern-matches objects called function symbols, explained in Chapter~\ref{funcsym}.
 
-The first argument of the \lstinline{symbol} pattern constructor matches the symbol itself, and the second argument matches the indices.
-Indices are discussed again in Chapter~\ref{tensor}, which covers tensors.
+The first argument of the \lstinline{symbol} pattern constructor pattern-matches the name string of the symbol, and the second argument pattern-matches the list of indices.
+Indices are covered again in Chapter~\ref{tensor}, which explains tensors.
 \begin{lstlisting}[language=egison,numbers=none]
-match x as mathExpr with
+match x as mathValue with
   | symbol $s _ -> s
--- x
+-- "x"
 \end{lstlisting}
-While one can use the \lstinline{symbol} pattern constructor to match symbols, in practice, value patterns are more commonly used.
+Although symbols can be pattern-matched using the \lstinline{symbol} pattern constructor, in practice, value patterns are more commonly used.
 \begin{lstlisting}[language=egison,numbers=none]
-match x as mathExpr with
+match x as mathValue with
   | #x -> "Matched"
   | _ -> "Not matched"
 -- "Matched"
 \end{lstlisting}
 
-The first argument of the \lstinline{apply} pattern constructor matches the function name symbol, and the second argument matches the list of argument expressions.
-Since the \lstinline{list mathExpr} matcher is used for matching the arguments, list patterns can be used.
+For symbolic function applications, the pattern constructors \lstinline{apply1} through \lstinline{apply4} are used according to the number of arguments.
+The first argument pattern-matches the function itself, and the remaining arguments pattern-match the expressions of the respective arguments.
+For the function itself, value patterns such as \lstinline{#sqrt} are commonly used.
 \begin{lstlisting}[language=egison,numbers=none]
-match ('f x 1 y)  as mathExpr with
-  | apply $f ($x :: $xs) -> (f, x, xs)
--- (f, x, [1, y])
+match (sqrt x) as mathValue with
+  | apply1 #sqrt $g -> g
+-- x
 \end{lstlisting}
 
-The \lstinline{quote} pattern constructor takes a pattern for a mathematical expression as its argument.
-This pattern is matched against the contents of the quote using the \lstinline{mathExpr} matcher.
+The \lstinline{quote} pattern constructor takes a pattern for mathematical expressions as its argument.
+This pattern is matched against the expression inside the quote using the \lstinline{mathValue} matcher.
 \begin{lstlisting}[language=egison,numbers=none,escapechar=']
-match `(x + 1) as mathExpr with
+match `(x + 1) as mathValue with
   | quote $e -> e
 -- x + 1
 \end{lstlisting}
@@ -188,55 +169,58 @@ match `(x + 1) as mathExpr with
 \subsection{Pattern Matching on Terms}
 
 The \lstinline{term} pattern constructor is used for pattern matching on terms.
-The first argument of the \lstinline{term} pattern constructor matches the coefficient, and the second argument matches the association list of factors.
-The assocMultiset matcher introduced in Section~\ref{matcher-assoc} is used for pattern matching on the association list of factors.
+The first argument of the \lstinline{term} pattern constructor pattern-matches the coefficient, and the second argument pattern-matches the association list of factors and exponents.
+The assocMultiset matcher introduced in Section~\ref{matcher-assoc} is used for pattern matching the association list of factors.
 \begin{lstlisting}[language=egison,numbers=none]
-matchAll 3 * x^2 * y  as mathExpr with
-  | term $a ($x :: $xs) -> (a, x, xs)
--- [(3, x, [(x, 1), (y, 1)]), (3, y, [(x, 2)])]
+matchAll 3 * x^2 * y as mathValue with
+  | term $a (($x, $n) :: $xs) -> (a, x, n, xs)
+-- [(3, x, 2, [(y, 1)]), (3, y, 1, [(x, 2)])]
 \end{lstlisting}
 
-There is syntactic sugar for the \lstinline{term} pattern constructor that allows writing patterns closer to mathematical notation.
+The \lstinline{term} pattern constructor has syntactic sugar for writing patterns in a form closer to mathematical notation.
+In the first pattern below, \lstinline{$x} matches a factor together with its power, such as \lstinline{x^2}, and \lstinline{$xs} matches the product of the remaining factors.
+As in the second pattern, a pattern for the exponent can also be written following \lstinline{^}.
 \begin{lstlisting}[language=egison,numbers=none]
-matchAll 3 * x^2 * y  as mathExpr with
+matchAll 3 * x^2 * y as mathValue with
   | $a * $x * $xs -> (a, x, xs)
--- [(3, x, x * y), (3, y, x^2)]
+-- [(3, x^2, y), (3, y, x^2)]
 
-matchAll 3 * x^2 * y  as mathExpr with
+matchAll 3 * x^2 * y as mathValue with
   | $a * $x^#2 * $xs -> (a, x, xs)
 -- [(3, x, y)]
 \end{lstlisting}
 
 \subsection{Pattern Matching on Polynomials}
 
-The \lstinline{poly} pattern constructor is used for pattern matching on rational expressions.
+The \lstinline{poly} pattern constructor is used for pattern matching on polynomials.
 The \lstinline{poly} pattern constructor takes a pattern that matches a list of terms as its argument.
 \begin{lstlisting}[language=egison,numbers=none]
-matchAll x + y + 1  as mathExpr with
+matchAll x + y + 1 as mathValue with
   | poly ($x :: $xs) -> (x, xs)
--- [(x, [y, 1]), (y, [x, 1]), (1, [x, y])]
+-- [(y, [x, 1]), (x, [y, 1]), (1, [y, x])]
 \end{lstlisting}
 
-There is also syntactic sugar for the \lstinline{poly} pattern constructor to allow writing patterns closer to mathematical notation.
+The \lstinline{poly} pattern constructor also has syntactic sugar for writing patterns in a form closer to mathematical notation.
 \begin{lstlisting}[language=egison,numbers=none]
-matchAll x + y + 1  as mathExpr with
+matchAll x + y + 1 as mathValue with
   | $x + $xs -> (x, xs)
--- [(x, y + 1), (y, x + 1), (1, x + y)]
+-- [(y, x + 1), (x, y + 1), (1, y + x)]
 \end{lstlisting}
 
 \subsection{Pattern Matching on Rational Expressions}
 
-The \lstinline{div} pattern constructor is used for pattern matching on rational expressions.
-The first argument of the \lstinline{div} pattern constructor matches the numerator polynomial, and the second argument matches the denominator polynomial.
+The \lstinline{frac} pattern constructor is used for pattern matching on rational expressions.
+The first argument of the \lstinline{frac} pattern constructor pattern-matches the numerator polynomial, and the second argument pattern-matches the denominator polynomial.
 \begin{lstlisting}[language=egison,numbers=none]
-matchAll (a + b) / c  as mathExpr with
-  | div $x $y -> (x, y)
--- [(a + b, c)]
+matchAll (a + b) / (c + 1) as mathValue with
+  | frac $x $y -> (x, y)
+-- [(b + a, c + 1)]
 \end{lstlisting}
+Note that, as mentioned in Section~\ref{mexpr-expr}, a fraction whose denominator consists of a single term is represented as a term with negative exponents, and hence does not match the \lstinline{frac} pattern.
 
-There is also syntactic sugar for the \lstinline{div} pattern constructor to allow writing patterns closer to mathematical notation.
+The \lstinline{frac} pattern constructor also has syntactic sugar for writing patterns in a form closer to mathematical notation.
 \begin{lstlisting}[language=egison,numbers=none]
-matchAll (a + b) / c  as mathExpr with
+matchAll (a + b) / (c + 1) as mathValue with
   | $x / $y -> (x, y)
--- [(a + b, c)]
+-- [(b + a, c + 1)]
 \end{lstlisting}

@@ -123,11 +123,16 @@ S = g^{ij} Ric_{ij} &\qquad
 また，計量を以下のように定義されるSchwarzschild計量に変えれば，原点を中心に一つだけ質量をもつ天体がある宇宙についての一般相対性理論の計算ができる．
 この計算結果は，「時空の曲がり=重力」ということをあらわしている．
 \begin{lstlisting}[language=egison,numbers=none,escapechar=']
-def g_i_j : Tensor MathExpr := [| [| `(c^2 * r - 2 * G * M) / c^2 * r, 0, 0, 0 |]
-                [| 0, -1 * c^2 * r / `(c^2 * r - 2 * G * M), 0, 0 |]
-                [| 0, 0, -1 * r^2, 0 |]
-                [| 0, 0, 0, -1 * r^2 * (sin `$\theta$`)^2 |] |]
+declare symbol G, M, c, t, r, `$\theta$`, `$\phi$`
+
+def g_i_j : Tensor MathValue :=
+  [| [| `(c^2 * r - 2 * G * M) / (c^2 * r), 0, 0, 0 |]
+   , [| 0, (-1) / (`(c^2 * r - 2 * G * M) / (c^2 * r)), 0, 0 |]
+   , [| 0, 0, -r^2, 0 |]
+   , [| 0, 0, 0, -r^2 * (sin `$\theta$`)^2 |]
+   |]
 \end{lstlisting}
+このプログラムの全体は，Egisonのソースコードの\texttt{sample/math/geometry/riemann-curvature-tensor-of-Schwarzschild-metric.egi}にある．
 
 \section{曲率形式の計算 - 微分形式を使った計算（1）}\label{diffgeo-curvature}
 
@@ -161,10 +166,16 @@ def g_i_j : Tensor MathExpr := [| [| `(c^2 * r - 2 * G * M) / c^2 * r, 0, 0, 0 |
 以下のプログラムは，トーラス$T^2$のオイラー形式を計算している．
 
 \begin{lstlisting}[language=egison,numbers=none]
-def eulerForm : Tensor MathExpr := (1 / (2 * `$\pi$`)) * (`$\Omega$`~1_2 - `$\Omega$`~2_1)
+def eulerForm : Tensor MathValue :=
+  (1 / (4 * `$\pi$`)) * withSymbols [t1, t2]
+    (`$\Omega$`~1_2_t1_t2 - `$\Omega$`~2_1_t1_t2)
 
-eulerForm -- [| [| 0, (cos `$\theta$`) / (* 2 `$\pi$`)) |], [| ((-1 * (cos `$\theta$`)) / (* 2 `$\pi$`)), 0 |] |]
+eulerForm
+-- [| [| 0, (1 / 2) * ('cos `$\theta$`) * `$\pi$`^-1 |],
+--    [| (-1 / 2) * ('cos `$\theta$`) * `$\pi$`^-1, 0 |] |]
 \end{lstlisting}
+ここで\lstinline[mathescape]{$\Omega$}は添字について反対称化した曲率形式である．
+このプログラムの全体は，Egisonのソースコードの\texttt{sample/math/geometry/euler-form-of-T2.egi}にある．
 
 積分のための関数がEgisonには実装されていないため，手計算でこれを積分した結果を記す．
 積分すると$T^2$のオイラー数である$0$が得られる．
@@ -210,14 +221,15 @@ eulerForm -- [| [| 0, (cos `$\theta$`) / (* 2 `$\pi$`)) |], [| ((-1 * (cos `$\th
 
 内部積やリー微分も，Egisonで簡潔に定義できることを紹介しておく．
 これらの演算子は，たとえば，流体力学の質量保存の法則やナビエ・ストークス方程式の微分形式による表現をするときに使う．
-内部積は以下のように定義できる．
+内部積は，ライブラリ（\texttt{lib/math/geometry/differential-form.egi}）で以下のように定義されている．
+\lstinline{DiffForm a}は微分形式を表す組み込みの型である．
 \begin{lstlisting}[language=egison,numbers=none]
-def `$\iota$` (X: Tensor MathExpr) (Y: Tensor MathExpr) : Tensor MathExpr :=
-  withSymbols [i] dfOrder Y * X...~i . (antisymmetrize Y..._i)
+def `$\iota$` {Field a} (X: DiffForm a) (Y: DiffForm a) : DiffForm a :=
+  withSymbols [i] dfOrder Y * (X...~i . dfNormalize Y..._i)
 \end{lstlisting}
-リー微分は以下のように定義できる．
+リー微分は以下のように定義できる（\lstinline{N}は多様体の次元である）．
 \begin{lstlisting}[language=egison,numbers=none]
-def Lie (X: Tensor MathExpr) (Y: Tensor MathExpr) : Tensor MathExpr :=
+def Lie {Field a} (X: DiffForm a) (Y: DiffForm a) : DiffForm a :=
   match dfOrder Y as integer with
     | #0 -> `$\iota$` X (d Y)
     | #N -> d (`$\iota$` X Y)
