@@ -405,7 +405,8 @@ def min (x: a) (y: a) : a := if x < y then x else y
 \end{figure}
 
 Figure~\ref{fig:minFunction} introduces the definition of the \lstinline{min} function and its application examples as an example of a scalar function.
-Since the formal parameter type is type variable \lstinline{a}, when a tensor is passed as an argument, the function is automatically applied component-wise.
+Since the body uses \lstinline{<}, the parameter type is inferred as a type variable under the constraint \lstinline|{Ord a}|, which the \lstinline{Tensor} type cannot satisfy (a scalar parameter --- the precise criterion is given in Section~\ref{tensor-tensormap}).
+Therefore, when a tensor is passed as an argument, the function is automatically applied component-wise.
 As a result of component-wise application, the function is applied in the same form as a tensor product, as shown in Figure~\ref{fig:minDiff}.
 The index reduction rules for tensors are simple.
 The only rule is that when a tensor with two or more indices of the same symbol is generated as a result of applying a scalar function (as in Figure~\ref{fig:minSame}), it is reduced to a tensor consisting of its diagonal components.
@@ -606,16 +607,23 @@ This section explains the mechanism of automatic \lstinline{tensorMap} insertion
 
 \subsection{Basic Principle}
 
-Egison's type system compares the types of formal parameters and actual arguments at function application, and automatically inserts \lstinline{tensorMap} as needed.
+For every function application, Egison's type system decides \textbf{whether the formal parameter's type can---taking its type class constraints into account---be instantiated to \lstinline{Tensor a}}.
+A parameter for which this is possible is called \emph{tensor-compatible}\index{tensor-compatible}.
+\lstinline{tensorMap} is inserted exactly when the following two conditions hold:
+\begin{itemize}
+\item the formal parameter is not tensor-compatible (it is a \emph{scalar parameter}), and
+\item the actual argument's type is \lstinline{Tensor a}.
+\end{itemize}
 \lstinline{tensorMap} is a built-in function that applies the function given as the first argument to each component of the tensor given as the second argument and returns a tensor.
 
-The criteria for insertion are as follows:
+Parameter types fall into three classes:
 \begin{itemize}
-\item The formal parameter type cannot be unified with \lstinline{Tensor a} (e.g., \lstinline{Integer}, or a type variable \lstinline{a} with a type class constraint such as \lstinline{AddSemigroup a})
-\item The actual argument type is \lstinline{Tensor a}
+\item concrete scalar types such as \lstinline{Integer} --- not tensor-compatible (scalar parameters);
+\item type variables with class constraints (such as the \lstinline{a} of \lstinline|{Ord a}|) --- the \lstinline{Tensor} type is not an instance of those classes, so not tensor-compatible (scalar parameters);
+\item explicit \lstinline{Tensor a} types and type variables without constraints --- tensor-compatible; tensors are passed through as-is.
 \end{itemize}
-
-When both conditions are met, \lstinline{tensorMap} is automatically inserted.
+This classification is determined by the function's \emph{principal type} (its inferred type) alone, so where \lstinline{tensorMap} is inserted is deterministic, and type annotations are never needed to control insertion.
+Moreover, the decision stays entirely within Hindley--Milner inference: no index information is lifted to the type level, and no dependent typing is required.
 
 \subsection{Concrete Example}
 
@@ -632,30 +640,40 @@ min [|1,2,3|]_i [|10,20,30|]_i
 -- Result: [|1,2,3|]_i
 \end{lstlisting}
 
-The formal parameter type of the \lstinline{min} function is the type variable \lstinline{a}, which cannot be unified with \lstinline{Tensor a}.
-Therefore, when a tensor is passed as an argument, \lstinline{tensorMap} is automatically inserted.
+Since the body of \lstinline{min} uses \lstinline{<}, its parameter type is inferred as the type variable \lstinline{a} under the constraint \lstinline|{Ord a}|.
+The \lstinline{Tensor} type is not an instance of the \lstinline{Ord} class, so \lstinline{a} cannot be instantiated to a \lstinline{Tensor} type.
+The parameters of \lstinline{min} are therefore scalar parameters, and when a tensor is passed, \lstinline{tensorMap} is inserted automatically.
+Writing the definition without any annotations, \lstinline{def min x y := if x < y then x else y}, infers the same type and behaves identically --- whether to lift follows from the inferred principal type alone.
 
 The indices of the resulting tensor for the first expression are ``\lstinline|_i_j|''.
 When the result of applying the first argument's function to the second argument's tensor components in \lstinline{tensorMap} is itself a tensor, \lstinline{tensorMap} moves the indices of that result tensor to the end of the indices of the overall result tensor.
 This is why the result tensor has the indices ``\lstinline|_i_j|''.
 This mechanism enables the application of scalar functions using tensor index notation.
 
-\subsection{Relationship with Type Class Constraints}
+\subsection{Unconstrained Type Variables}
 
-\lstinline{tensorMap} is also inserted when there are type class constraints.
+The key point of the classification is that \textbf{the dividing line is the type class constraint, not the type variable itself}.
+An unconstrained type variable can be instantiated to any type --- including \lstinline{Tensor} types --- so it is tensor-compatible.
+Passing a tensor to the identity function, for example, inserts no \lstinline{tensorMap}: the tensor passes through as-is.
+\begin{lstlisting}[language=egison,numbers=none]
+def myId (x: a) : a := x
+
+myId [|1,2,3|]_i -- [| 1, 2, 3 |]_i
+\end{lstlisting}
+It is thanks to this classification that generic higher-order functions carrying tensors as elements (list operations and the like) work as expected.
+
+By contrast, a parameter with an explicit type class constraint is a scalar parameter.
 \begin{lstlisting}[language=egison,numbers=none]
 def double {AddSemigroup a} (x: a) : a := x + x
 
 double [|1,2,3|]_i
--- Since Tensor Integer is not an instance of AddSemigroup,
+-- Since Tensor is not an instance of AddSemigroup,
 -- tensorMap is automatically inserted:
 -- tensorMap (\xi -> double xi) [|1,2,3|]_i
 -- Result: [|2,4,6|]_i
 \end{lstlisting}
-
-Due to the type class constraint \lstinline{AddSemigroup a}, the type variable \lstinline{a} must be an instance of the \lstinline{AddSemigroup} class.
-Since \lstinline{Tensor Integer} is not an instance of the \lstinline{AddSemigroup} class, it cannot be unified with \lstinline{Tensor a}.
-Therefore, when a tensor is passed as an argument, \lstinline{tensorMap} is automatically inserted, and the \lstinline{double} function is applied to each component (of type \lstinline{Integer}) of the tensor.
+The constraint \lstinline{AddSemigroup a} restricts \lstinline{a} to instances of the \lstinline{AddSemigroup} class.
+The \lstinline{Tensor} type is not among them, so when a tensor is passed, \lstinline{tensorMap} is inserted automatically and \lstinline{double} is applied to each component (of type \lstinline{Integer}).
 
 \subsection{The Case of Tensor Functions}
 
@@ -1015,6 +1033,13 @@ The processing flow is as follows:
 
 The reason TensorMap insertion is executed before type class expansion is to first determine the argument types (scalar or tensor), so that instance selection can be performed correctly during type class expansion.
 
+\subsection{Two-Phase Transformation per Application Spine}
+
+Insertion operates in two phases on each application spine (\lstinline{f a1 ... an}).
+The first phase determines, from the function's principal type, which argument positions of the spine are scalar parameters.
+The second phase wraps the scalar positions that receive tensors with \lstinline{tensorMap} or \lstinline{tensorMap2}, all at once.
+Because position determination and wrapping are separated, the insertion result does not depend on the order in which arguments are processed (the confluence of Section~\ref{tensor-guarantees}).
+
 \subsection{Basic Principles of Insertion}
 
 TensorMap insertion is based on the following principles:
@@ -1172,7 +1197,7 @@ Through the TensorMap insertion mechanism, Egison achieves the following:
 
 This design allows Egison's computer algebra system to handle scalars and tensors uniformly, while providing an intuitive and user-friendly interface.
 
-\subsection{Properties of the Insertion (Guarantees)}
+\subsection{Properties of the Insertion (Guarantees)}\label{tensor-guarantees}
 
 Type-directed \lstinline{tensorMap} insertion is designed to satisfy the following properties.
 
