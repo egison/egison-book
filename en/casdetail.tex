@@ -150,6 +150,17 @@ inspect byX3
 Here the outer atom set is filled with the \lstinline{x} occurring in the value \lstinline{v}, so the observed type is \lstinline{Poly (Poly Integer [i]) [x]} (it would become \lstinline{[x, y]} for a value containing $x$ and $y$).
 The promotion tower of the next section is likewise written with open atom sets such as \lstinline{Poly Integer [..]}, to denote general polynomials not tied to specific symbols.
 
+Conversely, the inner atom set can also be left open.
+Fixing only the outer set means ``keep exactly the named symbols as the polynomial's variables, and fold every other atom into the coefficients''.
+\begin{lstlisting}[language=egison,numbers=none]
+def byI : Poly (Poly Integer [..]) [i] := v
+inspect byI
+-- "(- x + 3) * i + 4 * x^2 + x + 2 : Poly (Poly Integer [x]) [i]"
+\end{lstlisting}
+Here only $i$ remains as the outer variable, and the same value is now regrouped as the polynomial $(3 - x)i + (4x^2 + x + 2)$ in $i$ with coefficients in $\mathbb{Z}[x]$.
+However, \lstinline{[..]} may appear \textbf{at most once} within one nested polynomial type (a tower).
+With a single open atom set, every atom's destination is determined uniquely (atoms listed in a closed set go to that level; all remaining atoms go to the open level), whereas opening two positions (as in \lstinline{Poly (Poly Integer [..]) [..]}) would make the destination of the remaining atoms ambiguous, so such a type is rejected as a type error.
+
 A type annotation does more than classify the value: it reorganizes the value's internal structure into the shape of the type (reshape).
 Reshaping never changes the value.
 Indeed, the difference of the two canonical forms computes to $0$.
