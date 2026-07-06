@@ -86,10 +86,14 @@ declare rule auto term w^2 = -1 - w
 Users can declare their own simplification rules with exactly the same \lstinline{declare rule} statement (Section~\ref{cas-rule} of Chapter~\ref{casdetail}).
 Only a few simplification rules for which performance is critical, such as those used in computations with differential forms, are exceptionally implemented on the Haskell side (\texttt{hs-src/Language/Egison/Math/Rewrite.hs}).
 
-Automating the simplification of mathematical expressions is extremely difficult, and Egison provides only simple algorithms.
-For example, algorithms based on Gr\"obner basis theory are useful for polynomial division, but they are not implemented in Egison.
-As a result, Egison may not be able to properly simplify complex polynomial fractions.
-For univariate polynomials, however, reduction by the Euclidean algorithm, such as $(x^2-1)/(x-1) \rightarrow x+1$, is implemented.
+Reduction of polynomial fractions is performed automatically by polynomial GCD (the Euclidean algorithm for univariate polynomials, subresultant PRS for multivariate ones).
+\begin{lstlisting}[language=egison,numbers=none]
+(x^2 - 1) / (x - 1) -- x + 1
+(x^2 - y^2) / (x - y) -- y + x
+\end{lstlisting}
+Fully automating the simplification of mathematical expressions, on the other hand, is an extremely difficult problem.
+For example, algorithms based on Gr\"obner basis theory are useful for computing normal forms modulo an ideal, but they are not yet implemented in Egison.
+As a result, Egison may not be able to properly simplify complex expressions.
 
 Wolfram Language (Mathematica) is capable of such advanced expression simplification.
 Running the Egison interpreter with the ``\texttt{-M mathematica}'' option outputs expressions in a format readable by the Wolfram Language.

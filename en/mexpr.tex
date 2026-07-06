@@ -61,14 +61,15 @@ An expression following a backquote is treated like a single symbol.
 -- x + `(x + 1) + 1
 \end{lstlisting}
 
-Backquotes are useful mainly in computations involving polynomial division.
-For univariate polynomials, reduction by the Euclidean algorithm mentioned in Section~\ref{cas-simplify} is implemented, but reduction of multivariate polynomials is not implemented.
+Backquotes are useful when we do not want expressions to be expanded.
+Reduction of polynomial fractions itself is performed automatically by polynomial GCD, as mentioned in Section~\ref{cas-simplify}, but both the input and the result are expanded into sum-of-products normal form.
 \begin{lstlisting}[language=egison,numbers=none,escapechar=']
 (x + 1)^2 / (x + 1) -- x + 1
-(x^2 - y^2) / (x - y) -- (- y^2 + x^2) / (- y + x)
+(x^2 - y^2) / (x - y) -- y + x
 \end{lstlisting}
-If the factored form is preserved using backquotes, such expressions can also be reduced.
+If the factored form is preserved using backquotes, the expression is reduced without going through expansion, and the result is also obtained in factored form.
 \begin{lstlisting}[language=egison,numbers=none,escapechar=']
+`(x + y)^2 / `(x + y) -- `(y + x)
 `(x - y) * `(x + y) / `(x - y) -- `(y + x)
 \end{lstlisting}
 

@@ -86,10 +86,14 @@ declare rule auto term w^2 = -1 - w
 ユーザーもこれとまったく同じ\lstinline{declare rule}文を使って，簡約規則を自分で宣言できる（第\ref{casdetail}章\ref{cas-rule}節）．
 なお，微分形式の計算のように性能が特に重要になる一部の簡約規則だけは，例外的にHaskell側（\texttt{hs-src/Language/Egison/Math/Rewrite.hs}）に実装されている．
 
-数式の簡約の自動化は非常に難しく，Egisonでは簡潔なアルゴリズムしか用意されていない．
-たとえば，多項式の約分にはグレブナー基底についての理論に基づいたアルゴリズムが有用であるが，Egisonには実装されていない．
-そのため，Egisonは複雑な多項式の分数の適切に簡約できないことがある．
-なお，単変数の多項式については，$(x^2-1)/(x-1) \rightarrow x+1$のようなユークリッドの互除法による約分が実装されている．
+多項式の分数の約分は，多項式GCD（単変数はユークリッドの互除法，多変数はsubresultant PRS）により自動でおこなわれる．
+\begin{lstlisting}[language=egison,numbers=none]
+(x^2 - 1) / (x - 1) -- x + 1
+(x^2 - y^2) / (x - y) -- y + x
+\end{lstlisting}
+一方，数式の簡約の完全な自動化は非常に難しい問題である．
+たとえば，イデアルを法とする正規形の計算にはグレブナー基底についての理論に基づいたアルゴリズムが有用であるが，Egisonにはまだ実装されていない．
+そのため，Egisonが複雑な数式を適切に簡約できないことがある．
 
 Wolfram言語(Mathematica)は，このような高度な数式の簡約ができる．
 ``\texttt{-M mathematica}''オプションを追加してEgison処理系を実行するとWolfram言語で読み込めるかたちで数式を出力する．
