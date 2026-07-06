@@ -2,7 +2,7 @@
 
 This chapter explains in detail how simplification in Egison's computer algebra system cooperates with the type system.
 Chapter~\ref{cas} introduced simplification as a built-in facility, but the simplification system is in fact assembled from several orthogonal, user-extensible mechanisms.
-This chapter walks through (1) declaring simplification rules, (2) declaring mathematical functions, (3) selecting canonical forms with type annotations, (4) the promotion tower of types and its extension, and (5) quotient types, which live outside the tower.
+This chapter walks through (1) declaring simplification rules, (2) generating rule sets mechanically by declaring ideals, (3) declaring mathematical functions, (4) selecting canonical forms with type annotations, (5) the promotion tower of types and its extension, and (6) quotient types, which live outside the tower.
 
 \section{Declaring Simplification Rules}\label{cas-rule}
 
@@ -65,6 +65,73 @@ sin (a + b) -- 'sin (b + a)
 simplify (sin (a + b)) using sinAdd
 -- ('cos b) * ('sin a) + ('cos a) * ('sin b)
 \end{lstlisting}
+
+\section{Declaring Ideals}\label{casdetail-ideal}
+
+As we saw in the previous section, declaring a simplification rule such as $i^2 = -1$ amounts to introducing an algebraic extension --- a quotient of a polynomial ring by an ideal --- on top of a symbol.
+Pushing this view further, the rule set itself can be generated mechanically from the generators of the ideal.
+This section introduces the \lstinline{declare ideal} statement and the Gr\"obner-basis library functions underneath it.
+
+Hand-written rules have a completeness problem.
+Introduce symbols \lstinline{s2}, \lstinline{s3}, \lstinline{s6} standing for $\sqrt{2}$, $\sqrt{3}$, $\sqrt{6}$; the relations evident from the definitions are the three $s_2^2 = 2$, $s_3^2 = 3$, and $s_6 = s_2 s_3$.
+Declaring just these three as rules, however, leaves $s_2 s_6$ (which is $\sqrt{2}\cdot\sqrt{6} = 2\sqrt{3}$) unreduced.
+Writing every needed rule by hand is hard, and even when it succeeds, termination and confluence --- reaching the same normal form regardless of application order --- can only be checked by inspection.
+
+Gr\"obner basis theory gives the mathematical answer to this problem.
+From a set of generators one can compute a complete rule set (the reduced Gr\"obner basis) for which normal forms modulo the ideal are unique, and the termination and confluence of the resulting rules hold as theorems.
+In Egison, Buchberger's algorithm is implemented as the library function \lstinline{groebnerBasis}, written in Egison itself with pattern matching (\texttt{lib/math/algebra/groebner.egi}).
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol s2, s3, s6
+
+groebnerBasis [s2^2 - 2, s3^2 - 3, s6 - s2 * s3]
+-- [s2^2 - 2, s2 s3 - s6, s2 s6 - 2 * s3,
+--  s3^2 - 3, s3 s6 - 3 * s2, s6^2 - 6]
+\end{lstlisting}
+The user supplied the three obvious relations; completion yields the six rules that form the multiplication table of $\{1, \sqrt{2}, \sqrt{3}, \sqrt{6}\}$.
+Each element reads as a rewrite rule from its leading monomial to the (negated) remaining terms, such as $s_2 s_6 \to 2 s_3$.
+
+A computed basis can be applied to an expression explicitly with the function \lstinline{polyNF}.
+\lstinline{polyNF gb e} returns the normal form of \lstinline{e} modulo the ideal.
+In particular, a result of \lstinline{0} means that \lstinline{e} equals zero as a consequence of the relations --- membership in the ideal.
+\begin{lstlisting}[language=egison,numbers=none]
+def gb := groebnerBasis [s2^2 - 2, s3^2 - 3, s6 - s2 * s3]
+
+polyNF gb ((s2 + s3)^2) -- 2 * s6 + 5
+polyNF gb (s2 * s3 - s6) -- 0
+\end{lstlisting}
+Note that \lstinline{polyNF} uses the polynomials it is given as the basis as-is (it does not complete them); to get unique normal forms, pass a basis that went through \lstinline{groebnerBasis}, as above.
+
+To apply the rule set all the time, use the \lstinline{declare ideal} statement.
+The Gr\"obner basis is computed from the generators once, at declaration time, and each element is registered as a term-level auto rule.
+From then on the rules apply automatically on every arithmetic operation, like ordinary simplification rules.
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol s2, s3, s6
+
+declare ideal [s2^2 - 2, s3^2 - 3, s6 - s2 * s3]
+
+s2 * s6 -- 2 * s3
+(s2 + s3)^2 -- 2 * s6 + 5
+(s2 + s3) * (s2 - s3) -- -1
+\end{lstlisting}
+In fact, the standard library's rules for the primitive cube root of unity $w$ have been replaced: instead of the two hand-written rules ($w^3 = 1$ and $w^2 = -1-w$), the library now contains the single declaration \lstinline{declare ideal [w^2 + w + 1]}.
+The generated rule $w^2 \to -1-w$ also derives the reduction of $w^3$ in two steps, so the completeness of the rule set becomes a theorem instead of a convention.
+
+Compound atoms work as-is.
+Since \lstinline{sin θ} and \lstinline{cos θ} are factors (atoms) of the mathematical expression data (Section~\ref{mexpr-expr}), the Pythagorean relation can be declared without any change of variables.
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol `$\theta$`
+
+declare ideal [(sin `$\theta$`)^2 + (cos `$\theta$`)^2 - 1]
+
+(sin `$\theta$`)^4 - (cos `$\theta$`)^4 -- 2 * 'sin `$\theta$`^2 - 1
+(sin `$\theta$`)^2 + 2 * (cos `$\theta$`)^2 -- - 'sin `$\theta$`^2 + 2
+\end{lstlisting}
+Which atoms survive in normal forms is determined by an ordering: symbols follow their \lstinline{declare symbol} declaration order, and compound atoms follow their order of appearance in the generators, with earlier atoms surviving.
+In the example above, \lstinline{sin θ} was written first in the generator, so the rules are generated in the direction that keeps $\sin$ and eliminates even powers of $\cos$.
+
+\lstinline{declare ideal} and \lstinline{polyNF} divide the labor between applying always and applying once.
+An oriented normal form is not always what one wants, and applying heavy relations on every operation can slow the whole computation down.
+For a relation used only as a final check --- such as the defining polynomial of a coordinate --- applying it once at the point of comparison with \lstinline{polyNF} is the better fit.
 
 \section{Declaring Mathematical Functions}\label{casdetail-mathfunc}
 

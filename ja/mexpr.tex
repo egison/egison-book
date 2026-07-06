@@ -97,6 +97,30 @@ f a -- a + 1
 シンボリックな関数適用は，出力でも先頭にシングルクオートを付けて表示される．
 シングルクオートは，\ref{casdetail-mathfunc}節で紹介した\lstinline{declare apply}文の本体で，これ以上簡約できない入力に対してシンボリックな値を返すために，\lstinline{sqrt}や三角関数\lstinline{sin}・\lstinline{cos}などの定義のなかで使われている．
 
+\section{規則の適用を抑制するクオート（\texttt{'( )}）}\label{mexpr-rsquote}
+
+シングルクオートを括弧で囲った式に前置すると，その式は\lstinline{declare rule}による簡約規則（第\ref{casdetail}章\ref{cas-rule}節）を適用せずに構築される．
+積和標準形への展開や同類項の整理といった構造的な正規化はおこなわれる．
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol x, `$\theta$`
+
+w^2 + w + 1 -- 0
+'(w^2 + w + 1) -- w^2 + w + 1
+
+(sin `$\theta$`)^2 + (cos `$\theta$`)^2 - 1 -- 0
+'((sin `$\theta$`)^2 + (cos `$\theta$`)^2 - 1) -- 'sin `$\theta$`^2 + 'cos `$\theta$`^2 - 1
+
+'(2 * x + x) -- 3 * x
+'((x + 1)^2) -- x^2 + 2 * x + 1
+\end{lstlisting}
+このクオートが必要になる典型は，簡約規則の対象になる関係式そのものをデータとして扱いたいときである．
+たとえば第\ref{casdetail}章\ref{casdetail-ideal}節の\lstinline{polyNF}にイデアルの生成元を渡すとき，ピタゴラスの関係式を素の式で書くと，構築の時点で既存の自動規則により\lstinline{0}に簡約されてしまう．
+\lstinline{'( )}で囲えば，関係式は式のまま生き残る．
+
+これで3種類のクオートが出そろった．
+バッククオート\lstinline{`}は式を1つの原子に固めて展開を止め（\ref{mexpr-backquote}節），シングルクオート\lstinline{'f}は関数適用の評価を止め（\ref{mexpr-squote}節），\lstinline{'( )}は簡約規則の適用を止める．
+それぞれ，数式の構造・関数適用・等式理論という異なる層を凍結するクオートである．
+
 \section{\texttt{withSymbols}式によるローカルシンボルの宣言}\label{mexpr-withsym}
 
 \lstinline{declare symbol}文で宣言されるシンボルは大域的である．

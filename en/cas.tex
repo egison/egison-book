@@ -54,6 +54,12 @@ Simplifications such as $\sqrt{8} \rightarrow 2 \sqrt{2}$ are also defined in th
 sqrt 2 -- 'sqrt 2
 sqrt 8 -- 2 * 'sqrt 2
 \end{lstlisting}
+Nested radicals are also opened up automatically when possible
+(for $\sqrt{a+b\sqrt{c}}$, when $a^2-b^2c$ is a perfect square).
+\begin{lstlisting}[language=egison,numbers=none]
+sqrt (9 - 4 * sqrt 5) -- 'sqrt 5 - 2
+sqrt (2 + sqrt 2) -- 'sqrt ('sqrt 2 + 2)
+\end{lstlisting}
 Such mathematical functions are declared with the \lstinline{declare mathfunc} statement, and their simplification at application time is defined with the \lstinline{declare apply} statement.
 These declaration statements are explained in Section~\ref{casdetail-mathfunc} of Chapter~\ref{casdetail}, and the single quote used in their definitions is explained in Section~\ref{mexpr-squote}.
 
@@ -91,9 +97,9 @@ Reduction of polynomial fractions is performed automatically by polynomial GCD (
 (x^2 - 1) / (x - 1) -- x + 1
 (x^2 - y^2) / (x - y) -- y + x
 \end{lstlisting}
-Fully automating the simplification of mathematical expressions, on the other hand, is an extremely difficult problem.
-For example, algorithms based on Gr\"obner basis theory are useful for computing normal forms modulo an ideal, but they are not yet implemented in Egison.
-As a result, Egison may not be able to properly simplify complex expressions.
+Normal forms modulo an ideal can also be computed, based on Gr\"obner basis theory:
+the \lstinline{declare ideal} statement generates a complete rule set from a set of relations mechanically, and the \lstinline{polyNF} function computes normal forms explicitly (Section~\ref{casdetail-ideal} of Chapter~\ref{casdetail}).
+Fully automating the simplification of mathematical expressions is nevertheless an extremely difficult problem, and Egison may not be able to properly simplify complex expressions.
 
 Wolfram Language (Mathematica) is capable of such advanced expression simplification.
 Running the Egison interpreter with the ``\texttt{-M mathematica}'' option outputs expressions in a format readable by the Wolfram Language.

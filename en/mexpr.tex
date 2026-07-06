@@ -97,6 +97,30 @@ f a -- a + 1
 Symbolic function applications are also displayed with a leading single quote in the output.
 Single quotes are used in the bodies of the \lstinline{declare apply} statements introduced in Section~\ref{casdetail-mathfunc} --- for example in the definitions of \lstinline{sqrt} and the trigonometric functions \lstinline{sin} and \lstinline{cos} --- to return symbolic values for inputs that cannot be simplified further.
 
+\section{Suppressing Rule Application with \texttt{'( )}}\label{mexpr-rsquote}
+
+Prefixing a parenthesized expression with a single quote builds the expression without applying the rewrite rules declared with \lstinline{declare rule} (Section~\ref{cas-rule} of Chapter~\ref{casdetail}).
+Structural normalization --- expansion into sum-of-products normal form and merging of like terms --- still happens.
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol x, `$\theta$`
+
+w^2 + w + 1 -- 0
+'(w^2 + w + 1) -- w^2 + w + 1
+
+(sin `$\theta$`)^2 + (cos `$\theta$`)^2 - 1 -- 0
+'((sin `$\theta$`)^2 + (cos `$\theta$`)^2 - 1) -- 'sin `$\theta$`^2 + 'cos `$\theta$`^2 - 1
+
+'(2 * x + x) -- 3 * x
+'((x + 1)^2) -- x^2 + 2 * x + 1
+\end{lstlisting}
+The typical situation that needs this quote is treating a relation that is itself subject to simplification rules as data.
+For example, when passing ideal generators to \lstinline{polyNF} (Section~\ref{casdetail-ideal} of Chapter~\ref{casdetail}), writing the Pythagorean relation plainly would let the existing auto rules collapse it to \lstinline{0} at construction time.
+Wrapped in \lstinline{'( )}, the relation survives as an expression.
+
+This completes the set of three quotes.
+The backquote \lstinline{`} freezes an expression into a single atom and stops expansion (Section~\ref{mexpr-backquote}), the single quote \lstinline{'f} stops the evaluation of a function application (Section~\ref{mexpr-squote}), and \lstinline{'( )} stops the application of rewrite rules.
+Each quote freezes a different layer: the structure of an expression, function application, and the equational theory.
+
 \section{Declaring Local Symbols with \texttt{withSymbols} Expressions}\label{mexpr-withsym}
 
 Symbols declared with the \lstinline{declare symbol} statement are global.

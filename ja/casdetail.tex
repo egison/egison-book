@@ -2,7 +2,7 @@
 
 本章は，Egisonの数式処理システムの簡約が型システムとどのように連携しているかを詳しく解説する．
 第\ref{cas}章では数式の簡約を組み込みの機能として紹介したが，簡約システムは実際には，ユーザーが拡張できるいくつかの直交した仕組みから組み立てられている．
-本章では，（1）簡約規則の宣言，（2）数学関数の宣言，（3）型注釈による正規形の指定，（4）型の昇格タワーとその拡張，（5）タワーの外に置かれる商の型，の5つを順にみていく．
+本章では，（1）簡約規則の宣言，（2）イデアルの宣言による規則集合の機械生成，（3）数学関数の宣言，（4）型注釈による正規形の指定，（5）型の昇格タワーとその拡張，（6）タワーの外に置かれる商の型，の6つを順にみていく．
 
 \section{簡約規則の宣言}\label{cas-rule}
 
@@ -65,6 +65,74 @@ sin (a + b) -- 'sin (b + a)
 simplify (sin (a + b)) using sinAdd
 -- ('cos b) * ('sin a) + ('cos a) * ('sin b)
 \end{lstlisting}
+
+\section{イデアルの宣言}\label{casdetail-ideal}
+
+前節でみたように，$i^2 = -1$のような簡約規則の宣言は，シンボルの上に代数拡大（多項式環のイデアルによる商）を導入する操作である．
+この見方を進めると，簡約規則の集合そのものをイデアルの生成元から機械的に作り出せる．
+本節では，そのための\lstinline{declare ideal}文と，その土台になっているグレブナー基底のライブラリ関数を紹介する．
+
+手書きの規則には完全性の問題がある．
+たとえば$\sqrt{2}$，$\sqrt{3}$，$\sqrt{6}$を表すシンボル\lstinline{s2}，\lstinline{s3}，\lstinline{s6}を導入すると，定義から明らかな関係式は$s_2^2 = 2$，$s_3^2 = 3$，$s_6 = s_2 s_3$の3本である．
+しかし，この3本を規則として宣言するだけでは，たとえば$s_2 s_6$（$= \sqrt{2}\cdot\sqrt{6} = 2\sqrt{3}$）は簡約されない．
+必要な規則をもれなく手で書き切るのは難しく，書けたとしても，停止性や合流性（適用順序によらず同じ正規形に到達すること）は目視で確かめるしかない．
+
+グレブナー基底の理論は，この問題への数学的な解を与える．
+生成元の集合から，イデアルを法とする正規形が一意になる完備な規則集合（被約グレブナー基底）を計算でき，得られる規則集合の停止性と合流性は定理として保証される．
+EgisonではBuchbergerのアルゴリズムが，ライブラリ関数\lstinline{groebnerBasis}としてEgison自身のパターンマッチで実装されている（\texttt{lib/math/algebra/groebner.egi}）．
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol s2, s3, s6
+
+groebnerBasis [s2^2 - 2, s3^2 - 3, s6 - s2 * s3]
+-- [s2^2 - 2, s2 s3 - s6, s2 s6 - 2 * s3,
+--  s3^2 - 3, s3 s6 - 3 * s2, s6^2 - 6]
+\end{lstlisting}
+ユーザーが与えたのは自明な3本だが，完備化により$\{1, \sqrt{2}, \sqrt{3}, \sqrt{6}\}$の乗法表にあたる6本が得られる．
+各元は「先頭の単項式を残りの項（の符号反転）に書き換える」規則として読める（$s_2 s_6 \to 2 s_3$など）．
+
+計算した基底は，関数\lstinline{polyNF}で式に明示的に適用できる．
+\lstinline{polyNF gb e}は式\lstinline{e}のイデアルを法とする正規形を返す．
+特に，結果が\lstinline{0}になることは，\lstinline{e}が関係式の帰結として0に等しいこと（イデアルへの所属）を意味する．
+\begin{lstlisting}[language=egison,numbers=none]
+def gb := groebnerBasis [s2^2 - 2, s3^2 - 3, s6 - s2 * s3]
+
+polyNF gb ((s2 + s3)^2) -- 2 * s6 + 5
+polyNF gb (s2 * s3 - s6) -- 0
+\end{lstlisting}
+なお，\lstinline{polyNF}は渡された多項式の集合をそのまま基底として使う（完備化しない）．
+一意な正規形が欲しいときは，上のように\lstinline{groebnerBasis}を通した基底を渡す．
+
+規則集合として常時適用したい場合は，\lstinline{declare ideal}文を使う．
+生成元からグレブナー基底が宣言時に一度だけ計算され，各元が項レベルの自動規則として登録される．
+以後は通常の簡約規則と同じように，算術演算のたびに自動で適用される．
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol s2, s3, s6
+
+declare ideal [s2^2 - 2, s3^2 - 3, s6 - s2 * s3]
+
+s2 * s6 -- 2 * s3
+(s2 + s3)^2 -- 2 * s6 + 5
+(s2 + s3) * (s2 - s3) -- -1
+\end{lstlisting}
+実際に，標準ライブラリの1の原始立方根$w$の規則は，手書きの2本（$w^3 = 1$と$w^2 = -1-w$）から\lstinline{declare ideal [w^2 + w + 1]}という1つの宣言に置き換えられている．
+生成される規則$w^2 \to -1-w$が$w^3$の簡約も2段階で導くので，規則集合の完全性が慣習ではなく定理になる．
+
+複合的な原子にもそのまま使える．
+数式データのなかで\lstinline{sin θ}や\lstinline{cos θ}は因子（原子）として扱われるので（\ref{mexpr-expr}節），変数への置き換えなしにピタゴラスの関係式を宣言できる．
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol `$\theta$`
+
+declare ideal [(sin `$\theta$`)^2 + (cos `$\theta$`)^2 - 1]
+
+(sin `$\theta$`)^4 - (cos `$\theta$`)^4 -- 2 * 'sin `$\theta$`^2 - 1
+(sin `$\theta$`)^2 + 2 * (cos `$\theta$`)^2 -- - 'sin `$\theta$`^2 + 2
+\end{lstlisting}
+正規形にどの原子が残るかは順序で決まっており，シンボルは\lstinline{declare symbol}の宣言順，生成元のなかの複合原子は出現順で，先に現れたものほど正規形に残る．
+上の例では生成元に\lstinline{sin θ}を先に書いたので，$\sin$が残って$\cos$の偶数冪が消える向きの規則が生成されている．
+
+\lstinline{declare ideal}と\lstinline{polyNF}は，「常時適用するか，一度だけ適用するか」の使い分けである．
+向き付けされた正規形がいつでも欲しいとは限らず，重い関係式を常時適用すると計算全体が遅くなることもある．
+たとえば座標の定義多項式のような，計算の最後の検算にだけ使いたい関係式は，\lstinline{polyNF}で比較の時点に一度だけ適用するのがよい．
 
 \section{数学関数の宣言}\label{casdetail-mathfunc}
 
