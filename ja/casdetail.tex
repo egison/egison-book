@@ -380,3 +380,36 @@ $(1 + x)^4 = 1 + 4x + 6x^2 + 4x^3 + x^4$から$x^3$と$x^4$の項が消え，$6x
 ふつうの\lstinline{Poly Integer [x]}の値は$3$次以上の項を保ったままになる．
 これが，係数領域の商をタワーの外の独立した型として扱うことの利点である．
 
+最後に，本章の道具立てが合流する例として，位数$4$の有限体$\mathrm{GF}(4) = \mathbb{F}_2[\alpha]/(\alpha^2+\alpha+1)$を作ってみよう．
+必要な規律は2つある．係数を$2$で割った余りで数えること（係数の商）と，$\alpha^2 + \alpha + 1 = 0$という関係で$\alpha$の冪を落とすこと（\ref{casdetail-ideal}節のイデアル）である．
+ライブラリ関数\lstinline{finiteFieldReduce}は，素数$p$と最小多項式の生成元からこの2つを合成した簡約関数を作る．
+グレブナー基底は宣言時に一度だけ計算され，体の除算にはフェルマーの小定理による逆元が使われる（$p$は素数に限る）．
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol `$\alpha$`
+
+declare cas-quotient GF4 := MathValue by finiteFieldReduce 2 [`$\alpha$`^2 + `$\alpha$` + 1]
+
+def a : GF4 := projGF4 `$\alpha$`
+def u : GF4 := projGF4 1
+
+reprGF4 ((a + u) * (a + u)) -- `$\alpha$`
+reprGF4 (a * (a + u)) -- 1
+reprGF4 (a + a) -- 0
+\end{lstlisting}
+$(\alpha+1)^2 = \alpha$，$\alpha(\alpha+1) = 1$（互いに逆元），$a + a = 0$（標数$2$）と，体の構造が演算のたびに維持される．
+
+底が\lstinline{MathValue}であることには意味がある．
+この型は体のスカラーだけでなく，$\mathrm{GF}(4)$係数の多項式も最初から含んでいる．
+簡約関数は項の内側の係数にも規律を適用するからである．
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol x, y
+
+reprGF4 (projGF4 (x^2 + 3*x + `$\alpha$`^2)) -- x^2 + x + `$\alpha$` + 1
+
+(projGF4 (`$\alpha$`*x + y)) * (projGF4 (`$\alpha$`*x + y))
+  == projGF4 ((`$\alpha$`*x)^2 + y^2) -- True
+\end{lstlisting}
+1つ目では，係数$3$が$1$に，$\alpha^2$が$\alpha + 1$に，多項式の項の内側で簡約されている．
+2つ目は標数$2$の体でだけ成り立つ恒等式$(u+v)^2 = u^2 + v^2$である．
+係数の商（本節）とイデアルによる規則生成（\ref{casdetail-ideal}節）という2つの直交した機構が，簡約関数の合成だけで有限体に組み上がる．
+
