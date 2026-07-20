@@ -40,7 +40,7 @@ window.MathJax = {
 </head>
 <body>
   <a class="skip-link" href="#main-content">本文へ移動</a>
-  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">目次</a><a rel="prev" href="pmo.html">← 前へ</a><a rel="next" href="mechanism.html">次へ →</a><a class="language" hreflang="en" href="../en/essence.html">English</a></nav></header>
+  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="https://www.egison.org/">Egison</a><a href="index.html#contents">目次</a><a rel="prev" href="pmo.html">← 前へ</a><a rel="next" href="mechanism.html">次へ →</a></nav></header>
   <main id="main-content" class="book-page">
     <h1><span class="heading-number">4</span>パターンマッチ指向プログラミングの効果</h1>
 <p><span id="ref-essence" class="anchor"></span></p>
@@ -81,6 +81,11 @@ window.MathJax = {
 <p><span id="ref-essence-pmo" class="anchor"></span></p>
 <p><a class="reference" href="essence.html#ref-essence-sat">4.1</a>節で実装したSATソルバーは，パターンマッチ指向プログラミングによって取りのぞけないループを含んでいた． そのループとは，<code>dp</code>関数の再帰である． この再帰は，SAT問題を解くための探索空間を狭めるために本質的なループである． この探索空間の縮小は，単純なバックトラッキング・アルゴリズムでは不可能なものである． たいして，その他のバックトラッキングにより実装できるループはすべてパターンの中に押し込められている． 伝統的な関数型プログラミングでは，これら2種類のループのどちらも再帰を使って記述する必要があった． パターンマッチ指向プログラミングは，バックトラッキングにより実装できるループをパターンに閉じ込めることにより，時間的計算量を減らすための本質的なループのみの記述にプログラマが注力できるようにする． これにより，プログラムの記述しやすさ・読解しやすさが向上する．</p>
   </main>
-  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></footer>
+  <div class="site-language">
+    <span>この本を別の言語で読む:</span>
+    <a href="../en/essence.html" hreflang="en" lang="en">English</a>,
+    <a href="../ja/essence.html" hreflang="ja" lang="ja">日本語</a>
+  </div>
+  <footer><div class="footer-inner"><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></div></footer>
 </body>
 </html>

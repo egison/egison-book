@@ -40,7 +40,7 @@ window.MathJax = {
 </head>
 <body>
   <a class="skip-link" href="#main-content">本文へ移動</a>
-  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">目次</a><a rel="prev" href="tensor.html">← 前へ</a><a rel="next" href="diffgeo.html">次へ →</a><a class="language" hreflang="en" href="../en/funcsym.html">English</a></nav></header>
+  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="https://www.egison.org/">Egison</a><a href="index.html#contents">目次</a><a rel="prev" href="tensor.html">← 前へ</a><a rel="next" href="diffgeo.html">次へ →</a></nav></header>
   <main id="main-content" class="book-page">
     <h1><span class="heading-number">13</span>関数シンボル</h1>
 <p><span id="ref-funcsym" class="anchor"></span></p>
@@ -124,6 +124,11 @@ match f as mathValue with
 <h2><span class="heading-number">13.6</span>関数シンボルの実装方法</h2>
 <p>関数シンボルの実装で注意すべきことは，関数シンボルは自身の名前を保持することである． そのためにEgisonインタプリタは現在定義しようとしている変数の名前を管理している． また，<a class="reference" href="funcsym.html#ref-funcsym-tensor">13.4</a>節で解説したテンソルの成分に現れる関数シンボルをサポートするためには，現在テンソルのどの位置の成分を定義しているのか管理する必要がある． そのためにEgisonインタプリタは現在定義しようとしているテンソルの成分の位置も管理している． これらはEgisonインタプリタの実装では，評価器が引き回す環境の追加要素として管理されている．</p>
   </main>
-  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></footer>
+  <div class="site-language">
+    <span>この本を別の言語で読む:</span>
+    <a href="../en/funcsym.html" hreflang="en" lang="en">English</a>,
+    <a href="../ja/funcsym.html" hreflang="ja" lang="ja">日本語</a>
+  </div>
+  <footer><div class="footer-inner"><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></div></footer>
 </body>
 </html>

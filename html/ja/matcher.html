@@ -40,7 +40,7 @@ window.MathJax = {
 </head>
 <body>
   <a class="skip-link" href="#main-content">本文へ移動</a>
-  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">目次</a><a rel="prev" href="mechanism.html">← 前へ</a><a rel="next" href="etc.html">次へ →</a><a class="language" hreflang="en" href="../en/matcher.html">English</a></nav></header>
+  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="https://www.egison.org/">Egison</a><a href="index.html#contents">目次</a><a rel="prev" href="mechanism.html">← 前へ</a><a rel="next" href="etc.html">次へ →</a></nav></header>
   <main id="main-content" class="book-page">
     <h1><span class="heading-number">6</span>マッチャーを定義しよう</h1>
 <p><span id="ref-matcher" class="anchor"></span></p>
@@ -292,6 +292,11 @@ set       : MatcherSlot a a -&gt; Matcher [a]</code></pre>
 --   Pattern Integer, but $y :: _ is Pattern [Integer]</code></pre>
 <p>パターン関数の適用は，適合性検査（<a class="reference" href="matcher.html#ref-matcher-match-typing">6.10</a>節）では<em>本体のパターンの骨格</em>として扱われる． <code>twin</code>の本体はコンス・パターンの入れ子なので，<code>twin</code>を使うマッチ式にはコンスを分解できるマッチャー （<code>list</code>や<code>multiset</code>）が必要である． 逆に，本体が仮引数そのものであるようなパターン関数は構造を課さないため，引数パターンの要求だけが伝播する． このように，パターン関数を経由しても「そのパターンにどんなマッチャーが必要か」が静的に追跡される．</p>
   </main>
-  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></footer>
+  <div class="site-language">
+    <span>この本を別の言語で読む:</span>
+    <a href="../en/matcher.html" hreflang="en" lang="en">English</a>,
+    <a href="../ja/matcher.html" hreflang="ja" lang="ja">日本語</a>
+  </div>
+  <footer><div class="footer-inner"><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></div></footer>
 </body>
 </html>

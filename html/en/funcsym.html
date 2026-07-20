@@ -40,7 +40,7 @@ window.MathJax = {
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
-  <header class="site-header"><nav aria-label="Primary navigation"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">Contents</a><a rel="prev" href="tensor.html">← Previous</a><a rel="next" href="diffgeo.html">Next →</a><a class="language" hreflang="ja" href="../ja/funcsym.html">日本語</a></nav></header>
+  <header class="site-header"><nav aria-label="Primary navigation"><a class="site-brand" href="https://www.egison.org/">Egison</a><a href="index.html#contents">Contents</a><a rel="prev" href="tensor.html">← Previous</a><a rel="next" href="diffgeo.html">Next →</a></nav></header>
   <main id="main-content" class="book-page">
     <h1><span class="heading-number">13</span>Function Symbols</h1>
 <p><span id="ref-funcsym" class="anchor"></span></p>
@@ -124,6 +124,11 @@ match f as mathValue with
 <h2><span class="heading-number">13.6</span>Implementation of Function Symbols</h2>
 <p>An important aspect of the function symbol implementation is that function symbols retain their own names. For this purpose, the Egison interpreter keeps track of the name of the variable currently being defined. Additionally, to support function symbols appearing as tensor components as described in Section&nbsp;<a class="reference" href="funcsym.html#ref-funcsym-tensor">13.4</a>, it is necessary to track the position of the tensor component currently being defined. For this purpose, the Egison interpreter also keeps track of the position of the tensor component being defined. In the Egison interpreter implementation, these are managed as additional components of the environment threaded through the evaluator.</p>
   </main>
-  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/en">TeX source</a></footer>
+  <div class="site-language">
+    <span>This book in another language:</span>
+    <a href="../en/funcsym.html" hreflang="en" lang="en">English</a>,
+    <a href="../ja/funcsym.html" hreflang="ja" lang="ja">日本語</a>
+  </div>
+  <footer><div class="footer-inner"><a href="https://github.com/egison/egison-book/tree/master/tex/en">TeX source</a></div></footer>
 </body>
 </html>

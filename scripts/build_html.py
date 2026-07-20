@@ -42,6 +42,7 @@ LANGUAGE = {
         "about_body": "Egison is a programming language designed to make pattern matching and mathematical notation first-class tools. This book introduces the language from its foundations and develops practical techniques for symbolic and tensor computation.",
         "learn": "What you will learn",
         "complete_book": "Complete book",
+        "language_switch": "This book in another language:",
         "topics": (
             ("Pattern matching", "Describe patterns directly, even for sets, multisets, graphs, and other non-free data types."),
             ("Computer algebra", "Work with symbolic expressions, simplification rules, and extensible mathematical functions."),
@@ -72,6 +73,7 @@ LANGUAGE = {
         "about_body": "Egisonは、パターンマッチと数学的な記法を第一級の道具として扱うために設計されたプログラミング言語です。本書では言語の基礎から始め、記号計算やテンソル計算の実践的な手法までを解説します。",
         "learn": "本書で学べること",
         "complete_book": "全目次",
+        "language_switch": "この本を別の言語で読む:",
         "topics": (
             ("パターンマッチ", "集合・多重集合・グラフなどの非自由データ型に対するパターンを直接記述します。"),
             ("数式処理", "数式データ、簡約規則、拡張可能な数学関数の仕組みを学びます。"),
@@ -749,18 +751,15 @@ class BookBuilder:
         include_math: bool = True,
         home: bool = False,
     ) -> str:
-        other = "ja" if self.lang == "en" else "en"
-        other_target = f"../{other}/{page}"
         contents_target = "#contents" if home else "index.html#contents"
         nav_links = [
-            '<a class="site-brand" href="index.html">Egison Book</a>',
+            '<a class="site-brand" href="https://www.egison.org/">Egison</a>',
             f'<a href="{contents_target}">{self.words["home"]}</a>',
         ]
         if previous:
             nav_links.append(f'<a rel="prev" href="{previous.filename}">← {self.words["previous"]}</a>')
         if following:
             nav_links.append(f'<a rel="next" href="{following.filename}">{self.words["next"]} →</a>')
-        nav_links.append(f'<a class="language" hreflang="{other}" href="{other_target}">{self.words["other"]}</a>')
         description = html.escape(self.words["description"], quote=True)
         page_title = f"{title} — {self.words['short_title']}"
         schema = ""
@@ -808,7 +807,12 @@ class BookBuilder:
   <main id="main-content" class="{main_class}">
     {body}
   </main>
-  <footer><a href="{source_url}">{self.words['source']}</a></footer>
+  <div class="site-language">
+    <span>{html.escape(self.words['language_switch'])}</span>
+    <a href="../en/{page}" hreflang="en" lang="en">English</a>,
+    <a href="../ja/{page}" hreflang="ja" lang="ja">日本語</a>
+  </div>
+  <footer><div class="footer-inner"><a href="{source_url}">{self.words['source']}</a></div></footer>
 </body>
 </html>
 """

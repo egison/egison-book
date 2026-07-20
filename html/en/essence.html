@@ -40,7 +40,7 @@ window.MathJax = {
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
-  <header class="site-header"><nav aria-label="Primary navigation"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">Contents</a><a rel="prev" href="pmo.html">← Previous</a><a rel="next" href="mechanism.html">Next →</a><a class="language" hreflang="ja" href="../ja/essence.html">日本語</a></nav></header>
+  <header class="site-header"><nav aria-label="Primary navigation"><a class="site-brand" href="https://www.egison.org/">Egison</a><a href="index.html#contents">Contents</a><a rel="prev" href="pmo.html">← Previous</a><a rel="next" href="mechanism.html">Next →</a></nav></header>
   <main id="main-content" class="book-page">
     <h1><span class="heading-number">4</span>The Benefits of Pattern-Match-Oriented Programming</h1>
 <p><span id="ref-essence" class="anchor"></span></p>
@@ -81,6 +81,11 @@ window.MathJax = {
 <p><span id="ref-essence-pmo" class="anchor"></span></p>
 <p>The SAT solver implemented in Section&nbsp;<a class="reference" href="essence.html#ref-essence-sat">4.1</a> contained a loop that could not be eliminated by pattern-match-oriented programming. That loop is the recursion of the <code>dp</code> function. This recursion is an essential loop for narrowing the search space in solving SAT problems. This search space reduction cannot be achieved by a simple backtracking algorithm. In contrast, all other loops that can be implemented through backtracking have been pushed into the patterns. In traditional functional programming, both kinds of loops had to be written using recursion. Pattern-match-oriented programming confines loops implementable by backtracking into patterns, allowing programmers to focus solely on writing the essential loops that reduce time complexity. This improves both the ease of writing and the readability of programs.</p>
   </main>
-  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/en">TeX source</a></footer>
+  <div class="site-language">
+    <span>This book in another language:</span>
+    <a href="../en/essence.html" hreflang="en" lang="en">English</a>,
+    <a href="../ja/essence.html" hreflang="ja" lang="ja">日本語</a>
+  </div>
+  <footer><div class="footer-inner"><a href="https://github.com/egison/egison-book/tree/master/tex/en">TeX source</a></div></footer>
 </body>
 </html>
