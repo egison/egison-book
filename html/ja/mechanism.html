@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>Egisonパターンマッチの仕組み — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="essence.html">← 前へ</a><a rel="next" href="matcher.html">次へ →</a><a class="language" href="../en/mechanism.html">English</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">5</span>Egisonパターンマッチの仕組み</h1>
+<p><span id="ref-mechanism" class="anchor"></span></p>
+<p>本章は，Egison内部のパターンマッチの仕組みを解説する． まず，<a class="reference" href="mechanism.html#ref-mechanism-overview">5.1</a>節で概略を説明する． <a class="reference" href="mechanism.html#ref-mechanism-traversal">5.2</a>節以降では，Egisonパターンマッチを自身で実装するために必要な事項を解説する． 単にEgisonの使い方を知りたい読者は，<a class="reference" href="mechanism.html#ref-mechanism-traversal">5.2</a>節以降を読み飛ばして第<a class="reference" href="matcher.html#ref-matcher">6</a>章に進んでも構わない．</p>
+<h2><span class="heading-number">5.1</span>パターンマッチ・アルゴリズムの概略</h2>
+<p><span id="ref-mechanism-overview" class="anchor"></span></p>
+<p>以下の<code>matchAll</code>式を実行したときにどのような処理がなされるのかみていくことにより，Egison内部のパターンマッチ・アルゴリズムの概略をつかむ．</p>
+<pre class="listing"><code class="language-egison">matchAll [2,8,2] as multiset eq with
+| $m :: #m :: _ -&gt; m
+-- [2,2]</code></pre>
+<p>上記の<code>matchAll</code>式を受け取るとEgison処理系は，以下のような<em>マッチング・ステート</em>（<em>matching state</em>）と呼ばれるオブジェクトを処理系内部で生成する． マッチング・ステートは，<em>マッチング・アトム</em>（<em>matching atom</em>）のスタックと，パターンマッチの途中結果（下記の場合，<code>[]</code>），<code>matchAll</code>式実行時の環境（下記の場合，<code>env</code>）からなる． マッチング・アトムは，パターン，マッチャー，ターゲットからなる3つ組である． 初期マッチング・ステートは，<code>matchAll</code>式のパターン，マッチャー，ターゲットから構成されるマッチング・アトム1つからなるスタックから構成される． Egison内部のパターンマッチ・アルゴリズムは，マッチング・ステートの簡約プロセスとして定義されている． 簡約の結果，マッチング・アトムのスタックが空になるとパターンマッチに成功する．</p>
+<pre class="listing"><code class="language-egison">MState [($m :: #m :: _, multiset eq, [2,8,2])]
+       [] env</code></pre>
+<p>このマッチング・ステートは，次のステップで以下の3つのマッチング・ステートに簡約される． この簡約は<code>multiset</code>マッチャーのコンス・パターンの定義（第<a class="reference" href="matcher.html#ref-matcher">6</a>章<a class="reference" href="matcher.html#ref-matcher-multiset">6.4</a>節にて解説する）にもとづいて実行される．</p>
+<pre class="listing"><code class="language-egison">MState [($m, eq, 2)
+       ,(#m :: _, multiset eq, [8,2])]
+       [] env
+
+MState [($m, eq, 8)
+       ,(#m :: _, multiset eq, [2,2])]
+       [] env
+
+MState [($m, eq, 2)
+       ,(#m :: _, multiset eq, [2,8])]
+       [] env</code></pre>
+<p>このように1つのマッチング・ステートを1ステップ簡約すると複数のマッチング・ステートが生成される． 生成されるマッチング・ステートの数が0個であることも，無限個ある場合もある． これらのマッチング・ステートがどのような順番で簡約されるのかは，<a class="reference" href="mechanism.html#ref-mechanism-traversal">5.2</a>節で論じる． ここでは，1つ目のマッチング・ステートの簡約をみる． 1つ目のマッチング・ステートは，次のステップで以下のように簡約される． スタックの先頭のマッチング・アトムのマッチャーが<code>eq</code>から<code>something</code>に変わる． この簡約は，<code>eq</code>マッチャーに定義されている．（第<a class="reference" href="matcher.html#ref-matcher">6</a>章<a class="reference" href="matcher.html#ref-matcher-eq">6.3</a>節でその定義をみる．）</p>
+<pre class="listing"><code class="language-egison">MState [($m, something, 2)
+       ,(#m :: _, multiset eq, [8,2])]
+       [] env</code></pre>
+<p><code>something</code>はEgison唯一の組み込みマッチャーであり，パターンマッチの途中結果に新しい束縛を追加することができる． ここでは，変数<code>m</code>に<code>2</code>を束縛している．</p>
+<pre class="listing"><code class="language-egison">MState [(#m :: _, multiset eq, [8,2])]
+       [(m, 2)] env</code></pre>
+<p>再び，<code>multiset</code>のコンス・パターンの定義にもとづき，マッチング・ステートが簡約される．</p>
+<pre class="listing"><code class="language-egison">MState [(#m, eq, 8)
+       ,(_, multiset eq, [2])]
+       [(m, 2)] env
+
+MState [(#m, eq, 2)
+       ,(_, multiset eq, [8])]
+       [(m, 2)] env</code></pre>
+<p>上記，1つ目のマッチング・ステートは値パターン<code>#m</code>のパターンマッチに失敗して消える．（簡約された結果0個のマッチング・ステートを生成するともいうことができる．） 2つ目のマッチング・ステートは，先頭のマッチング・アトムが解決されて以下のようになる．</p>
+<pre class="listing"><code class="language-egison">MState [(_, multiset eq, [8])]
+       [(m, 2)] env</code></pre>
+<p>このマッチング・ステートも，先頭のマッチング・アトムが解決されて以下のようになる．</p>
+<pre class="listing"><code class="language-egison">MState []
+       [(m, 2)] env</code></pre>
+<p>最終的にマッチング・アトムのスタックが上記のように空になると，このパターンマッチの途中結果が最終結果としてボディの評価に使われる．</p>
+<h2><span class="heading-number">5.2</span><code>matchAll</code>・<code>matchAllDFS</code>による探索木のトラバース</h2>
+<p><span id="ref-mechanism-traversal" class="anchor"></span></p>
+<p>本節では，<code>matchAll</code>式と<code>matchAllDFS</code>式を実行したときに内部でどのような探索木がトラバースされるのかを解説する． ある1つのマッチング・ステートを簡約すると0個から無限個までを含む複数のマッチング・ステートが生成される． そのため，Egisonの内部のパターンマッチ・アルゴリズムは，初期マッチング・ステートを根とする木の探索と考えることができる．</p>
+<p>まずは，以下のような<code>matchAllDFS</code>式の探索木をみる．</p>
+<pre class="listing"><code class="language-egison">take 8 (matchAllDFS [1..] as set integer with
+        | $m :: $n :: _ -&gt; (m, n))
+-- [(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7), (1, 8)]</code></pre>
+<p>この<code>matchAllDFS</code>式の探索木は図<a class="reference" href="mechanism.html#ref-fig-reduction-tree-1">5.2</a>のようになる． 図中の四角は，1つのマッチング・ステートを表現している． 図中の丸は，マッチング・アトムのスタックが空になったマッチング・ステート，パターンマッチの最終結果を表現している．</p>
+<figure>
+<p><img src="assets/reduction-tree-1.png" alt=""></p>
+<figcaption><code>matchAllDFS</code>式の探索木</figcaption>
+<p><span id="ref-fig-reduction-tree-1" class="anchor"></span></p>
+</figure>
+<p><code>matchAllDFS</code>式はこの探索木を深さ優先探索する．</p>
+<p>そのため，マッチング・ステートは，a1，b2，e3，f4，h5，j6，m7，o8，k7，p8，r9，...という順番で簡約されていく． マッチング・ステートh5は無限個のマッチング・ステート（j6，k7，...）に簡約される． そのため，深さ優先探索では，マッチング・ステートc3の簡約に行き着くことがない． このように<code>matchAllDFS</code>では，すべてのマッチング・ステートをたどれず，可算無限のパターンマッチ結果をすべて列挙できない場合がある．</p>
+<p><code>matchAll</code>式は，可算無限のパターンマッチ結果をすべて列挙するために，この探索木に変形を加えて幅優先探索をおこなう． 図<a class="reference" href="mechanism.html#ref-fig-reduction-tree-2">5.2</a>は，下記の<code>matchAll</code>式を実行したときの探索木である．</p>
+<pre class="listing"><code class="language-egison">take 8 (matchAll [1..] as set integer with
+        | $m :: $n :: _ -&gt; (m, n))
+-- [(1, 1), (1, 2), (2, 1), (1, 3), (2, 2), (3, 1), (1, 4), (2, 3)]</code></pre>
+<figure>
+<p><img src="assets/reduction-tree-2.png" alt=""></p>
+<figcaption><code>matchAll</code>式の探索木</figcaption>
+<p><span id="ref-fig-reduction-tree-2" class="anchor"></span></p>
+</figure>
+<p>図<a class="reference" href="mechanism.html#ref-fig-reduction-tree-1">5.2</a>の探索木については，1つのマッチング・ステートが1つのノードをあらわしていたが，図<a class="reference" href="mechanism.html#ref-fig-reduction-tree-2">5.2</a>の探索木については，一連なりのマッチング・ステートのリストを1つのノードとする． たとえば，a1は1つのマッチング・ステートからなるノード，b2，c3，d4，...は無限個のマッチング・ステートからなる1つのノードである． このように探索木をとらえると，この探索木は二分木になっている． 探索木が二分木であるため，すべてのノードの子が有限であるため，幅優先探索をすれば，すべてのノードをたどることができる．</p>
+<p>図<a class="reference" href="mechanism.html#ref-fig-reduction-tree-1">5.2</a>の探索木を斜めにとらえることによって，図<a class="reference" href="mechanism.html#ref-fig-reduction-tree-2">5.2</a>の二分木への変形はできる． b2，c3，d4，...からなるノードに注目しよう． このノードの子は，e3単独からなるノードと，c3，d4，...からなるノードである． 一般に，あるノードの子は，そのノードの先頭のマッチング・ステートを簡約した結果と，そのノードの先頭の要素を取り除いたマッチング・ステートのリストとなる．</p>
+<h2><span class="heading-number">5.3</span>andパターン・orパターン・notパターンの実装</h2>
+<p><span id="ref-mechanism-and-pat-or-pat" class="anchor"></span></p>
+<p>本節では，組み込みパターンの実装の例として，andパターン・orパターン・notパターン（第<a class="reference" href="quick.html#ref-quick">2</a>章<a class="reference" href="quick.html#ref-quick-logical-pat">2.6</a>節）の実装を説明する．</p>
+<p>andパターンの実装からみていく． 以下のようなandパターンを含むパターンマッチを考える．</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2, 3] as list integer with
+| $n :: (_ :: _ &amp; $rs) -&gt; (n, rs)
+-- [(1, [2, 3])]</code></pre>
+<p>このパターンマッチを処理する過程で，以下のようなマッチング・ステートの簡約にいきつく．</p>
+<pre class="listing"><code class="language-egison">MState [(_ :: _ &amp; $rs, [2, 3], list integer)]
+       [(n, 1)] env</code></pre>
+<p>スタックの先頭のマッチング・アトムのパターンがandパターンであった場合，Egison処理系は以下のように簡約する．</p>
+<pre class="listing"><code class="language-egison">MState [(_ :: _, [2, 3], list integer)
+       ,($rs, [2, 3], list integer)]
+       [(n, 1)] env</code></pre>
+<p>andパターンのそれぞれの引数について，同じターゲットとマッチャーからつくったマッチング・アトムがスタックに追加される．</p>
+<p>次にorパターンの実装をみる． 以下のようなorパターンを含むパターンマッチを考える．</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 1, 2] as list integer with
+| $m :: ([] | #m :: _) -&gt; m
+-- [1]</code></pre>
+<p>このパターンマッチを処理する過程で，以下のようなマッチング・ステートの簡約にいきつく．</p>
+<pre class="listing"><code class="language-egison">MState [(([] | #m :: _), [1, 2], list integer)]
+       [(m, 1)] env</code></pre>
+<p>スタックの先頭のマッチング・アトムのパターンがorパターンであった場合，Egison処理系は以下のように簡約する．</p>
+<pre class="listing"><code class="language-egison">MState [([], [1, 2], list integer)]
+       [(m, 1)]
+
+MState [(#m :: _, [1, 2], list integer)]
+       [(m, 1)] env</code></pre>
+<p>orパターンのそれぞれの引数について，同じターゲットとマッチャーからつくったマッチング・アトムをスタックの先頭にもつマッチング・ステートを生成する．</p>
+<p>最後にnotパターンの実装をみる． 以下のようなnotパターンを含むパターンマッチを考える．</p>
+<pre class="listing"><code class="language-egison">matchAll [2, 8, 2] as multiset integer with
+| $m :: (!(#m :: _) &amp; $rs) -&gt; (m, rs)
+-- [(8, [2,2])]</code></pre>
+<p>このパターンマッチを処理する過程で，以下のようなマッチング・ステートの簡約にいきつく．</p>
+<pre class="listing"><code class="language-egison">MState [(!(#m :: _), [2, 2], multiset integer)
+       ,($rs, [2, 2], multiset integer)]
+       [(m, 8)] env</code></pre>
+<p>スタックの先頭のマッチング・アトムのパターンがnotパターンであった場合，Egison処理系は以下のように，スタックの先頭のマッチング・アトムからnotパターンのnotをのぞいたマッチング・アトムだけをスタックにもつマッチング・ステートを生成する．</p>
+<pre class="listing"><code class="language-egison">MState [((#m :: _), [2, 2], multiset integer)
+       [(m, 8)] env</code></pre>
+<p>このマッチング・ステートの簡約した結果，1つもパターンマッチに成功するマッチング・ステートがなければ，以下のような先ほどのマッチング・ステートからnotパターンをもつ先頭のマッチング・アトムをのぞいたマッチング・ステートを簡約する．</p>
+<pre class="listing"><code class="language-egison">MState [($rs, [2, 2], multiset integer)]
+       [(m, 8)] env</code></pre>
+<h2><span class="heading-number">5.4</span>パターン関数の実装</h2>
+<p><span id="ref-mechanism-pat-func" class="anchor"></span></p>
+<p>本節は，パターン関数の実装を解説する． 以下のようなパターン関数の適用を含むパターンマッチを考える．</p>
+<pre class="listing"><code class="language-egison">def twin := \p1 p2 =&gt; (~p1 &amp; $x) :: #x :: ~p2
+
+matchAll [1, 2, 1, 3] as multiset integer with
+| $m :: twin $n _ -&gt; (m, n)
+-- [(2, 1), (2, 1), (3, 1), (3, 1)]</code></pre>
+<p>このパターンマッチを処理する過程で，以下のようなマッチング・ステートの簡約にいきつく．</p>
+<pre class="listing"><code class="language-egison">MState [(twin $n _, [1, 1, 3], multiset integer)]
+       [(m, 2)]</code></pre>
+<p>このようにスタックの先頭のマッチング・アトムのパターンが，パターン関数の適用であった場合，パターン関数が展開される． この展開と同時に，<code>MNode</code>というほとんど<code>MState</code>と同じ構造のデータにマッチング・アトムは変換される． <code>MNode</code>は，パターンマッチの途中結果（下記の場合，<code>[]</code>）と，パターン関数を定義したときの環境（下記の場合，<code>env1</code>），パターン関数の引数に束縛されたパターンの環境（下記の場合，<code>[(p1, $n), (p2, _)]</code>）をもつ． このように<code>MState</code>がネストしたような構造をつくるのは，パターンの静的スコープを実現するためである．</p>
+<pre class="listing"><code class="language-egison">MState [MNode [(~p1 &amp; $x) :: #x :: ~p2, [1, 1, 3], multiset integer)]
+              []
+              env1
+              [(p1, $n), (p2, _)]]
+       [(m, 2)] env</code></pre>
+<p>このマッチング・ステートを簡約していくと，スタックの先頭のパターンがパターン関数の仮引数（下記の場合，<code>p1</code>）であるマッチング・ステートにいきつく．</p>
+<pre class="listing"><code class="language-egison">MState [MNode [(p1, 1, integer),
+               (#x :: ~p2, [1, 3], multiset integer)]
+              [(x, 1)]
+              env1
+              [(p1, $n), (p2, _)]]
+       [(m, 2)] env</code></pre>
+<p>パターン関数の引数に束縛されたパターンの環境（<code>MNode</code>の3つ目の引数）から<code>p1</code>に束縛されているパターンを取り出し，マッチング・アトムのパターンをそのパターンに展開する． 同時に，このマッチング・アトムを<code>MNode</code>から<code>MState</code>のマッチング・アトムに持ち上げる．</p>
+<pre class="listing"><code class="language-egison">MState [($n, 1, integer),
+        MNode [(#x :: ~p2, [1, 3], multiset integer)]
+              [(x, 1)]
+              env1
+              [(p1, $n), (p2, _)]]
+       [(m, 2)] env</code></pre>
+<p>%</p>
+<pre class="listing"><code class="language-egison">%matchAll [1..4] as multiset integer with
+%| $a_1 ::
+%   (loop $i (2, 4)
+%         ((loop $j (1, i - 1)
+%                (!#(a_j - (i - j)) &amp; !#(a_j + (i - j)) &amp; ...)
+%                $a_i) :: ...)
+%         []
+%-&gt; map (\i -&gt; a_i) [1..4]
+%</code></pre>
+<p>%</p>
+<pre class="listing"><code class="language-egison">%MState []
+%       [($a_1 ::
+%          (loop $i (2, 4)
+%                ((loop $j (1, i - 1)
+%                       (!#(a_j - (i - j)) &amp; !#(a_j + (i - j)) &amp; ...)
+%                       $a_i) :: ...)
+%                []]
+%        ,multiset integer, [1,2,3,4])]
+%       [] env
+%</code></pre>
+<p>%</p>
+<pre class="listing"><code class="language-egison">%MState []
+%       [($a_1, something, 2)
+%       ,((loop $i (2, 4)
+%               ((loop $j (1, i - 1)
+%                      (!#(a_j - (i - j)) &amp; !#(a_j + (i - j)) &amp; ...)
+%                      $a_i) :: ...)
+%               []]
+%         ,multiset integer, [1,3,4])]
+%       [] env
+%</code></pre>
+<p>%</p>
+<pre class="listing"><code class="language-egison">%MState []
+%       [((loop $i (2, 4)
+%               ((loop $j (1, i - 1)
+%                      (!#(a_j - (i - j)) &amp; !#(a_j + (i - j)) &amp; ...)
+%                      $a_i) :: ...)
+%               []]
+%         ,multiset integer, [1,3,4])]
+%       [(a, {|[1, 2]|})] env
+%</code></pre>
+<p>%</p>
+<pre class="listing"><code class="language-egison">%MState [((i, 2), [4], _, ((loop $j (1, i - 1)
+%                                (!#(a_j - (i - j)) &amp; !#(a_j + (i - j)) &amp; ...)
+%                                $a_i) :: ...), [])]
+%       [((loop $i (2, 4)
+%               ((loop $j (1, i - 1)
+%                      (!#(a_j - (i - j)) &amp; !#(a_j + (i - j)) &amp; ...)
+%                      $a_i) :: ...)
+%               []]
+%         ,multiset integer, [1,3,4])]
+%       [(a, {|[1, 2]|})] env
+%</code></pre>
+  </main>
+  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+</body>
+</html>

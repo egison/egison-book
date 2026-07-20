@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>数式処理システムとしてのEgisonの演習問題 — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="problem.html">← 前へ</a><a class="language" href="../en/problem2.html">English</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">B</span>数式処理システムとしてのEgisonの演習問題</h1>
+<p>本付録の問題にあるプログラムをいくつか書いてみることによって数式処理システムとしてのEgisonを使いこなせるようになる． プログラムを書くむずかしさよりも，数学の知識を求められる問題が多いがぜひ挑戦してみてほしい．</p>
+<h2>三次方程式と四次方程式の解</h2>
+<p><a class="reference" href="cas.html#ref-cas-quadratic">9.4</a>節の内容を発展させて，三次方程式と四次方程式の解を求めるプログラムを書け． 三次方程式と四次方程式の解を求めるアルゴリズムには，それぞれカルダノの方法，フェラーリの方法が知られている．</p>
+<h2><span class="math-inline">\(1\)</span>の<span class="math-inline">\(n\)</span>乗根</h2>
+<p><span class="math-inline">\(1\)</span>の<span class="math-inline">\(n\)</span>乗根は代数的に求めることができることが知られている． いくつかの<span class="math-inline">\(n\)</span>について<span class="math-inline">\(1\)</span>の<span class="math-inline">\(n\)</span>乗根を計算するプログラムを書いてみよ． <span class="math-inline">\(1\)</span>の<span class="math-inline">\(5\)</span>乗根，<span class="math-inline">\(7\)</span>乗根，<span class="math-inline">\(9\)</span>乗根，<span class="math-inline">\(17\)</span>乗根についてはEgisonレポジトリにサンプルコードが用意されている．</p>
+<h2>リーマン曲率の計算</h2>
+<p><a class="reference" href="diffgeo.html#ref-diffgeo-riemann">14.2</a>節のプログラムを参考にして，円柱のリーマン曲率，<span class="math-inline">\(S^3\)</span>のリーマン曲率を計算するプログラムを書け．</p>
+<h2>球座標系のホッジ・ラプラシアン</h2>
+<p><a class="reference" href="diffgeo.html#ref-diffgeo-riemann">14.2</a>節の極座標のホッジ・ラプラシアンを計算するプログラムを参考にして，球座標系のホッジ・ラプラシアンを計算するプログラムを書け．</p>
+  </main>
+  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+</body>
+</html>

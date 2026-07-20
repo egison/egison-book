@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>テンソル計算 — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="casdetail.html">← 前へ</a><a rel="next" href="funcsym.html">次へ →</a><a class="language" href="../en/tensor.html">English</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">12</span>テンソル計算</h1>
+<p><span id="ref-tensor" class="anchor"></span></p>
+<p>Egisonにはテンソル計算を便利に記述するために開発された機能が実装されている． 本章はこれらの機能を紹介していく．</p>
+<h2><span class="heading-number">12.1</span>テンソルとは</h2>
+<p>テンソルとは，ベクトルや行列を一般化したものである． ベクトルは一階のテンソル，行列は二階のテンソルである． ベクトルは一次元配列，行列は二次元配列としてプログラムでは表現されることが多い． <span class="math-inline">\(n\)</span>階のテンソルは，<span class="math-inline">\(n\)</span>次元配列により表現される．</p>
+<p>以下はそれぞれベクトル，行列，<span class="math-inline">\(2\)</span>階のテンソルの例を数式で表現したものである．</p>
+<div class="math-display">\[\begin{pmatrix}
+a_{1} &amp; a_{2} &amp; a_{3}\\
+\end{pmatrix}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a_{11} &amp; a_{12} &amp; a_{13} \\
+a_{21} &amp; a_{22} &amp; a_{23}
+\end{pmatrix}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+
+\begin{pmatrix}
+a_{111} &amp; a_{112} &amp; a_{113} \\
+a_{121} &amp; a_{122} &amp; a_{123}
+\end{pmatrix}
+
+\begin{pmatrix}
+a_{211} &amp; a_{212} &amp; a_{213} \\
+a_{221} &amp; a_{222} &amp; a_{223}
+\end{pmatrix}
+
+\begin{pmatrix}
+a_{311} &amp; a_{312} &amp; a_{313} \\
+a_{321} &amp; a_{322} &amp; a_{323}
+\end{pmatrix}
+
+\end{pmatrix}\]</div>
+<p>上記の数式はEgisonでは下記のように表現される． Egisonではテンソルの成分を<code>[| |]</code>で囲むことにより，テンソルを表現する． 行列はベクトルのベクトルとして，<span class="math-inline">\(2\)</span>階のテンソルは行列のベクトルとして表現される． これはC言語などの多次元配列の表記法に似ている．</p>
+<pre class="listing"><code class="language-egison">[| a_1, a_2, a_3 |]
+
+[| [| a_11, a_12, a_13 |],
+   [| a_21, a_22, a_23 |] |]
+
+[| [| [| a_111, a_112, a_113 |],
+      [| a_121, a_122, a_123 |] |],
+   [| [| a_211, a_212, a_213 |],
+      [| a_221, a_222, a_223 |] |],
+   [| [| a_311, a_312, a_313 |],
+      [| a_321, a_322, a_323 |] |] |]</code></pre>
+<h2><span class="heading-number">12.2</span>テンソルの添字記法</h2>
+<p>テンソル計算は，ベクトルについてのテンソル積・アダマール積・内積の組み合わせでほとんど表現できる． テンソル積は，ベクトルのすべての成分の組み合わせからなる行列を返す． アダマール積は，対応する成分同士のみからなるベクトルを返す． 内積は，アダマール積の結果の成分を足し合わせた結果のスカラー値を返す．</p>
+<div class="math-display">\[\begin{pmatrix}
+a_{1} &amp; a_{2}
+\end{pmatrix}
+\otimes
+\begin{pmatrix}
+b_{1} &amp; b_{2}
+\end{pmatrix}
+=
+\begin{pmatrix}
+a_{1} b_{1} &amp; a_{1} b_{2} \\
+a_{2} b_{1} &amp; a_{2} b_{2}
+\end{pmatrix}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a_{1} &amp; a_{2}
+\end{pmatrix}
+\circ
+\begin{pmatrix}
+b_{1} &amp; b_{2}
+\end{pmatrix}
+=
+\begin{pmatrix}
+a_{1} b_{1} &amp; a_{2} b_{2}
+\end{pmatrix}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a_{1} &amp; a_{2}
+\end{pmatrix}
+\cdot
+\begin{pmatrix}
+b_{1} &amp; b_{2}
+\end{pmatrix}
+=
+a_{1} b_{1} + a_{2} b_{2}\]</div>
+<p>たとえば，行列<span class="math-inline">\(A\)</span>と行列<span class="math-inline">\(B\)</span>の掛け算は，<span class="math-inline">\(A\)</span>の行と<span class="math-inline">\(B\)</span>の列についてはテンソル積，<span class="math-inline">\(A\)</span>の列と<span class="math-inline">\(B\)</span>の行については内積をとる演算と解釈できる．</p>
+<div class="math-display">\[\begin{pmatrix}
+a_{11} &amp; a_{12} \\
+a_{21} &amp; a_{22}
+\end{pmatrix}
+\begin{pmatrix}
+b_{11} &amp; b_{12} \\
+b_{21} &amp; b_{22}
+\end{pmatrix}
+=
+\begin{pmatrix}
+a_{11} b_{11} + a_{12} b_{21} &amp; a_{11} b_{12} + a_{12} b_{22} \\
+a_{21} b_{11} + a_{22} b_{21} &amp; a_{21} b_{12} + a_{22} b_{22}
+\end{pmatrix}\]</div>
+<p>ベクトルについては，掛け算の方法は，テンソル積・アダマール積・内積の3つだけだが，行列や行列よりさらに高階なテンソルとなると掛け算の方法が無数にある． これらの掛け算のすべてに名前をつけるのは大変である． そのため，数学者はシンボリックな添字をテンソルに付加し，その添字をパラメーターにしてこれらの掛け算を表現する． たとえば，それぞれのベクトルに異なるシンボルが付加されている場合はテンソル積に，それぞれのベクトルの同じ位置に同じシンボルが付加されている場合はアダマール積に，それぞれのベクトルの上下に同じシンボルが付加されている場合は内積になる． 添字には上添字と下添字の二種類がある． この位置関係によってアダマール積となるか内積となるか区別する． このようにシンボリックな添字を使って，テンソルのかけあわせ方を指定する記法は，添字記法と呼ばれている． 下記の数式はEgisonで<a class="reference" href="cas.html#ref-cas-linear">9.6</a>節で示したプログラムで表現できる．</p>
+<div class="math-display">\[\begin{pmatrix}
+a_{1} &amp; a_{2}
+\end{pmatrix}_{i}
+\begin{pmatrix}
+b_{1} &amp; b_{2}
+\end{pmatrix}_{j}
+=
+\begin{pmatrix}
+a_{1} b_{1} &amp; a_{1} b_{2} \\
+a_{2} b_{1} &amp; a_{2} b_{2}
+\end{pmatrix}_{ij}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a_{1} &amp; a_{2}
+\end{pmatrix}_{i}
+\begin{pmatrix}
+b_{1} &amp; b_{2}
+\end{pmatrix}_{i}
+=
+\begin{pmatrix}
+a_{1} b_{1} &amp; a_{2} b_{2}
+\end{pmatrix}_{i}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a_{1} &amp; a_{2}
+\end{pmatrix}^{i}
+\begin{pmatrix}
+b_{1} &amp; b_{2}
+\end{pmatrix}_{i}
+=
+a_{1} b_{1} + a_{2} b_{2}\]</div>
+<p>行列のかけ算も添字記法をつかってうまく表現できる． 内積をとるAの列とBの行について，それぞれ上下を逆にし，同じシンボルにすれば，行列の掛け算は表現できる．</p>
+<div class="math-display">\[\begin{pmatrix}
+a_{11} &amp; a_{12} \\
+a_{21} &amp; a_{22}
+\end{pmatrix}^{i}_{\ j}
+\begin{pmatrix}
+b_{11} &amp; b_{12} \\
+b_{21} &amp; b_{22}
+\end{pmatrix}^{j}_{\ k}
+=
+\begin{pmatrix}
+a_{11} b_{11} + a_{12} b_{21} &amp; a_{11} b_{12} + a_{12} b_{22} \\
+a_{21} b_{11} + a_{22} b_{21} &amp; a_{21} b_{12} + a_{22} b_{22}
+\end{pmatrix}^{i}_{\ k}\]</div>
+<h2><span class="heading-number">12.3</span>添字記法をプログラミングに導入するためのアイデア</h2>
+<p><span id="ref-tensor-idea" class="anchor"></span></p>
+<p>添字記法のプログラミングへの導入が難しい理由は，演算子ごとにシンボリックな添字のルールが異なることにある． 特にテンソルの足し算と掛け算では，添字のルールが異なる． 例を紹介する． <span class="math-inline">\(u\)</span>と<span class="math-inline">\(v\)</span>をそれぞれベクトルとする．</p>
+<ul>
+<li><span class="math-inline">\(u_{i} + v_{i}\)</span>はベクトルを返す．対して，<span class="math-inline">\(u_{i} v_{i}\)</span>は無効な式である．
+<p>（<span class="math-inline">\(u_{i} v_{i}\)</span>は上下添字を自由に入れ替えることが可能なユークリッド空間では内積を返す．しかし，このような例外はここでは考えない．）</p>
+</li>
+<li><span class="math-inline">\(u^{i} + v_{i}\)</span>は無効である．対して，<span class="math-inline">\(u^{i} v_{i}\)</span>は内積を返す．
+</li>
+<li><span class="math-inline">\(u_{i} + v_{j}\)</span>は無効である．対して，<span class="math-inline">\(u_{i} v_{j}\)</span>はテンソル積を返す．
+</li>
+</ul>
+<p>このように演算子ごとに異なるシンボリックな添字のルールがある． そのため，テンソルを扱う関数を定義するたびに，シンボリックな添字のルールを指定する必要がある． これはわずらわしい作業である． それだけではなく，添字ルールを記述するための新しい構文が必要になる場合もある． このような新しい構文はプログラミング言語を複雑にする．</p>
+<p>Egisonは，シンボリックな添字のルールを簡略化することによって，この問題を解決する． 添字のルールの簡略化によって，有効な数式の解釈は変わらない． ただし，無効であった数式が有効になる場合がある． 例えば，<span class="math-inline">\(v_{i} + v_{j}\)</span>は無効な式であったが，新しい添字ルールでは有効な式になる． テンソルの足し算についての簡略化された添字ルールを図<a class="reference" href="tensor.html#ref-fig-ruleAdd">12.3</a>で示す． 添字ルールを緩めることによって，多くのテンソルについての演算をテンソルの足し算の変種として捉えることができるようになる． 例えば，テンソルの掛け算は，足し算と同じ形で成分を掛け合わせたあとに縮約（contraction）という追加の処理をする演算と捉えられる（図<a class="reference" href="tensor.html#ref-fig-ruleMult">12.3</a>）． テンソルの縮約とは，同じシンボルの上添字と下添字があるときに，対角成分を足し合わせる操作のことをいう． このような見方をすると，テンソルについての関数を定義するときの添字ルールの記述をへらすことができる．</p>
+<figure>
+<div class="minipage">
+<div class="subfigure">
+<div class="center">
+<div class="math-display">\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
++
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}_{i}
+=
+\begin{pmatrix}
+a + c \\
+b + d
+\end{pmatrix}_{i}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
++
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}_{j}
+=
+\begin{pmatrix}
+a + c &amp; a + d \\
+b + c &amp; b + d
+\end{pmatrix}_{ij}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
++
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}^{i}
+=
+\begin{pmatrix}
+a + c &amp; a + d \\
+b + c &amp; b + d
+\end{pmatrix}_{i}^{\ i}\]</div>
+</div>
+<figcaption>足し算の添字ルール</figcaption>
+<p><span id="ref-fig-ruleAdd" class="anchor"></span></p>
+</div>
+</div>
+<div class="minipage">
+<div class="subfigure">
+<div class="center">
+<div class="math-display">\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}_{i}
+=
+contract
+\begin{pmatrix}
+a c \\
+b d
+\end{pmatrix}_{i}
+=
+\begin{pmatrix}
+a c \\
+b d
+\end{pmatrix}_{i}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}_{j}
+=
+contract
+\begin{pmatrix}
+a c &amp; a d \\
+b c &amp; b d
+\end{pmatrix}_{ij}
+=
+\begin{pmatrix}
+a c &amp; a d \\
+b c &amp; b d
+\end{pmatrix}_{ij}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}^{i}
+=
+contract
+\begin{pmatrix}
+a c &amp; a d \\
+b c &amp; b d
+\end{pmatrix}_{i}^{\ i}
+= a c + b d\]</div>
+</div>
+<figcaption>掛け算の添字ルール</figcaption>
+<p><span id="ref-fig-ruleMult" class="anchor"></span></p>
+</div>
+</div>
+<figcaption>簡略化された添字ルール</figcaption>
+<p><span id="ref-fig-rule" class="anchor"></span></p>
+</figure>
+<h2><span class="heading-number">12.4</span>スカラー仮引数とテンソル仮引数</h2>
+<p><span id="ref-tensor-params" class="anchor"></span></p>
+<p>テンソルの添字記法のプログラミングへの導入は，(i)型システムによるスカラー関数とテンソル関数の区別と，(ii)適切な添字の簡約ルールによってなされる． 本節からこれらの概念の解説を始める．</p>
+<p>まず，型システムによるスカラー関数とテンソル関数の区別を説明する． Egisonでは，仮引数の型注釈により，関数がスカラー関数かテンソル関数かが決まる． 仮引数の型が<code>Tensor a</code>型でない場合，その仮引数はスカラーとして扱われる． 仮引数の型が<code>Tensor a</code>型である場合，その仮引数はテンソルとして扱われる． スカラーとして扱われる仮引数にテンソルが引数として与えられると，テンソルの成分ごとに関数の処理がマップされる． テンソルとして扱われる仮引数にテンソルが引数として与えられると，テンソルがそのまま仮引数に渡される． 以下の例では，型変数<code>a</code>がスカラー型と推論され，テンソルが渡されると成分ごとに処理がマップされる．</p>
+<pre class="listing"><code class="language-egison">(\u v -&gt; (u, v)) [| a, b |]_i [| x, y |]_j
+-- [| [| (a, x), (a, y) |],
+--    [| (b, x), (b, y) |] |]_i_j</code></pre>
+<p>一方，明示的に<code>Tensor</code>型を指定した場合，テンソルがそのまま渡される．</p>
+<pre class="listing"><code class="language-egison">(\(u: Tensor a) (v: Tensor a) -&gt; (u, v)) [| a, b |]_i [| x, y |]_j
+-- ([| a, b |]_i, [| x, y |]_j)</code></pre>
+<p>Egisonの型システムは，<em>スカラー関数</em>（<em>scalar function</em>）と<em>テンソル関数</em>（<em>tensor function</em>）という2種類の関数を区別する． スカラー関数は，テンソルを引数にとったとき，成分ごとに処理をマップする関数のことをいう． たとえば，“<code>+</code>”や，“<code>-</code>”，“<code>*</code>”，“<code>/</code>”，“<span class="inline-code"><span class="math-inline">\(\partial\)</span>/<span class="math-inline">\(\partial\)</span></span>”はスカラー関数である． テンソル関数は，テンソルを引数にとったとき，テンソルをテンソルとしてそのまま処理する関数のことをいう． たとえば，行列式を計算する関数や，テンソル同士のかけ算のための関数は，テンソルの成分ごとに自動でマップされては記述できないため，テンソル関数として定義する必要がある． 関数がスカラー関数かテンソル関数かは型注釈によって決まる． 仮引数の型が<code>Tensor a</code>型でない場合，テンソルが引数として渡されると自動的に成分ごとに処理がマップされる（スカラー関数）． 仮引数の型が<code>Tensor a</code>型である場合，テンソルはテンソルとしてそのまま渡される（テンソル関数）． 図<a class="reference" href="tensor.html#ref-fig-minFunction">12.4</a>と図<a class="reference" href="tensor.html#ref-fig-dotFunction">12.4</a>でスカラー関数とテンソル関数の定義の例を説明する．</p>
+<figure>
+<div class="subfigure">
+<pre class="listing"><code class="language-egison">def min (x: a) (y: a) : a := if x &lt; y then x else y</code></pre>
+<figcaption><code>min</code>関数の定義（型注釈により，任意の比較可能な型<code>a</code>に対して動作することを示している）</figcaption>
+<p><span id="ref-fig-minDef" class="anchor"></span></p>
+</div>
+<div class="subfigure">
+<p><span class="small"></span></p>
+<span class="math-inline">\(min(\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i},  \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{j}) = \begin{pmatrix} min(1,10) &amp; min(1,20) &amp; min(1,30) \\ min(2,10) &amp; min(2,20) &amp; min(2,30) \\ min(3,10) &amp; min(3,20) &amp; min(3,30) \\ \end{pmatrix}_{ij}
+    = \begin{pmatrix} 1 &amp; 1 &amp; 1 \\ 2 &amp; 2 &amp; 2 \\ 3 &amp; 3 &amp; 3 \\ \end{pmatrix}_{ij}\)</span>
+<p>}</p>
+<figcaption>異なる添字をもつベクトルにたいする<code>min</code>関数の適用</figcaption>
+<p><span id="ref-fig-minDiff" class="anchor"></span></p>
+</div>
+<div class="subfigure">
+<p><span class="small"></span></p>
+<span class="math-inline">\(min(\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i},  \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{i}) = \begin{pmatrix} min(1,10) &amp; min(1,20) &amp; min(1,30) \\ min(2,10) &amp; min(2,20) &amp; min(2,30) \\ min(3,10) &amp; min(3,20) &amp; min(3,30) \\ \end{pmatrix}_{ii}
+  = \begin{pmatrix} min(1,10) \\ min(2,20) \\ min(3,30) \end{pmatrix}_{i} = \begin{pmatrix} 1 \\ 2 \\ 3 \end{pmatrix}_{i}\)</span>
+<p>}</p>
+<figcaption>同じ添字をもつベクトルにたいする<code>min</code>関数の適用</figcaption>
+<p><span id="ref-fig-minSame" class="anchor"></span></p>
+</div>
+<figcaption>スカラー関数の例として<code>min</code>関数の定義と適用例</figcaption>
+<p><span id="ref-fig-minFunction" class="anchor"></span></p>
+</figure>
+<p>図<a class="reference" href="tensor.html#ref-fig-minFunction">12.4</a>は，スカラー関数の例として，<code>min</code>関数の定義とその適用例を紹介している． 本体で<code>&lt;</code>を使っているため仮引数の型は<code>{Ord a}</code>という制約つきの型変数と推論され，<code>Tensor</code>型はこの制約を満たせない（スカラー仮引数 — 正確な判定基準は<a class="reference" href="tensor.html#ref-tensor-tensormap">12.10</a>節）． そのため，テンソルが引数として渡された場合，自動的に成分ごとに関数が適用される． 成分ごとに関数が適用された結果，図<a class="reference" href="tensor.html#ref-fig-minDiff">12.4</a>のように関数はテンソル積と同じ形で適用される． テンソルの添字の簡約ルールはシンプルである． 図<a class="reference" href="tensor.html#ref-fig-minSame">12.4</a>のようにスカラー関数を適用した結果，同じシンボルの添字が2つ以上付加されたテンソルが生成された場合，その対角成分からなるテンソルに簡約されるというルールだけである． 添字簡約のルールの詳しい仕様は次節で論じる．</p>
+<figure>
+<div class="subfigure">
+<pre class="listing"><code class="language-egison">def (.) (t1: Tensor a) (t2: Tensor a) : Tensor a := contractWith (+) (t1 * t2)</code></pre>
+<figcaption>“<code>.</code>”関数の定義（型注釈により，テンソルを受け取りテンソルを返すことを示している）</figcaption>
+<p><span id="ref-fig-dotDef" class="anchor"></span></p>
+</div>
+<div class="subfigure">
+<p><span class="small"></span></p>
+<span class="math-inline">\(\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}^{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{i} = contractWith(+, \begin{pmatrix} 10 &amp; 20 &amp; 30 \\ 20 &amp; 40 &amp; 60 \\ 30 &amp; 60 &amp; 90 \\ \end{pmatrix}^{i}_{\;i})
+  = 10 + 40 + 90 = 140\)</span>
+<p><br>  <br></p>
+<span class="math-inline">\(\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{i} = contractWith(+, \begin{pmatrix} 10 \\ 40 \\ 90 \\ \end{pmatrix}_{i}) = \begin{pmatrix} 10 \\ 40 \\ 90 \\ \end{pmatrix}_{i}\)</span>
+<p><br>  <br> <span class="math-inline">\(\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{j} = contractWith(+, \begin{pmatrix} 10 &amp; 20 &amp; 30 \\ 20 &amp; 40 &amp; 60 \\ 30 &amp; 60 &amp; 90 \\ \end{pmatrix}_{ij})
+  = \begin{pmatrix} 10 &amp; 20 &amp; 30 \\ 20 &amp; 40 &amp; 60 \\ 30 &amp; 60 &amp; 90 \\ \end{pmatrix}_{ij}\)</span> <br> }</p>
+<figcaption>“<code>.</code>”関数の適用</figcaption>
+<p><span id="ref-fig-dotApp" class="anchor"></span></p>
+</div>
+<figcaption>テンソル関数の例として“<code>.</code>”関数の定義と適用例</figcaption>
+<p><span id="ref-fig-dotFunction" class="anchor"></span></p>
+</figure>
+<p>図<a class="reference" href="tensor.html#ref-fig-dotFunction">12.4</a>は，テンソル関数の例として，テンソルのかけ算をする“<code>.</code>”関数の定義と適用例を紹介している． 仮引数の型が<code>Tensor a</code>型であるため，テンソルが引数として渡された場合，テンソルとしてそのまま渡される． 図<a class="reference" href="tensor.html#ref-fig-dotApp">12.4</a>のように，Egisonは上添字と下添字の両方を組み込みでサポートしている． 上添字と下添字で同じシンボルが使われていた場合は，関数<code>contractWith</code>を使って縮約することができる．</p>
+<p>上添字は“<code>~</code>”，下添字は“<code>_</code>”を使ってプログラム上で表現される． たとえば，図<a class="reference" href="tensor.html#ref-fig-dotApp">12.4</a>の一つ目の計算例は以下のようにEgisonで表現される．</p>
+<pre class="listing"><code class="language-egison">[| 1, 2, 3 |]~i . [| 10, 20, 30 |]_i
+-- 140</code></pre>
+<h2><span class="heading-number">12.5</span>三種類の添字</h2>
+<p><span id="ref-tensor-index" class="anchor"></span></p>
+<p>テンソルの添字記法を扱うためにEgisonには三種類の添字が導入されている． 最初の二つは前節で紹介した上添字と下添字で<code>~</code>と<code>_</code>で表現される． 三つ目は上下添字と呼ばれる添字で<code>~_</code>で表現される． 上下添字は，同一のシンボルをもつ上添字と下添字をもつテンソルに対してスカラー関数を適用した際に現れる．</p>
+<pre class="listing"><code class="language-egison">[| 1 2 3 |]_i * [| 10 20 30 |]_i -- [| 10, 40, 90 |]_i
+[| 1 2 3 |]~i * [| 10 20 30 |]~i -- [| 10, 40, 90 |]~i
+[| 1 2 3 |]~i * [| 10 20 30 |]_i -- [| 10, 40, 90 |]~_i</code></pre>
+<p>前節でも登場した<code>contractWith</code>関数は上下添字について対角成分をリストに変換し第一引数の関数で畳み込む．</p>
+<pre class="listing"><code class="language-egison">contractWith (+) [| 10, 40, 90 |]_i -- [| 10, 40, 90 |]_i
+contractWith (+) [| 10, 40, 90 |]~i -- [| 10, 40, 90 |]~i
+contractWith (+) [| 10, 40, 90 |]~_i -- 130</code></pre>
+<p><code>contractWith</code>関数は組み込み関数<code>contract</code>を使って定義されたライブラリ関数である． 組み込み関数<code>contract</code>は上下添字の付加されたスロットの成分のリストを返す．</p>
+<pre class="listing"><code class="language-egison">contract [| 1, 2, 3 |]~_i -- [1, 2, 3]
+contract [| [| 11, 12 |], [| 21, 22 |] |]~_i_j -- [[| 11, 12 |]_j, [| 21, 22 |]_j]
+contract [| [| 11, 12 |], [| 21, 22 |] |]_i~_j -- [[| 11, 21 |]_j, [| 12, 22 |]_i]
+contract [| [| 11, 12 |], [| 21, 22 |] |]~_i~_j -- [11, 12, 21, 22]</code></pre>
+<h2><span class="heading-number">12.6</span>添字の簡約規則</h2>
+<p><span id="ref-tensor-rules" class="anchor"></span></p>
+<figure>
+<div class="center">
+<pre class="listing"><code class="language-egison">E({A, xs}) =
+  if e(xs) = [] then
+    {A, xs})
+  elsif e(xs) = [{k,j}, …] &amp; p(k,xs) = p(j,xs) then
+    E({diag(k, j, A), remove(j, xs))
+  elsif e(xs) = [{k,j}, …] &amp; p(k,xs) != p(j,xs) then
+    E({diag(k, j, A), update(k, 0, remove(j, xs)))</code></pre>
+</div>
+<figcaption>添字簡約の擬似コード</figcaption>
+<p><span id="ref-fig-semanticsRules" class="anchor"></span></p>
+</figure>
+<p>本節は，添字の簡約ルールを擬似コードを使って説明する． <a class="reference" href="tensor.html#ref-tensor-params">12.4</a>節で説明したように，テンソルをスカラー関数を適用したときは常にテンソル積のかたちで成分ごとに処理がマップされるため，ひとつのテンソルについての簡約ルールのみを定義すればよい．</p>
+<p>図<a class="reference" href="tensor.html#ref-fig-semanticsRules">12.6</a>は添字簡約をする擬似コードである． <code>E(A,xs)</code>は添字付きテンソルの簡約をする関数である． <code>A</code>はテンソルの成分からなる配列であり，<code>xs</code>は<code>A</code>に付加されている添字のリストを表す． たとえば，<code>E(A,xs)</code>は添字として“<code>~i_j_i</code>”を持つテンソルに対して以下のように動作する． 上添字，下添字，上下添字を表すフラグとしてそれぞれ<code>1</code>，<code>-1</code>，<code>0</code>を使っている．</p>
+<pre class="listing"><code class="language-egison">E({[|[|[|1,2|],[|3,4|]|]
+    ,[|[|5,6|],[|7,8|]|]|]
+ ,[{i,1}, {j,-1}, {i,-1}]}) =
+{[|[|1,3|],[|6,8|]|], [{i,0}, {j,-1}]}</code></pre>
+<p>擬似コード中で使われている補助関数を説明する． <code>e(xs)</code>は<code>xs</code>中に現れる同一のシンボルからなる添字のペアを見つける関数である． <code>diag(k, j, A)</code>は<code>k</code>番目と<code>j</code>番目のスロットについて<code>A</code>の対角成分からなるテンソルを計算する関数である． <code>remove(k, xs)</code>はリスト<code>xs</code>から<code>k</code>番目の要素を取りのぞく関数である． <code>p(k, xs)</code>は連想リスト<code>xs</code>から<code>k</code>番目の値を取得する関数である． <code>update(k, p, xs)</code>は連想リスト<code>xs</code>の<code>k</code>番目の値を<code>p</code>に更新する関数である． これらの補助関数は以下のように動作する．</p>
+<pre class="listing"><code class="language-egison">e([{i, 1}, {j, -1}, {i, -1}])        = [{1,3}]
+diag(1, 2, [|[|11,12|],[|21,22|]|]) = [|11,22|]
+p(2, [{i, 1}, {j, -1}])             = -1
+remove(2, [{i, 1}, {j, -1}])        = [{i, 1}]
+update(2, 0, [{i, 1}, {j, -1}])     = [{i, 1}, {j, 0}]</code></pre>
+<h2><span class="heading-number">12.7</span>古典的な添字記法との違い — 統一された添字規則</h2>
+<p><span id="ref-tensor-unified" class="anchor"></span></p>
+<p>古典的なテンソルの添字記法では，演算ごとに添字の使い方の正しさの条件が異なる． たとえば，<span class="math-inline">\(u_i + v_i\)</span>は正しいが<span class="math-inline">\(u_i + v_j\)</span>は不正であり， アインシュタインの縮約規約では<span class="math-inline">\(u^i v_i\)</span>は縮約を表すが，同じ変位が繰り返される<span class="math-inline">\(u_i v_i\)</span>は不正である． Egisonはこの規則を単純化して統一している． <strong>すべての演算をひとつの意味論 — 成分ごとのリフト（<code>tensorMap</code>挿入）と，そのあとの添字簡約 — で扱う</strong>． その結果，古典的な記法で正しい式の意味はそのまま保たれ，古典的には不正だった式にも一貫した意味が与えられる．</p>
+<pre class="listing"><code class="language-egison">declare symbol i, j
+
+[|1,2,3|]_i + [|10,20,30|]_j
+-- [| [| 11, 21, 31 |], [| 12, 22, 32 |], [| 13, 23, 33 |] |]_i_j
+
+[|1,2,3|]_i + [|10,20,30|]_i
+-- [| 11, 22, 33 |]_i
+
+[|1,2,3|]_i * [|10,20,30|]_j
+-- [| [| 10, 20, 30 |], [| 20, 40, 60 |], [| 30, 60, 90 |] |]_i_j
+
+[|1,2,3|]_i * [|10,20,30|]_i
+-- [| 10, 40, 90 |]_i
+
+[|1,2,3|]~i . [|10,20,30|]_i
+-- 140</code></pre>
+<p><code>+</code>と<code>*</code>が<em>完全に同じ規則</em>に従っていることに注目してほしい． 添字が異なれば結果はテンソル積のかたち（すべての組合せ）になり， 同じ下添字が繰り返されれば対角成分の抽出になる（<code>*</code>の場合はアダマール積に一致する）． 古典記法で不正だった<span class="math-inline">\(u_i + v_j\)</span>は「和のすべての組合せ」という自然な意味をもつテンソルになる． 縮約は，上添字と下添字のペアが<code>.</code>のようなテンソル関数（<a class="reference" href="tensor.html#ref-tensor-tensorfunc">12.8</a>節）に渡されたときに起こる．</p>
+<p>なお，同じ添字のケースでは，リフト直後にはすべての組合せをもつ正方配列が中間形として現れるが， 添字簡約（<a class="reference" href="tensor.html#ref-tensor-rules">12.6</a>節）が即座に対角を取り出すため，ユーザーが観察するのは簡約後の値だけである．</p>
+<h2><span class="heading-number">12.8</span>テンソル関数の適用</h2>
+<p><span id="ref-tensor-tensorfunc" class="anchor"></span></p>
+<p>添字付きのテンソルがテンソル関数に渡されるとき，そのテンソルの添字ごとテンソル関数に適用される． 図<a class="reference" href="tensor.html#ref-fig-dotDef">12.4</a>で定義した“<code>.</code>”関数でこの挙動を確認する． 図<a class="reference" href="tensor.html#ref-fig-dotApp">12.4</a>では，“<code>.</code>”関数を適用をしたときなされる展開が段階的に表示されている． <code>contractWith</code>の内側に添字付きのテンソルがあらわれるが，これはテンソルの添字ごとテンソル関数に渡されることで可能になっている． この挙動のおかげで以下のようにテンソル関数についてテンソルの添字記法を使って関数適用できるようになっている．</p>
+<pre class="listing"><code class="language-egison">[|1,2,3|]~i . [|10,20,30|]_i -- 140
+[|1,2,3|]_i . [|10,20,30|]_j -- [|[|10,20,30|],[|20,40,60|],[|30,60,90|]|]_i_j
+[|1,2,3|]_i . [|10,20,30|]_i -- [|10,40,90|]_i</code></pre>
+<p>テンソル関数の中で引数として渡されたテンソルに追加で添字を付加したいことがある． 追加で新しい添字を付加するためには，以下のように<code>...</code>をテンソルと添字の間に挟めば良い． この機能は，<a class="reference" href="tensor.html#ref-tensor-refs">12.14</a>節で紹介する<code>subrefs</code>と<code>suprefs</code>という組み込み関数を使った糖衣構文として実装されている． この機能の使用例は第<a class="reference" href="diffgeo.html#ref-diffgeo">14</a>章で紹介する．</p>
+<pre class="listing"><code class="language-egison">A..._i_j</code></pre>
+<h2><span class="heading-number">12.9</span>省略された添字の補完</h2>
+<p><span id="ref-tensor-completion" class="anchor"></span></p>
+<p>添字が省略されたテンソルが関数に適用された場合，Egisonは自動で添字を補完する． 本節はこの補完の規則を説明する．</p>
+<p>以下，<code>A</code>，<code>B</code>を<span class="math-inline">\(2\)</span>階のテンソル，つまり行列であるとする． 添字を省略した状態でスカラー関数に<code>A</code>，<code>B</code>を同時に適用すると，下記のように同じ組み合わせの添字が補完される．</p>
+<pre class="listing"><code class="language-egison">A + B -- A_t1_t2 + B_t1_t2</code></pre>
+<p>関数適用の前に“<code>!</code>”が付加されていた場合は，下記のように違う添字が補完される．</p>
+<pre class="listing"><code class="language-egison">A !+ B -- A_t1_t2 + B_t3_t4</code></pre>
+<p>添字が省略されたテンソルが，テンソル関数に適用された場合は，補完はおこなわれない．</p>
+<p>上記の添字の補完規則には実は必然性がある． 添字が省略された場合の添字補完規則を上記のように設定すると，微分形式のための演算子を簡潔に定義できる． 微分形式の演算子の定義の具体例は，第<a class="reference" href="diffgeo.html#ref-diffgeo">14</a>章で紹介する． あとで第<a class="reference" href="diffgeo.html#ref-diffgeo">14</a>章でも述べるように，“<code>!</code>”が使われる必要があるのは，微分形式の演算子の定義の中だけになる． そのため，基本的にユーザーは“<code>!</code>”については意識しなくてよい．</p>
+<h2><span class="heading-number">12.10</span><code>tensorMap</code>自動挿入の仕組み</h2>
+<p><span id="ref-tensor-tensormap" class="anchor"></span></p>
+<p>本節は，型システムによる<code>tensorMap</code>自動挿入の仕組みについて説明する．</p>
+<h3><span class="heading-number">12.10.1</span>基本原理</h3>
+<p>Egisonの型システムは，関数適用ごとに，<strong>仮引数の型が（型クラス制約まで考慮したうえで）<code>Tensor a</code>型に実体化できるか</strong>を判定する． 実体化できる仮引数を<em>テンソル互換</em>（tensor-compatible）な仮引数と呼ぶ． <code>tensorMap</code>が挿入されるのは，つぎの2つの条件がそろったときである：</p>
+<ul>
+<li>仮引数がテンソル互換でない（＝<em>スカラー仮引数</em>である）
+</li>
+<li>実引数の型が<code>Tensor a</code>型である
+</li>
+</ul>
+<p><code>tensorMap</code>は，第一引数の関数を第二引数のテンソルの成分ごとに適用してテンソルを返す組み込み関数である．</p>
+<p>仮引数の型がテンソル互換かどうかは，つぎのように定まる：</p>
+<ul>
+<li><code>Integer</code>のような具体的なスカラー型 — テンソル互換でない（スカラー仮引数）
+</li>
+<li>明示的な<code>Tensor a</code>型 — テンソル互換
+</li>
+<li>型変数 — <strong>付いている型クラス制約のすべてを<code>Tensor</code>型が満たせるか</strong>で決まる．
+<p>制約がなければ常にテンソル互換である． <code>{Eq a}</code>の<code>a</code>もテンソル互換である（ライブラリに<code>instance {Eq a} Eq (Tensor a)</code>があるため）． 一方，<code>{Ord a}</code>や<code>{AddSemigroup a}</code>の<code>a</code>はテンソル互換でない（<code>Tensor</code>型はこれらのクラスのインスタンスをもたない）．</p>
+</li>
+</ul>
+<p>この分類は関数の<em>主型</em>（推論された型）だけから決まるため，どこに<code>tensorMap</code>が挿入されるかは決定的であり，型注釈は挿入の制御のためには不要である． また，判定はHindley--Milner型推論の範囲に収まっており，添字の情報を型に持ち上げることも，依存型も必要としない．</p>
+<h3><span class="heading-number">12.10.2</span>具体例</h3>
+<p>図<a class="reference" href="tensor.html#ref-fig-minFunction">12.4</a>で定義した<code>min</code>関数を使って挙動を確認する．</p>
+<pre class="listing"><code class="language-egison">def min (x: a) (y: a) : a := if x &lt; y then x else y
+
+min [|1,2,3|]_i [|10,20,30|]_j
+-- Internally transformed to:
+-- tensorMap (\xi -&gt; tensorMap (\yi -&gt; min xi yi) [|10,20,30|]_j) [|1,2,3|]_i
+-- Result: [|[|1,1,1|],[|2,2,2|],[|3,3,3|]|]_i_j
+
+min [|1,2,3|]_i [|10,20,30|]_i
+-- Result: [|1,2,3|]_i</code></pre>
+<p><code>min</code>関数の本体は<code>&lt;</code>を使っているため，仮引数の型は<code>{Ord a}</code>という制約つきの型変数<code>a</code>と推論される． <code>Tensor</code>型は<code>Ord</code>クラスのインスタンスではないため，<code>a</code>を<code>Tensor</code>型に実体化することはできない． つまり<code>min</code>の仮引数はスカラー仮引数であり，テンソルが渡されると自動的に<code>tensorMap</code>が挿入される． 型注釈をすべて省いて<code>def min x y := if x &lt; y then x else y</code>と書いても，同じ型が推論されるので挙動は変わらない — リフトするかどうかは推論された主型だけに従う．</p>
+<p>一つ目の式の結果のテンソルの添字が“<code>_i_j</code>”となっている． <code>tensorMap</code>は，第一引数の関数に第二引数のテンソルの成分を適用した結果がテンソルである場合，その結果のテンソルの添字を<code>tensorMap</code>全体の結果のテンソルの添字の末端に移動する． このために結果のテンソルの添字が“<code>_i_j</code>”となる． この仕組みがテンソルの添字記法を使ってスカラー関数を適用することを可能にしている．</p>
+<h3><span class="heading-number">12.10.3</span>型変数のテンソル互換性</h3>
+<p>型変数の分類の分かれ目は，<strong>制約の有無そのものではなく，付いている制約を<code>Tensor</code>型が満たせるか</strong>である． 制約のない型変数はどんな型にも — <code>Tensor</code>型にも — 実体化できるので，テンソル互換である． たとえば恒等関数にテンソルを渡しても，<code>tensorMap</code>は挿入されず，テンソルがそのまま通る．</p>
+<pre class="listing"><code class="language-egison">def myId (x: a) : a := x
+
+myId [|1,2,3|]_i -- [| 1, 2, 3 |]_i</code></pre>
+<p>テンソルを要素として運ぶ総称的な高階関数（リスト操作など）が期待どおり動くのは，この分類のおかげである．</p>
+<p>制約が付いていても，<code>Tensor</code>型がそのクラスのインスタンスをもつならテンソル互換のままである． たとえば<code>{Eq a}</code>には<code>instance {Eq a} Eq (Tensor a)</code>があるため，等値比較はテンソル全体に対しておこなわれる（成分ごとにはリフトされない）．</p>
+<pre class="listing"><code class="language-egison">def eqTest {Eq a} (x: a) (y: a) : Bool := x == y
+
+eqTest [|1,2|]_i [|1,2|]_i -- True
+eqTest [|1,2|]_i [|1,3|]_i -- False</code></pre>
+<p>一方，<code>Tensor</code>型がインスタンスをもたないクラスの制約が付くと，スカラー仮引数になる．</p>
+<pre class="listing"><code class="language-egison">def double {AddSemigroup a} (x: a) : a := x + x
+
+double [|1,2,3|]_i
+-- Since Tensor is not an instance of AddSemigroup,
+-- tensorMap is automatically inserted:
+-- tensorMap (\xi -&gt; double xi) [|1,2,3|]_i
+-- Result: [|2,4,6|]_i</code></pre>
+<p><code>AddSemigroup a</code>という制約により，<code>a</code>は<code>AddSemigroup</code>クラスのインスタンスの範囲でしか実体化できない． <code>Tensor</code>型はそのインスタンスではないため，テンソルが渡されると自動的に<code>tensorMap</code>が挿入され，各成分（<code>Integer</code>型）に対して<code>double</code>関数が適用される．</p>
+<h3><span class="heading-number">12.10.4</span>テンソル関数の場合</h3>
+<p>一方，仮引数の型が明示的に<code>Tensor a</code>型である場合，<code>tensorMap</code>は挿入されない．</p>
+<pre class="listing"><code class="language-egison">def (.) (t1: Tensor a) (t2: Tensor a) : Tensor a :=
+  contractWith (+) (t1 * t2)
+
+[|1,2,3|]~i . [|10,20,30|]_i
+-- tensorMap is not inserted; the tensor is passed as-is
+-- Result: 140</code></pre>
+<h3><span class="heading-number">12.10.5</span>高階関数に渡される関数</h3>
+<p><span id="ref-tensor-hof" class="anchor"></span></p>
+<p>高階関数の引数として渡される関数にも挿入は働く． このとき<code>tensorMap</code>は関数の適用位置にではなく，<strong>関数引数そのものをイータ展開して</strong>挿入される． つまり，渡された関数<code>f</code>が<code>\x -&gt; tensorMap f x</code>や<code>\x y -&gt; tensorMap2 f x y</code>のようなラッパに変換され，成分ごとの適用はラッパの本体でおこなわれる．</p>
+<pre class="listing"><code class="language-egison">def inc (x: Integer) : Integer := x + 1
+
+map inc [[|1,2|]_i, [|10,20|]_i]
+-- inc is eta-expanded to \x -&gt; tensorMap inc x
+-- Result: [[|2,3|]_i, [|11,21|]_i]
+
+foldl1 (+) [[|1,2|]_i, [|10,20|]_i]
+-- (+) is eta-expanded to \x y -&gt; tensorMap2 (+) x y
+-- Result: [|11,22|]_i</code></pre>
+<p>イータ展開が起こる条件は，関数引数のかたちによって異なる． 1引数のスカラー関数は，適用先が期待するコールバックの型にテンソルが現れる場合にイータ展開される （上の<code>map</code>の例では，リストの要素がテンソルであることが型からわかる）． 一方，<strong>2引数のスカラー関数は，型からテンソルが見えるかどうかによらず，例外なく<code>tensorMap2</code>版にイータ展開される</strong>． <code>tensorMap</code>と<code>tensorMap2</code>はスカラー値に対しては恒等に働くため，この無条件のラップは常に安全である． この設計のおかげで，<code>foldl</code>の累積器のように，計算の途中でスカラーからテンソルに変わる引数も正しく処理される．</p>
+<pre class="listing"><code class="language-egison">foldl (+) 0 [[|1,2|]_i, [|10,20|]_i]
+-- The accumulator starts as the scalar 0 and becomes
+-- a tensor at the first addition
+-- Result: [|11,22|]_i</code></pre>
+<p>なお，“<code>.</code>”のように仮引数が<code>Tensor a</code>型のコールバックはイータ展開されず，テンソルのまま渡される．</p>
+<h3><span class="heading-number">12.10.6</span>効率化のための工夫</h3>
+<p>実際の実装では，効率化のために<code>tensorMap2</code>という組み込み関数も使われる． <code>tensorMap</code>をネストして使う方法では，対角化するために対角成分しか必要ない場合でも対角成分以外の成分ももつテンソルを生成してしまう． <code>tensorMap2</code>は<span class="math-inline">\(2\)</span>引数関数と二つのテンソルを引数にとり，結果のテンソルに必要な成分だけを計算するように実装されている．</p>
+<h2><span class="heading-number">12.11</span>添字の反転と<code>flipIndices</code>関数</h2>
+<p>偏微分をするために使われる<span class="inline-code"><span class="math-inline">\(\partial\)</span>/<span class="math-inline">\(\partial\)</span></span>関数はスカラー関数である． しかし，<span class="inline-code"><span class="math-inline">\(\partial\)</span>/<span class="math-inline">\(\partial\)</span></span>関数はただのスカラー関数ではない． <span class="inline-code"><span class="math-inline">\(\partial\)</span>/<span class="math-inline">\(\partial\)</span></span>関数は第二引数のテンソルの添字の上下を反転する． たとえば，<span class="inline-code">(<span class="math-inline">\(\partial\)</span>/<span class="math-inline">\(\partial\)</span> <span class="math-inline">\(\Gamma\)</span>~i_j_k x~l)</span>は，添字として“<code>~i_j_k_l</code>”をもつ四階のテンソルを返す．</p>
+<p>このような動作を実現するために，Egisonには<code>flipIndices</code>という組み込み関数が用意されている． <code>flipIndices</code>は，その引数のテンソルのすべての添字の上下を反転させる． 上下添字は反転させても上下添字のままである．</p>
+<p><span class="inline-code"><span class="math-inline">\(\partial\)</span>/<span class="math-inline">\(\partial\)</span></span>関数は，以下のように<code>flipIndices</code>を使って定義される．</p>
+<pre class="listing"><code class="language-egison">def `$\partial$`/`$\partial$` (f: Tensor MathValue) (x: Tensor MathValue)
+    : Tensor MathValue :=
+  tensorMap2 partialDiffMV f (flipIndices x)
+
+-- partialDiffMV is an auxiliary function that computes
+-- partial differentiation on scalar values
+def partialDiffMV (f: MathValue) (x: MathValue) : MathValue := ...</code></pre>
+<p><code>tensorMap2</code>により，<code>f</code>と<code>flipIndices x</code>の各成分に対して<code>partialDiffMV</code>関数が適用される． <code>flipIndices x</code>により第二引数の添字が反転されるため，結果のテンソルの添字も反転する．</p>
+<p>以下は，<span class="inline-code"><span class="math-inline">\(\partial\)</span>/<span class="math-inline">\(\partial\)</span></span>の使用例である．</p>
+<pre class="listing"><code class="language-egison">declare symbol r, `$\theta$`, i, j
+
+`$\partial$`/`$\partial$` [|(r * (sin `$\theta$`)),(r * (cos `$\theta$`))|]_i [|r,`$\theta$`|]_j
+-- [| [| &#x27;sin `$\theta$`, (&#x27;cos `$\theta$`) * r |], [| &#x27;cos `$\theta$`, - (&#x27;sin `$\theta$`) * r |] |]_i~j
+`$\partial$`/`$\partial$` [|(r * (sin `$\theta$`)),(r * (cos `$\theta$`))|]_i [|r,`$\theta$`|]_i
+-- [| &#x27;sin `$\theta$`, - (&#x27;sin `$\theta$`) * r |]~_i</code></pre>
+<p>一つ目の例では，第二引数の添字が<code>_j</code>から<code>~j</code>に反転され，結果の添字が<code>_i~j</code>となる．</p>
+<h2><span class="heading-number">12.12</span><code>generateTensor</code>式によるテンソルの生成</h2>
+<p><code>generateTensor</code>式はテンソルの初期化をするために便利な組み込み構文である． <code>generateTensor</code>式は第一引数にリストを引数にとる関数，第二引数に生成したいテンソルのサイズをとる． たとえば，すべての成分が<span class="math-inline">\(1\)</span>であるサイズが<span class="math-inline">\((3, 4)\)</span>の行列を生成するには以下のように<code>generateTensor</code>式を書く．</p>
+<pre class="listing"><code class="language-egison">generateTensor [2]#1 [3, 4]
+-- [| [| 1, 1, 1, 1 |], [| 1, 1, 1, 1 |], [| 1, 1, 1, 1 |] |]</code></pre>
+<p>無名<code>match</code>関数と組み合わせると短い記述でいろいろなテンソルを生成できる． たとえば単位行列を生成するには以下のようにすればよい．</p>
+<pre class="listing"><code class="language-egison">generateTensor (\match as list integer with
+                  | [$n, #n] -&gt; 1
+                  | _ -&gt; 0)
+               [3, 3]
+-- [| [| 1, 0, 0 |], [| 0, 1, 0 |], [| 0, 0, 1 |] |]</code></pre>
+<h2><span class="heading-number">12.13</span>テンソルの宣言</h2>
+<p>テンソルを変数に束縛する方法を解説する． まずテンソルは通常の値と同様に<code>def</code>式や<code>let</code>式で定義することができる．</p>
+<pre class="listing"><code class="language-egison">def A : Tensor Integer := [| [| 11, 12 |], [| 21, 22 |] |]
+
+A -- [| [| 11, 12 |], [| 21, 22 |] |]</code></pre>
+<p>数学や物理では同じ変数名で添字の上下の型が違うテンソルにそれぞれ別の値を入れることがよくある． Egisonでもその慣習に対応するために，添字の上下の型ごとに違うテンソルを定義できるようにしている． Egisonは，変数を参照するとき，変数名と添字の型の両方を使う． 変数定義のときに，変数名の後ろに添字を続けて記述することによって添字の型を指定する．</p>
+<pre class="listing"><code class="language-egison">def g_i_j : Tensor MathValue := [| [| 2, 2 |], [| 2, 2 |] |]_i_j
+def g~i~j : Tensor MathValue :=
+  [| [| 1 / 2, 1 / 2 |], [| 1 / 2, 1 / 2 |] |]~i~j
+
+g_1_1 -- 2
+g~1~1 -- 1 / 2</code></pre>
+<p>添字の型を指定してテンソルが束縛されている変数に参照するには，<em>ダミーシンボル</em>（<em>dummy symbol</em>）を使うのが便利である． ダミーシンボルは，<code>#</code>で表現され，すべてユニークなシンボルとして扱われる． ダミーシンボルはEgisonに組み込みで実装されている機構である． ダミーシンボルを使うと，上記で定義した<code>g~~</code>と<code>g__</code>を以下のように参照できる．</p>
+<pre class="listing"><code class="language-egison">g_#_# -- [| [| 2, 2 |], [| 2, 2 |] |]_#_#
+g~#~# -- [| [| 1 / 2, 1 / 2 |], [| 1 / 2, 1 / 2 |] |]~#~#</code></pre>
+<p>宣言済みのシンボルを使っても添字の型を指定してテンソルを参照することもできるが，ダミーシンボルを使う方が宣言の必要がなく手軽である．</p>
+<pre class="listing"><code class="language-egison">declare symbol i, j
+
+g_i_j -- [| [| 2, 2 |], [| 2, 2 |] |]_i_j
+g~i~j -- [| [| 1 / 2, 1 / 2 |], [| 1 / 2, 1 / 2 |] |]~i~j</code></pre>
+<p>なお，ひとつの式のなかに現れる複数のダミーシンボルは，それぞれ異なるシンボルとして扱われる．</p>
+<p>数式でテンソルを定義するときのように，左辺の変数の添字としてシンボルを書くこともできる．</p>
+<pre class="listing"><code class="language-egison">def A_i_j : Tensor Integer := [| [| 11, 12 |], [| 21, 22 |] |]_i_j
+def B_i_j : Tensor Integer := [| [| 11, 12 |], [| 21, 22 |] |]_j_i
+
+A_#_# -- [| [| 11, 12 |], [| 21, 22 |] |]_#_#
+B_#_# -- [| [| 11, 21 |], [| 12, 22 |] |]_#_#</code></pre>
+<p>この機能は以下のような糖衣構文としてEgisonでは実装されている．</p>
+<pre class="listing"><code class="language-egison">def A_i_j := ...
+-- =&gt; def A__ := withSymbols [i, j]
+--                 transpose [i, j] ...</code></pre>
+<p><code>transpose</code>関数は，テンソルの成分を第一引数で指定された順番に転置する組み込み関数である．</p>
+<h2><span class="heading-number">12.14</span>添字付加のために便利な構文</h2>
+<p><span id="ref-tensor-refs" class="anchor"></span></p>
+<p>階数がパラメーター<span class="math-inline">\(n\)</span>によって変わるテンソル<span class="math-inline">\(A\)</span>について，<span class="math-inline">\(A_{i_{1}...i_{n}}\)</span>のように添字を付加したいことがある． このために<code>subrefs</code>と<code>subrefs!</code>という組み込み関数がEgisonには用意されている． これらの関数は第一引数にテンソルに第二引数に添字のリストを付加する． <code>subrefs</code>は第一引数のテンソルの既存の添字に追加で第二引数に添字のリストを付加するのに対して，<code>subrefs!</code>は既存の添字を消して新たに添字を付加し直す．</p>
+<pre class="listing"><code class="language-egison">subrefs! A (map 1#i_$1 [1..n])
+subrefs  A (map 1#i_$1 [1..n])</code></pre>
+<p><span class="math-inline">\(A_{i_{1}...i_{n}}\)</span>のような形のテンソルは数式でよく現れるため，上記の<code>subrefs!</code>と<code>subrefs</code>を使ったプログラムについては以下のような糖衣構文が用意されている．</p>
+<pre class="listing"><code class="language-egison">A_(i_1)...(i_n)
+A..._(i_1)...(i_n)</code></pre>
+<p>上記の内容は<span class="math-inline">\(A^{i_{1}...i_{n}}\)</span>のような上添字をもつテンソルにも用意されており，このために<code>suprefs</code>と<code>suprefs!</code>という組み込み関数がEgisonには用意されている．</p>
+<p><code>subrefs</code>や<code>suprefs</code>のように既存の添字に追加で添字を付加する機能は，第<a class="reference" href="diffgeo.html#ref-diffgeo">14</a>章で紹介する微分形式についての関数を定義するときに使われる．</p>
+<h2><span class="heading-number">12.15</span>テンソルの対称性・歪対称性の宣言</h2>
+<p><span id="ref-tensor-symm" class="anchor"></span></p>
+<figure>
+<div class="subfigure">
+<div class="math-display">\[\begin{pmatrix}
+a_{11} &amp; a_{12} &amp; a_{13} \\
+a_{12} &amp; a_{22} &amp; a_{23} \\
+a_{13} &amp; a_{23} &amp; a_{33} \\
+\end{pmatrix}\]</div>
+<figcaption>対称なテンソルの例</figcaption>
+<p><span id="ref-fig-symmtensor" class="anchor"></span></p>
+</div>
+<div class="subfigure">
+<div class="math-display">\[\begin{pmatrix}
+0 &amp; a_{12} &amp; a_{13} \\
+-a_{12} &amp; 0 &amp; a_{23} \\
+-a_{13} &amp; -a_{23} &amp; 0 \\
+\end{pmatrix}\]</div>
+<figcaption>歪対称なテンソルの例</figcaption>
+<p><span id="ref-fig-antisymmtensor" class="anchor"></span></p>
+</div>
+<figcaption>テンソルの対称性と歪対称性</figcaption>
+<p><span id="ref-fig-symm" class="anchor"></span></p>
+</figure>
+<p>テンソルが<em>対称</em>であるとは，図<a class="reference" href="tensor.html#ref-fig-symmtensor">12.15</a>の例のように，上三角の成分と下三角の成分が一致することをいう． テンソルが<em>歪対称</em>であるとは，図<a class="reference" href="tensor.html#ref-fig-antisymmtensor">12.15</a>の例のように，上三角の成分と下三角の成分の符号が反転することをいう． テンソルが歪対称であるとき，対角成分は0となる．</p>
+<p>数学や物理で現れるテンソルの多くが対称性をもつ． たとえば，<a class="reference" href="diffgeo.html#ref-diffgeo-riemann">14.2</a>節で計算するリーマン曲率テンソル<span class="math-inline">\(R_{abcd}\)</span>は<span class="math-inline">\(R_{abcd} = -R_{abdc}\)</span>，<span class="math-inline">\(R_{abcd} = -R_{bacd}\)</span>，<span class="math-inline">\(R_{abcd} = R_{cdab}\)</span>という複数の対称性をもつ． 数学者や物理学者はこれらの対称性を意識しながら適宜計算を省略する． Egisonでも対称性を意識した計算の最適化を実装したいが，プログラミング言語でこの最適化をするには，明示的にテンソルの対称性を宣言する必要がある． Egisonはテンソルの対称性を宣言するための記法が実装されている． 本節は，この記法の使い方と実装を解説する．</p>
+<h3><span class="heading-number">12.15.1</span>テンソルの対称性を宣言する記法</h3>
+<p>リーマン曲率テンソルには，上記の対称性に加えて第一ビアンキ恒等式<span class="math-inline">\(R_{abcd} + R_{acdb} + R_{adbc} = 0\)</span>とよばれる対称性もある． この第一ビアンキ恒等式の表現として，<span class="math-inline">\(R_{a[bcd]} = 0\)</span>という表記がある． Egisonに実装されているテンソルの対称性を宣言する記法は，この表記法に触発されて得られたものである．</p>
+<p>具体例をみせながら，その記法を紹介する． Egisonでリーマン曲率テンソル<span class="math-inline">\(R_{abcd}\)</span>は下記のように定義できる． 右辺に複雑な式があるが，本節では無視していただいて問題ない． 左辺だけに注目してほしい．</p>
+<pre class="listing"><code class="language-egison">def R_a_b_c_d : Tensor MathValue := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)</code></pre>
+<p><span class="math-inline">\(R_{abcd} = -R_{abdc}\)</span>という歪対称性を宣言するには，以下のように添字<code>_a_b</code>を波括弧<code>{}</code>で囲む．</p>
+<pre class="listing"><code class="language-egison">def R{_a_b}_c_d : Tensor MathValue := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)</code></pre>
+<p>上記のように<span class="math-inline">\(R_{abcd}\)</span>を定義すると，たとえば<span class="math-inline">\(R_{21cd}\)</span>を参照したとき，<span class="math-inline">\(R_{12cd}\)</span>の計算結果の符号を反転した値を返すようになる． 対称性を複数同時に宣言することもできる． <span class="math-inline">\(R_{abcd} = -R_{abdc}\)</span>と<span class="math-inline">\(R_{abcd} = -R_{bacd}\)</span>を同時に宣言するには，以下のように添字<code>_a_b</code>と<code>_c_d</code>の両方を波括弧<code>{}</code>で囲む．</p>
+<pre class="listing"><code class="language-egison">def R{_a_b}{_c_d} : Tensor MathValue := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)</code></pre>
+<p>こうすると，たとえば<span class="math-inline">\(R_{2121}\)</span>を参照したとき，<span class="math-inline">\(R_{1212}\)</span>の計算結果を返すようになる．</p>
+<p><span class="math-inline">\(R_{abcd} = R_{cdab}\)</span>のような複雑な対称性も記述できる． この対称性を記述するためには添字<code>_a_b</code>と<code>_c_d</code>をそれぞれひとまとまりで扱うために丸括弧<code>()</code>で囲む． そして，これらを角括弧<code>[]</code>で囲む． 波括弧<code>{}</code>が歪対称性を宣言するために使われるのに対し，角括弧<code>[]</code>は対称性を宣言するために使われる．</p>
+<pre class="listing"><code class="language-egison">def R[(_a_b)(_c_d)] : Tensor MathValue := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)</code></pre>
+<p>三つの対称性<span class="math-inline">\(R_{abcd} = -R_{abdc}\)</span>，<span class="math-inline">\(R_{abcd} = -R_{bacd}\)</span>，<span class="math-inline">\(R_{abcd} = R_{cdab}\)</span>を同時に宣言することもできる．</p>
+<pre class="listing"><code class="language-egison">def R[{_a_b}{_c_d}] : Tensor MathValue := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)</code></pre>
+<p>まとめると，Egisonは対称性の宣言には三種類の括弧を使い分ける． 角括弧<code>[]</code>は対称性を宣言するために使う． 波括弧<code>{}</code>は歪対称性を宣言するために使う． 丸括弧<code>()</code>は複数の添字をひとまとまりにするために使う．</p>
+<p>対称なテンソルの添字は隣り合っていることが多いため，数学や物理で現れるテンソルの対称性は，この記法でほぼ宣言することができる． <code>:=</code>の右辺のプログラムを全く変更せずに対称性を宣言できるところはこの記法のよいところである．</p>
+<h3><span class="heading-number">12.15.2</span>対称性の宣言によってテンソルの定義が短くなる例</h3>
+<p>さきほど，この手法の利点として，<code>:=</code>の右辺のプログラムを全く変更する必要がないと述べたが，<code>:=</code>の右辺のプログラムが簡略化できるケースもある． たとえば，下記のようにテンソルの各ブロックごとに異なる式を使って値が定義されるテンソルがそのようなケースに該当する．</p>
+<pre class="listing"><code class="language-egison">def R&#x27;_i_j_k_l : Tensor MathValue :=
+  generateTensor
+    (\match as list integer with
+       | [#1, #1, _, _] -&gt; 0
+       | [_, _, #1, #1] -&gt; 0
+       | [#1, $b, #1, $d] -&gt; -1 * p^2 * `$\delta$`~(b - 1)_(d - 1)
+       | [$a, #1, #1, $d] -&gt;      p^2 * `$\delta$`~(a - 1)_(d - 1)
+       | [#1, $b, $c, #1] -&gt;      p^2 * g_(b - 1)_(c - 1)
+       | [$a, #1, $c, #1] -&gt; -1 * p^2 * g_(a - 1)_(c - 1)
+       | [#1, $b, $c, $d] -&gt; -1 * p * `$\nabla$`J_(b - 1)_(c - 1)~(d - 1)
+       | [$a, #1, $c, $d] -&gt;      p * `$\nabla$`J_(a - 1)_(c - 1)~(d - 1)
+       | [$a, $b, #1, $d] -&gt; -1 * p * `$\nabla$`J~(d - 1)_(a - 1)_(b - 1)
+       | [$a, $b, $c, #1] -&gt;      p * `$\nabla$`J_(c - 1)_(a - 1)_(b - 1)
+       | [$a, $b, $c, $d] -&gt; R_(a - 1)_(b - 1)_(c - 1)~(d - 1)
+                             + -1 * p^2 * J_(b - 1)_(c - 1) * J_(a - 1)~(d - 1)
+                             +      p^2 * J_(a - 1)_(c - 1) * J_(b - 1)~(d - 1)
+                             +  2 * p^2 * J_(a - 1)_(b - 1) * J_(c - 1)~(d - 1))
+    [5, 5, 5, 5]</code></pre>
+<p>対称性により条件分岐を大きく減らすことができる．</p>
+<pre class="listing"><code class="language-egison">def R&#x27;[{_i_j}{_k_l}] : Tensor MathValue :=
+  generateTensor
+    (\match as list integer with
+       | [#1, #1, _, _] -&gt; 0
+       | [#1, $b, #1, $d] -&gt; -1 * p^2 * `$\delta$`~(b - 1)_(d - 1)
+       | [#1, $b, $c, $d] -&gt; -1 * p * `$\nabla$`J_(b - 1)_(c - 1)~(d - 1)
+       | [$a, $b, $c, $d] -&gt; R_(a - 1)_(b - 1)_(c - 1)~(d - 1)
+                             + -1 * p^2 * J_(b - 1)_(c - 1) * J_(a - 1)~(d - 1)
+                             +      p^2 * J_(a - 1)_(c - 1) * J_(b - 1)~(d - 1)
+                             +  2 * p^2 * J_(a - 1)_(b - 1) * J_(c - 1)~(d - 1))
+    [5, 5, 5, 5]</code></pre>
+<h3><span class="heading-number">12.15.3</span>実装</h3>
+<p>テンソルの対称性を宣言する記法の実装方法について解説する． この記法は<code>generateTensor</code>式を使う糖衣構文として実装されている． 本節では，この変換を具体例をいくつか紹介することによって説明する．</p>
+<p>まず対称性を宣言する角括弧<code>[]</code>がどう展開されるか説明する． 以下のプログラムの<code>...</code>の箇所にはなにか適当なテンソルを返すプログラムがはいる．</p>
+<pre class="listing"><code class="language-egison">def X[_i_j] := ...</code></pre>
+<p>上記の形のプログラムは，以下のようなプログラムに展開される．</p>
+<pre class="listing"><code class="language-egison">def X_i_j : Tensor a :=
+ let tmpX_i_j := ...
+   generateTensor
+     (\i j -&gt; if i &gt; j then tmpX_j_i
+              else          tmpX_i_j)
+     (tensorShape tmpX_#_#)</code></pre>
+<p><code>tmpX</code>という新たな変数を導入し，定義したいテンソルを代入する． <code>X</code>自体は<code>generateTensor</code>式を使って定義する． この<code>generateTensor</code>式は，下半分の成分については，上半分の成分を参照するように定義されている． Egisonはテンソルの成分の評価を遅延するため，<code>tmpX</code>の下半分の成分は計算されることはない． そのため，テンソル成分の計算コストが半分になる．</p>
+<p>歪対称性を宣言する波括弧<code>{}</code>も同じように展開される．</p>
+<pre class="listing"><code class="language-egison">def X{_i_j} := ...</code></pre>
+<p>下半分の成分の符号が上半分の成分に対して反転していることと，対角成分が<span class="math-inline">\(0\)</span>になるように<code>generateTensor</code>式の内部が変更されている．</p>
+<pre class="listing"><code class="language-egison">def X_i_j : Tensor a :=
+  let tmpX_i_j := ...
+    generateTensor
+      (\i j -&gt; if i &gt; j      then -tmpX_j_i
+               else if i = j then 0
+               else               tmpX_i_j)
+      (tensorShape tmpX_#_#)</code></pre>
+<h2><span class="heading-number">12.16</span>tensorMap挿入の詳細な仕組み</h2>
+<p>Egisonでは，多相関数がテンソル引数に対して正しく動作するように，コンパイラが自動的に<code>tensorMap</code>や<code>tensorMap2</code>を挿入する． 本節では，この自動挿入の仕組みの詳細を解説する．</p>
+<h3><span class="heading-number">12.16.1</span>処理フローとタイミング</h3>
+<p><code>tensorMap</code>の挿入は，型推論（Phase 5-6）の後，型クラス展開（Phase 8-2）の前に実行される（Phase 8-1）． 処理の流れは以下のとおりである：</p>
+<ol>
+<li>Phase 5-6: 型推論により，すべての式に型が付与される．
+</li>
+<li>Phase 8-1: TensorMap挿入により，必要な箇所に<code>tensorMap</code>/<code>tensorMap2</code>が自動挿入される．
+</li>
+<li>Phase 8-2: 型クラス展開により，型クラスメソッド（たとえば<code>(+)</code>）が辞書引きの形式（<code>dict_AddSemigroup_(&quot;plus&quot;)</code>）に変換される．
+</li>
+</ol>
+<p>TensorMap挿入を型クラス展開の前に実行する理由は，引数の型（スカラーかテンソルか）を先に確定させることで，型クラス展開時にインスタンス選択が正しく行えるようにするためである．</p>
+<h3><span class="heading-number">12.16.2</span>適用スパイン単位の二相の変換</h3>
+<p>挿入は，関数適用のスパイン（<code>f a1 ... an</code>）を単位として二相でおこなわれる． 第一相では，関数の主型から，スパインのどの引数位置がスカラー仮引数かを決定する． 第二相では，テンソルが渡されるスカラー位置をまとめて<code>tensorMap</code>や<code>tensorMap2</code>で包む． 位置の決定と包み込みを分離しているため，挿入の結果は引数を処理する順序に依存しない （<a class="reference" href="tensor.html#ref-tensor-guarantees">12.16.7</a>節の合流性）．</p>
+<h3><span class="heading-number">12.16.3</span>挿入の基本原則</h3>
+<p>TensorMap挿入は以下の基本原則に基づいて行われる：</p>
+<h4>原則1: 型コンストラクタ内のスカラー型に対する演算への挿入</h4>
+<p>型コンストラクタ（リスト<code>[a]</code>，タプル<code>(a, b)</code>など）の内側にスカラー型，または<code>Tensor</code>型がインスタンスをもたないクラスの制約が付いた型変数がある場合，その型に対する演算には常に<code>tensorMap</code>または<code>tensorMap2</code>を挿入する．</p>
+<p>たとえば，<code>xs: [a]</code>という型をもつ変数<code>xs</code>から取り出された要素<code>x</code>に対して，スカラー型を期待する演算<code>(+)</code>を適用する場合，<code>tensorMap2 (+)</code>という形式に変換される．</p>
+<h4>原則2: スカラーに対するtensorMapの動作</h4>
+<p><code>tensorMap</code>と<code>tensorMap2</code>は，スカラー値に対してもそのまま適用できるように実装されている：</p>
+<ul>
+<li><code>tensorMap f scalar</code> は <code>f scalar</code> を返す（テンソルでない場合は恒等的に動作）
+</li>
+<li><code>tensorMap2 f s1 s2</code> は <code>f s1 s2</code> を返す
+</li>
+</ul>
+<p>この性質により，実行時に引数がスカラーかテンソルかを判定する条件分岐を挿入する必要がなくなり，実装が大幅に簡略化される．</p>
+<h3><span class="heading-number">12.16.4</span>イータ展開された型クラスメソッドの処理</h3>
+<p>高階関数に渡された関数のイータ展開そのもの（挿入条件と例）は<a class="reference" href="tensor.html#ref-tensor-hof">12.10.5</a>節で解説した． 本節では，型クラスメソッドが関わる場合の実装上の処理を補足する．</p>
+<p>型クラスメソッドは，TensorMap挿入の段階ではまだイータ展開された形式で現れる． たとえば，<code>(+)</code>演算子は以下のような形式になっている：</p>
+<pre class="listing"><code class="language-egison">\etaVar1 etaVar2 -&gt; dict_AddSemigroup_(&quot;plus&quot;) etaVar1 etaVar2</code></pre>
+<p>この2引数ラムダ式の本体が2引数関数適用である場合，本体全体を<code>tensorMap2</code>でラップする：</p>
+<pre class="listing"><code class="language-egison">\etaVar1 etaVar2 -&gt; tensorMap2 (\x y -&gt; dict_AddSemigroup_(&quot;plus&quot;) x y) etaVar1 etaVar2</code></pre>
+<p>この変換により，型クラスメソッドに対してもtensorMap挿入が正しく適用される．</p>
+<h3><span class="heading-number">12.16.5</span>具体例: sum関数</h3>
+<p>多相的な<code>sum</code>関数の変換過程を追うことで，TensorMap挿入の仕組みをより具体的に理解できる．</p>
+<h4>元の定義</h4>
+<pre class="listing"><code class="language-egison">def sum {AddMonoid a} (xs: [a]) : a := foldl (+) zero xs</code></pre>
+<p>この関数は，型クラス制約<code>{AddMonoid a}</code>をもつ多相的な型<code>[a] -&gt; a</code>をもつ．</p>
+<h4>Phase 5-6: 型推論後</h4>
+<p>型推論により，型変数<code>a</code>が具体的な型（たとえば<code>t0</code>）にインスタンス化される：</p>
+<pre class="listing"><code class="language-egison">def sum : {AddMonoid t0} [t0] -&gt; t0 :=
+  \xs -&gt;
+    foldl ((+) : {AddSemigroup t0} t0 -&gt; t0 -&gt; t0) (zero : {AddMonoid t0} t0) (xs : [t0])</code></pre>
+<p>ここで，<code>xs</code>の型は<code>[t0]</code>であり，型コンストラクタ<code>[]</code>の内側に型クラス制約付き型変数<code>t0</code>が存在する． また，<code>(+)</code>の型は<code>{AddSemigroup t0} t0 -&gt; t0 -&gt; t0</code>であり，スカラー型を引数にとる二項関数である．</p>
+<h4>Phase 8-1: TensorMap挿入後</h4>
+<p><code>(+)</code>は二項関数であり，両方のパラメータがスカラー型（<code>t0</code>）であるため，<code>tensorMap2</code>でラップされる：</p>
+<pre class="listing"><code class="language-egison">def sum : {AddMonoid t0} [t0] -&gt; t0 :=
+  \xs -&gt;
+    foldl (tensorMap2 (+)) zero xs</code></pre>
+<p>この時点で，<code>xs</code>の要素がテンソルである場合でも，<code>tensorMap2</code>により要素ごとの加算が正しく実行されるようになる．</p>
+<h4>Phase 8-2: 型クラス展開後</h4>
+<p>型クラスメソッド<code>(+)</code>が辞書引きの形式に展開される：</p>
+<pre class="listing"><code class="language-egison">def sum : {AddMonoid t0} [t0] -&gt; t0 :=
+  \dict_AddMonoid xs -&gt;
+    foldl (tensorMap2 (dict_AddMonoid_(&quot;plus&quot;))) (dict_AddMonoid_(&quot;zero&quot;)) xs</code></pre>
+<p>ここで，<code>dict_AddMonoid</code>は<code>AddMonoid t0</code>インスタンスのメソッド辞書である． スーパークラスの関係により，<code>AddMonoid</code>の辞書は自身のメソッド（<code>zero</code>）と継承された<code>AddSemigroup</code>のメソッド（<code>+</code>）の両方を含む．</p>
+<h4>実行時の動作</h4>
+<p>この変換により，<code>sum</code>関数はスカラーとテンソルの両方に対して正しく動作する：</p>
+<h5>スカラーの場合 (<code>t0 = Integer</code>):</h5>
+<pre class="listing"><code class="language-egison">sum [1, 2, 3]
+-- foldl1 (tensorMap2 (+)) [1, 2, 3]
+-- tensorMap2 (+) 1 2  --&gt;  (+) 1 2  --&gt;  3
+-- tensorMap2 (+) 3 3  --&gt;  (+) 3 3  --&gt;  6
+-- Result: 6</code></pre>
+<p>スカラーに対しては，<code>tensorMap2</code>が恒等的に動作するため，通常の加算が行われる．</p>
+<h5>テンソルの場合 (<code>t0 = Tensor Integer</code>):</h5>
+<pre class="listing"><code class="language-egison">sum [[| 1, 2 |], [| 3, 4 |]]
+-- foldl1 (tensorMap2 (+)) [[| 1, 2 |], [| 3, 4 |]]
+-- tensorMap2 (+) [| 1, 2 |] [| 3, 4 |]  --&gt;  [| 1+3, 2+4 |]  --&gt;  [| 4, 6 |]
+-- Result: [| 4, 6 |]</code></pre>
+<p>テンソルに対しては，<code>tensorMap2</code>が要素ごとに加算を適用する．</p>
+<h5>混合ケース:</h5>
+<pre class="listing"><code class="language-egison">sum [[| 1, 2 |], 3]
+-- tensorMap2 (+) [| 1, 2 |] 3  --&gt;  tensorMap (\x -&gt; x + 3) [| 1, 2 |]
+--                                --&gt;  [| 1+3, 2+3 |]  --&gt;  [| 4, 5 |]
+-- Result: [| 4, 5 |]</code></pre>
+<p>一方がテンソル，もう一方がスカラーの場合でも，<code>tensorMap2</code>が適切に処理する．</p>
+<h3><span class="heading-number">12.16.6</span>まとめ</h3>
+<p>TensorMap挿入の仕組みにより，Egisonでは以下が実現されている：</p>
+<ul>
+<li>ユーザーは型クラス制約を使って多相的な関数を定義するだけで，テンソル演算が自動的にサポートされる．
+</li>
+<li>コンパイラが型情報をもとに<code>tensorMap</code>/<code>tensorMap2</code>を自動挿入するため，ユーザーが明示的に記述する必要がない．
+</li>
+<li>実行時の型に応じて，スカラー演算とテンソル演算が自動的に切り替わる．
+</li>
+<li>高階関数（<code>foldl</code>，<code>map</code>など）に渡される関数引数に対しても，自動的に適切な変換が適用される．
+</li>
+</ul>
+<p>この設計により，Egisonの数式処理システムは，スカラーとテンソルを統一的に扱うことができ，かつユーザーにとって直感的で使いやすいインターフェースを提供している．</p>
+<h3><span class="heading-number">12.16.7</span>挿入の性質（保証）</h3>
+<p><span id="ref-tensor-guarantees" class="anchor"></span></p>
+<p>型主導の<code>tensorMap</code>挿入は，以下の性質をもつように設計されている．</p>
+<ul>
+<li><strong>保守性</strong>: テンソルを使わないプログラムは，挿入によって一切変化しない．
+<p>スカラーだけのプログラムの意味は，挿入機構の導入前とまったく同じである．</p>
+</li>
+<li><strong>決定性</strong>: どこに<code>tensorMap</code>が挿入されるかは，関数の主型（principal type）だけから一意に決まる．
+<p>型注釈は挿入の制御のためには不要であり，推論された型が同じなら挿入結果も同じである．</p>
+</li>
+<li><strong>多引数の合流性</strong>: <code>tensorMap2</code>や入れ子の<code>tensorMap</code>による多引数のリフトは，
+<p>どの引数から処理しても同じ結果になる（入れ子の順序に意味の差がない）．</p>
+</li>
+<li><strong><code>Tensor</code>型のべき等性</strong>: 型のレベルでは<code>Tensor (Tensor a)</code>は<code>Tensor a</code>と同一視される．
+<p>これはEgisonのテンソルが「平坦な多次元配列+添字リスト」であり，テンソルのテンソルという入れ子構造が 値のレベルに存在しないことに対応している．</p>
+</li>
+</ul>
+<p>これらの性質は，型保存や型安全性とあわせて，Egisonの型付きテンソル計算の理論として定理の形で整備されている．</p>
+  </main>
+  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+</body>
+</html>

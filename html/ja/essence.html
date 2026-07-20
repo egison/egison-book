@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>パターンマッチ指向プログラミングの効果 — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="pmo.html">← 前へ</a><a rel="next" href="mechanism.html">次へ →</a><a class="language" href="../en/essence.html">English</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">4</span>パターンマッチ指向プログラミングの効果</h1>
+<p><span id="ref-essence" class="anchor"></span></p>
+<p>本章の目的は，パターンマッチ指向プログラミングがどのような場面でどのように役に立つか明確にすることである． 前章までの例は，すべて単一の<code>matchAll</code>や<code>match</code>で記述した例ばかりを紹介してきたが，本章ではより大きなプログラムの記述の中でEgisonのパターンマッチがどのような役割を果たすのかみていく．</p>
+<h2><span class="heading-number">4.1</span>SATソルバーの実装</h2>
+<p><span id="ref-essence-sat" class="anchor"></span></p>
+<p>ある程度大きなプログラムを書く中で，パターンマッチ指向プログラミングの効果をみるために，SATソルバーを実装する． SATソルバーは，与えられた命題論理式が真になる論理変数の割り当てが存在するかどうか判定するプログラムである． SATソルバーが入力にとる論理式は，連言標準形（<em>conjunctive normal form</em>）であることが多い． 論理式が連言標準形であるとは，論理式がリテラル（<em>literal</em>）の選言からなる節の連言になっていることをいう． リテラルとは，<span class="math-inline">\(p\)</span>または<span class="math-inline">\(\neg p\)</span>という形をした論理式のことをいう． たとえば，<span class="math-inline">\((p \lor q) \wedge (\neg p \lor r) \wedge (\neg p \lor \neg r)\)</span>は，<span class="math-inline">\(p = \texttt{False}\)</span>，<span class="math-inline">\(q = \texttt{True}\)</span>，<span class="math-inline">\(r = \texttt{True}\)</span>という割り当てをすれば真になる連言標準形の論理式である．</p>
+<h3><span class="heading-number">4.1.1</span>Davis-Putnamアルゴリズム</h3>
+<p>ここではDavis-Putnamアルゴリズム[<a href="bibliography.html#cite-harrison2009handbook">3</a>]という，SAT問題を解くアルゴリズムのなかでもシンプルなアルゴリズムを実装する． 本節の実装では，連言標準形の命題論理式をリテラルのコレクションのコレクションとして表現する． <span class="math-inline">\(\wedge\)</span>と<span class="math-inline">\(\lor\)</span>は可換な演算子であるため，このコレクションのコレクションは，リテラルの多重集合の多重集合としてパターンマッチできる． さらに，リテラルを整数として表現し，<span class="math-inline">\(p\)</span>の形のリテラルは正整数，<span class="math-inline">\(\neg p\)</span>の形のリテラルは<span class="math-inline">\(p\)</span>に対応する正整数の<span class="math-inline">\(-1\)</span>倍の負整数となるようにする．</p>
+<p>そうすると，これらの論理式に対するマッチャーは<code>multiset (multiset integer)</code>と定義できる． 以下のプログラムは，Davis-Putnamアルゴリズムの核の実装である． <code>dp</code>関数は，論理変数のリストと論理式を引数にとり，解がある場合は<code>True</code>を，そうでない場合は<code>False</code>を返す． 型注釈により，<code>dp</code>関数が整数のリスト（論理変数）と整数のリストのリスト（論理式）を受け取り，<code>Bool</code>を返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def dp (vars: [Integer]) (cnf: [[Integer]]) : Bool :=
+  match (vars, cnf) as (multiset integer, multiset (multiset integer)) with
+  | (_, []) -&gt; True
+  | (_, [] :: _) -&gt; False
+  -- 1-literal rule
+  | (_, ($l :: []) :: _) -&gt; dp (delete (abs l) vars) (assignTrue l cnf)
+  -- pure literal rule (positive)
+  | ($v :: $vs, !((#(neg v) :: _) :: _)) -&gt; dp vs (assignTrue v cnf)
+  -- pure literal rule (negative)
+  | ($v :: $vs, !((#v :: _) :: _)) -&gt; dp vs (assignTrue (neg v) cnf)
+  -- otherwise
+  | ($v :: $vs, _) -&gt;
+    dp vs
+       ((resolveOn v cnf) ++ (deleteClausesWith v (deleteClausesWith (neg v) cnf)))</code></pre>
+<p>1つ目のマッチ節（3行目）は，入力された論理式が空だった場合，解を持つことを表現している． 2つ目のマッチ節（4行目）は，入力された論理式が空節を含んでいた場合，解が存在しないことを表現している． 3つ目のマッチ節（6行目）は，1-リテラル・ルール（<em>1-literal rule</em>）というルールを表現している． 入力の論理式が1つのリテラルからなる節を持つとき，そのリテラルが<code>True</code>になる割り当てを即座にできる． 4つ目のマッチ節（8行目）は，ある論理変数の否定がリテラルとして全く現れない場合，その論理変数に即座に<code>True</code>を割り当てることができることを表現している． たとえば，<span class="math-inline">\((p \lor q) \wedge (\neg p \lor r) \wedge (\neg p \lor \neg r)\)</span>は論理変数<span class="math-inline">\(q\)</span>の否定を含まないため，<span class="math-inline">\(q\)</span>に<code>True</code>を割り当てることができる． 5つ目のマッチ節（10行目）は，4つ目のマッチ節と逆のことを表現している． このマッチ節は，ある論理変数の否定のみが入力の論理式に含まれる場合，その論理変数に<code>False</code>を割り当てることができることを表現している． 最後のマッチ節（12-14行目）は導出原理（<em>resolution principle</em>）を適用している． このマッチ節は，<span class="math-inline">\(p \lor C\)</span>と<span class="math-inline">\(\neg p \lor D\)</span>という形のすべての節のペアを列挙し（<span class="math-inline">\(C\)</span>と<span class="math-inline">\(D\)</span>はリテラルの選言とする），<span class="math-inline">\(C \lor D\)</span>という形の節を生成する．</p>
+<p>上記の<code>dp</code>の定義は，入力の論理式を簡約するためのすべてのルールを多重集合に対するパターンマッチをいかして記述している． 同様のことをするために，伝統的な関数型プログラミングでは，複数のライブラリ関数を組み合わせたり，補助関数を定義する必要がある． Davis-PutnamアルゴリズムのOCamlによる実装は[<a href="bibliography.html#cite-harrison2009handbook">3</a>]でみることができる．</p>
+<h3><span class="heading-number">4.1.2</span>導出原理</h3>
+<p>本節は，<code>resolveOn</code>関数の実装を紹介する． まずは，ナイーブな実装を紹介するところからはじめる． <code>resolveOn</code>関数は，<code>matchAll</code>式を使って以下のように定義できる． 型注釈により，<code>resolveOn</code>関数が整数<code>v</code>と論理式<code>cnf</code>を受け取り，導出された節のリストを返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def resolveOn (v: Integer) (cnf: [[Integer]]) : [[Integer]] := matchAll cnf as multiset (multiset integer) with
+| (#v :: $xs) :: (#(negate v) :: $ys) :: _ -&gt; unique (filter (\c -&gt; not (tautology c)) (xs ++ ys))</code></pre>
+<p><span class="math-inline">\(p \lor C\)</span>と<span class="math-inline">\(\neg p \lor D\)</span>の形の節のペアを列挙するパターンは，多重集合の多重集合に対するパターンマッチにより記述できる． ただし，これだけでは，<span class="math-inline">\(C \lor D\)</span>がトートロジーな節である場合（<span class="math-inline">\(C\)</span>がリテラル<span class="math-inline">\(q\)</span>を含みかつ<span class="math-inline">\(D\)</span>がリテラル<span class="math-inline">\(\neg q\)</span>を含む場合そうなる）にもマッチしてしまう． そのために，<code>filter</code>関数と<code>tautology</code>関数を使って，そのような節を取り除いている． シーケンシャル・notパターン（第<a class="reference" href="pmo.html#ref-pmo">3</a>章<a class="reference" href="pmo.html#ref-pmo-tuple">3.3</a>節）を使って<code>resolveOn</code>関数を定義すると，パターンにそのような操作を取り込める．</p>
+<pre class="listing"><code class="language-egison">def resolveOn (v: Integer) (cnf: [[Integer]]) : [[Integer]] :=
+  matchAll cnf as multiset (multiset integer) with
+  | {(#v :: (@ &amp; $xs)) :: (#(neg v) :: (@ &amp; $ys)) :: _,
+     !($l :: _, #(neg l) :: _)}
+    -&gt;  unique (xs ++ ys)</code></pre>
+<h2><span class="heading-number">4.2</span>2種類のループの分離</h2>
+<p><span id="ref-essence-pmo" class="anchor"></span></p>
+<p><a class="reference" href="essence.html#ref-essence-sat">4.1</a>節で実装したSATソルバーは，パターンマッチ指向プログラミングによって取りのぞけないループを含んでいた． そのループとは，<code>dp</code>関数の再帰である． この再帰は，SAT問題を解くための探索空間を狭めるために本質的なループである． この探索空間の縮小は，単純なバックトラッキング・アルゴリズムでは不可能なものである． たいして，その他のバックトラッキングにより実装できるループはすべてパターンの中に押し込められている． 伝統的な関数型プログラミングでは，これら2種類のループのどちらも再帰を使って記述する必要があった． パターンマッチ指向プログラミングは，バックトラッキングにより実装できるループをパターンに閉じ込めることにより，時間的計算量を減らすための本質的なループのみの記述にプログラマが注力できるようにする． これにより，プログラムの記述しやすさ・読解しやすさが向上する．</p>
+  </main>
+  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+</body>
+</html>

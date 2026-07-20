@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>Egison開発の目標と方針 — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="diffgeo.html">← 前へ</a><a rel="next" href="problem.html">次へ →</a><a class="language" href="../en/direction.html">English</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">15</span>Egison開発の目標と方針</h1>
+<p><span id="ref-direction" class="anchor"></span></p>
+<p>本章では，今後のEgison開発についてどのようなことを考えているのか，「処理系の開発」・「アプリケーションの提示」・「Egisonの先にある研究」と三つのテーマにわけて紹介する．</p>
+<h2><span class="heading-number">15.1</span>処理系の開発</h2>
+<p><span id="ref-direction-language" class="anchor"></span></p>
+<p>Egison処理系の開発については，</p>
+<ol>
+<li>独立したプログラミング言語としてのEgison処理系の開発
+</li>
+<li>Egisonの機能の他言語への移植
+</li>
+</ol>
+<p>の2つを進めている． <a class="reference" href="direction.html#ref-direction-language-egison">15.1.1</a>節で，Egison本体の実装について，<a class="reference" href="direction.html#ref-direction-language-library">15.1.2</a>節で多言語への移植について述べる．</p>
+<h3><span class="heading-number">15.1.1</span>Egison本体</h3>
+<p><span id="ref-direction-language-egison" class="anchor"></span></p>
+<p>Egison本体には，Egisonコミュニティで発明された言語機能をフルに実装されている． 言語機能は豊富であるが，実行速度に関してはあまり気にせず実装されており，インタプリタ実装しかもたない． これは，新しい言語機能をスムーズに実装できるようにするためである． インタプリタはHaskellで実装されている．</p>
+<h4>独自の新機能の追求</h4>
+<p><span id="ref-direction-language-egison-new" class="anchor"></span></p>
+<p>プログラミング言語に今まで実装されたことがない新しい機能をEgisonに実装し動いたときが，Egison開発で一番楽しい瞬間である． 新しい言語機能のアイデアは実際に現実的な問題について手を動かしてプログラムを書いているときに生まれる． ループ・パターンや，シーケンシャル・パターン，テンソルの対称性の宣言，関数シンボルなどの機能はそのようにして生まれた． 今後もどんどん新しい言語機能を発案・実装していきたいと考えている．</p>
+<h4>静的型システムやコンパイラの実装</h4>
+<p><span id="ref-direction-language-egison-existing" class="anchor"></span></p>
+<p>静的型システムやコンパイラのような既存の言語機能をEgisonに組み込むことも重要な課題である． 既存の言語機能をEgisonに組み込むためには，新しい工夫が必要になることが多い． たとえば，静的型システムをEgisonに組み込むには，パターンやマッチャーについて適切な型規則を設計する必要がある．</p>
+<p>Egisonに静的型システムを導入する研究は進んでおり，河田旺さんによるTyped Egison&nbsp;[<a href="bibliography.html#cite-typedEgison">6</a>]とFormalized Egison&nbsp;[<a href="bibliography.html#cite-formalizedEgison">7</a>]がある． Typed Egisonは，Egisonインタプリタからパターンマッチに関する最小限の機能を切り出し，静的型システムを実装したものである． Typed EgisonはEgison version 3をベースにしている． Formalized Egisonは，Typed Egisonの型安全性を証明するためにCoqで実装されたインタプリタである． Egison本体に静的型システムを導入するには，比較的大きな手間がかかるため，まだ着手されていない． Egison Version 5の課題である．</p>
+<p>Egisonパターンマッチをコンパイル手法についても研究は進んでいる． 2020年3月に小川広水さんによってEgisonパターンマッチをバックトラッキング・モナドを使ったHaskellプログラムに変換する手法が発案され，Sweet Egison[<a href="bibliography.html#cite-sweetEgison">8</a>]というHaskellライブラリとして実装された． ただ，Egison本体については，新機能をすばやく実装できるproof of conceptのプログラミング言語ということもあり，コンパイラを実装することはまだ先になりそうである．</p>
+<aside class="callout">
+<h5>Egison Version 4のリリース</h5>
+<p>2020年4月にリリースしたEgison version 4から，多くのユーザーにとって馴染みやすいように文法を一新した． Egison Version 4の新しい文法は中置記法（<code>:=</code>，<code>++</code>，<code>::</code>，<code>+</code>など）をサポートしたおかげで，必要な括弧の数が種類も減っており，視認性が高まっている． 以下は，素数の無限リストから双子素数を抽出するパターンマッチを記述したプログラムをEgison version 3とEgison version 4で書きくらべたものである．</p>
+<pre class="listing"><code class="language-egison">(define $twin-primes
+  (match-all primes (list integer)
+    [&lt;join _ &lt;cons $p &lt;cons ,(+ p 2) _&gt;&gt;&gt; [p (+ p 2)]]))
+
+(take 5 twin-primes) ; =&gt; {[3 5] [5 7] [11 13] [17 19] [29 31]}</code></pre>
+<pre class="listing"><code class="language-egison">def twinPrimes :=
+  matchAll primes as list integer with
+    | _ ++ $p :: #(p + 2) :: _ -&gt; (p, p + 2)
+
+take 5 twinPrimes -- =&gt; [(3, 5), (5, 7), (11, 13), (17, 19), (29, 31)]</code></pre>
+<p>新文法の親しみやすさは，特に数式を書いたときに発揮される． リーマン曲率テンソルの公式という微分幾何で有名な公式をEgison version 3とEgison version 4で書きくらべてみる． リーマン曲率テンソルの公式は以下のような数式では表現される．</p>
+<div class="math-display">\[R^{i}_{\;jkl} = \frac{\partial \Gamma^{i}_{\;jl}}{\partial x^k} - \frac{\partial \Gamma^{i}_{\;jk}}{\partial x^l} + \Gamma^{m}_{\;jl} \Gamma^{i}_{\;mk} - \Gamma^{m}_{\;jk} \Gamma^{i}_{\;ml}\]</div>
+<p>数式の記述には中置記法が多用されるため，中置記法をサポートした新文法のほうが数式に近い記述になる． 以下は，実際にリーマン曲率テンソルの公式をEgison version 3とEgison version 4で書きくらべたものである．</p>
+<pre class="listing"><code class="language-egison">(define $R~i_j_k_l
+  (with-symbols {m}
+    (+ (- (`$\partial$`/`$\partial$` `$\Gamma$`~i_j_l x~k) (`$\partial$`/`$\partial$` `$\Gamma$`~i_j_k x~l))
+       (- (. `$\Gamma$`~m_j_l `$\Gamma$`~i_m_k) (. `$\Gamma$`~m_j_k `$\Gamma$`~i_m_l)))))</code></pre>
+<pre class="listing"><code class="language-egison">def R~i_j_k_l := withSymbols [m]
+  `$\partial$`/`$\partial$` `$\Gamma$`~i_j_l x~k - `$\partial$`/`$\partial$` `$\Gamma$`~i_j_k x~l + `$\Gamma$`~m_j_l . `$\Gamma$`~i_m_k - `$\Gamma$`~m_j_k . `$\Gamma$`~i_m_l</code></pre>
+</aside>
+<h3><span class="heading-number">15.1.2</span>他のプログラミングへのEgison言語機能の移植</h3>
+<p><span id="ref-direction-language-library" class="anchor"></span></p>
+<p>2019年からは既存のメジャーなプログラミング言語にEgisonの機能を実装することもはじまった． Egisonの言語機能を既存プログラミング言語へ移植することには，</p>
+<ol>
+<li>移植先のプログラミング言語のユーザーが気軽にEgisonの機能を試すことができるようになる．
+</li>
+<li>移植先のプログラミング言語の処理系で実行されるために，ナイーブな実装のEgison本体よりも，プログラムの実行速度が格段に高速になる．
+</li>
+</ol>
+<p>というメリットがある． ただし，<a class="reference" href="direction.html#ref-direction-language-egison">15.1.1</a>で述べたとおり，既存言語にEgisonの言語機能を移植するためには，既存言語の他の機能との兼ね合わせを考慮する必要があるために，すべての機能が移植できないことがある． たとえば，現在のところ，ループ・パターンの移植はまだできていない． また，既存言語の仕様や実装に詳しくなる必要があるために，これらのメリットを享受するためには比較的大きな開発コストがかかるというデメリットもある． そのため，Egison本体も並行して開発されている．</p>
+<h4>EgisonパターンマッチのSchemeライブラリ実装（実装済み）</h4>
+<p><span id="ref-direction-language-scheme" class="anchor"></span></p>
+<p>2018年12月にSchemeという言語自体がシンプルでかつ強力なメタプログラミング機能（言語を拡張するための言語機能）をもつ関数型プログラミング言語にEgisonのパターンマッチを提供するライブラリを実装した． 言語の拡張機能（メタプログラミングのための機能）が強力でかつ言語仕様が簡潔な言語をほど，言語機能の移植が進めやすい． そのため，最初の移植先言語として，Schemeが選ばれた． このライブラリの実装については論文を執筆してScheme Workshop 2019で発表した． このライブラリ実装はScheme処理系によってコンパイルされるために，Egisonのパターンマッチを使ったプログラムを，Egison処理系よりも50倍近く高速に実行できる． Scheme処理系にはGaucheを選んだ． Deep embeddingと呼ばれる手法を用いて，このライブラリは実装されている．</p>
+<h4>EgisonパターンマッチのHaskellライブラリ実装その1（miniEgisonとして実装済み）</h4>
+<p><span id="ref-direction-language-haskell1" class="anchor"></span></p>
+<p>上記のEgisonパターンマッチのScheme移植が完成した直後から，同様の手法でEgisonパターンマッチをHaskellに移植するためのHaskellライブラリの開発を開始した． Schemeが動的型付けプログラミング言語であるのにしたいして，Haskellは静的型システムをもつ言語であり，型システムを意識した移植の手法を考える必要があることが実装の難所だった． この実装は2019年9月頃に完成した．</p>
+<h4>EgisonパターンマッチのHaskellライブラリ実装その2（Sweet Egisonとして実装済み）</h4>
+<p><span id="ref-direction-language-haskell2" class="anchor"></span></p>
+<p>miniEgisonには，miniEgisonを使って書いたプログラムと同等のプログラムをHaskellで通常の関数型プログラミングスタイルで書いたプログラムをくらべたときにminiEgisonによるプログラムのほうが数倍遅いという問題があった． この問題を解決するために，shallow embeddingという手法で，Sweet EgisonというHaskellライブラリを2020年3月から新しく実装しなおした． Sweet Egisonは，Egisonパターンマッチを使って記述されたプログラムを，同等の意味の関数型プログラミングスタイルで記述されたプログラムに変換して実行する． そのため，Egisonパターンマッチを用いた簡潔なプログラムの記述と通常のHaskellプログラムと同等の実行速度を併せ持つ．</p>
+<h4>EgisonパターンマッチをGHC拡張として実装（未実装）</h4>
+<p><span id="ref-direction-language-ghc" class="anchor"></span></p>
+<p>ライブラリによりDSLとして言語機能を実装すると，冗長な記述をしないといけない箇所がでてくることが多い， Egisonパターンマッチを実装したHaskellライブラリであるminiEgisonやSweet Egisonにもこの問題があり，マッチ節やマッチャー定義の記述に少し冗長な記述が必要になる箇所がある． この問題を解決するには，Haskellの標準的なコンパイラであるGHCを直接編集して組み込みの構文として言語機能を実装すればよい． 今後，GHCを直接拡張してEgisonのパターンマッチを実装する試みをする予定である． ただ実装するだけでなく，GHCに取り込まれるためにはGHCコミュニティとコミュニケーションをとる必要がある． GHCに新機能を提案するための仕組みとしてGHC Proposalというものがある． ある程度実装がすすんだらドキュメントをまとめてそこで提案したい．</p>
+<h4>システム・プログラミング言語Rust（未実装）</h4>
+<p><span id="ref-direction-language-rust" class="anchor"></span></p>
+<p>ユーザーがメモリの管理を操作できるプログラミング言語へのEgisonパターンマッチの実装は面白い課題である． 現在のところ，以下のような疑問をもっている．</p>
+<ul>
+<li>メモリを効率的に操作することにより，効率的なパターンマッチ機能が実装できるか？
+</li>
+<li>メモリを効率的に操作するために，パターンマッチ機能を制限する必要があるか？
+</li>
+<li>パターンマッチ機能を制限したとして応用はあるか？
+</li>
+</ul>
+<p>メタプログラミング機能が豊富といわれるRustへの実装を考えている．</p>
+<h2><span class="heading-number">15.2</span>アプリケーションの提示・開発</h2>
+<p><span id="ref-application" class="anchor"></span></p>
+<p>Egisonの提供する言語機能のアプリケーションは，多くのプログラマにとって自明ではない． Egisonの応用例を提示・開発することは，世のプログラマにEgisonが実用に役に立つことに納得してもらい，さらに新しい応用例を考えてもらうために重要である．</p>
+<h3><span class="heading-number">15.2.1</span>アルゴリズムの実装（SATソルバー）</h3>
+<p>さまざまなアルゴリズムをEgisonで実装してみることは，Egisonの機能が役に立つ場面が明確になったり，新しい機能の発明につながることが多い． 第<a class="reference" href="essence.html#ref-essence">4</a>章でSATソルバーのアルゴリズムの1つであるDavis-Putnamアルゴリズムの実装を紹介したが，より複雑であるが効率的なCDCLアルゴリズムもEgisonで実装している． より効率的なアルゴリズムを実装しようとするとメモリの使い方まで管理したくなり，<a class="reference" href="direction.html#ref-direction-language-library">15.1.2</a>節で言及したように，Rustのようなシステム・プログラミング言語でEgisonのパターンマッチを使いたいニーズも生まれる．</p>
+<h3><span class="heading-number">15.2.2</span>数式処理システム</h3>
+<p>本書の第<a class="reference" href="cas.html#ref-part-cas">II</a>部で紹介した数式処理システムは，Egisonパターンマッチの重要な応用である． 数式に対するパターンマッチ・エンジンが簡潔に実装できるために，数式処理システムを少ない手間で実装することができた． そのために，数式処理システムの拡張も簡単で，テンソルの添字記法のサポートや関数シンボルなど新しい機能の実装を簡単に実験できた．</p>
+<h3><span class="heading-number">15.2.3</span>Egisonのパターンマッチを応用した定理証明記述言語</h3>
+<p>将来はコンピュータ上で数学の証明は記述し検査されるようになる． 現在これがされていないのは，コンピュータ上で数学の証明を紙の上のように簡潔に表現できないためである． Egisonはプログラミング言語としてアルゴリズムの表現を簡潔にする機能を開発したが，同様に証明の記述を簡潔にすることもできるはずである． たとえば，Egisonのパターンマッチは証明のための条件分岐を記述するために役に立つはずである． そのような考えをもとに，Egisonのパターンマッチをもつ証明支援システムを設計している[<a href="bibliography.html#cite-egi2020pattern">9</a>]．</p>
+<h3><span class="heading-number">15.2.4</span>クエリ言語（パターンマッチの応用）</h3>
+<p>Egisonのパターンマッチはさまざまな種類のデータベースのクエリ言語として使うことができる． 例として，ソーシャルネットワークを管理するデータベースに対して，ユーザー名<code>&quot;Egison_Lang&quot;</code>のユーザからフォローされているが，このユーザをフォローし返していないユーザ一覧を取得するクエリを考える． このクエリは，<code>matchAll</code>式を使って記述できる． リレーショナル・データベースのテーブルを集合として，パターンマッチしている．</p>
+<pre class="listing"><code class="language-egison">matchAll (users, follows, users) as (set user, set follow, set user) with
+  ((and (Name #&quot;Egison_Lang&quot;) (ID $uid)) : _,
+   (and (FromID #uid) (ToID $fid)) : !((and (FromID #fid) (ToID #uid)) : _),
+   (and (ID #fid) (Name $fname)) : _) -&gt; (fid, fname)</code></pre>
+<p>この<code>matchAll</code>式は，ユーザテーブル（<code>users</code>）と，フォローテーブル（<code>follows</code>），ユーザテーブルのタプルに対してパターンマッチする． それぞれのテーブルは集合としてパターンマッチされる． 2行目はユーザテーブルに対するパターンマッチを記述している． <code>Name</code>と<code>ID</code>は，それぞれのレコードのフィールドの値を取得するためのパターン・コンストラクタである． 2行目のユーザテーブルに対するパターンは，ユーザ名が<code>&quot;Egison_Lang&quot;</code>であるユーザのIDをパターン変数<code>$uid</code>に束縛する． 3行目はフォローテーブルに対するパターンマッチを記述している． <code>FromID</code>と<code>ToID</code>は，フォロワーとフォロイーを取得するためのパターン・コンストラクタである． <code>FromID</code>のユーザが<code>ToID</code>のユーザをフォローしている． ユーザID<code>uid</code>のユーザをフォロー返ししていないユーザはnotパターンを使ってパターンマッチされている． 4行目はユーザID<code>fid</code>のユーザの名前を取得するために，ユーザテーブルのパターンマッチをしている． 結果として，タプル<code>(fid, fname)</code>を返している．</p>
+<p>Egisonパターンマッチにはクエリの記述が簡潔であるという利点もある． たとえば，上記と同等のクエリをSQLで記述すると複雑になる． 非線形パターンのかわりに<code>WHERE</code>節のなかに条件を記述し，notパターンのかわりにサブクエリを使うためである． パターンマッチ指向によるクエリの記述は左から右に一度で読めるが，SQLのクエリはそのように読むことができない．</p>
+<pre class="listing"><code class="language-egison">SELECT DISTINCT ON (user.name) user.name
+  FROM user AS user1, follow AS follow1, user AS user2
+  WHERE user1.name = &#x27;Egison_Lang&#x27; AND follow1.from_id = user1.id AND user2.id = follow1.to_id
+    AND NOT EXISTS
+      (SELECT &#x27;&#x27; FROM follow AS follow2
+         WHERE follow2.from_id = follow1.to_id AND follow2.to_id = user1.id)</code></pre>
+<h3><span class="heading-number">15.2.5</span>機械学習（テンソル添字記法の応用）</h3>
+<p>テンソルを扱う機械学習のアルゴリズムは，添字記法を使って簡潔に表現できる． その例として，Egisonによるニューラル・ネットワークの実装を考えている． ニューラル・ネットワークの実装には下記のような数式が現れる． <span class="math-inline">\(x_i\)</span>は前の層から現在の層への入力，<span class="math-inline">\(y_j\)</span>は現在の層から次の層への出力，<span class="math-inline">\(w^{\;i}_{j}\)</span>は重み，<span class="math-inline">\(b_j\)</span>はバイアスを表す．</p>
+<div class="math-display">\[y_j = w^{\;i}_j x_i + b_j\]</div>
+<p><span class="math-inline">\(1\)</span>階のテンソルであるベクトルや<span class="math-inline">\(2\)</span>階のテンソルである行列までしか登場しないニューラル・ネットワークのアルゴリズムの場合，微分幾何の計算にくらべると添字記法の恩恵は薄れるが，行列の転置のミスなどがなくなるため，添字記法は役に立つ． ニューラル・ネットワークのアルゴリズムには，ステンシル計算や，平均プーリングやマックス・プーリングといったプーリング処理のような数学のテンソル計算では現れない処理が必要になるため，このような処理を表現する方法について研究する必要がある．</p>
+<h2><span class="heading-number">15.3</span>Egisonの先にある研究</h2>
+<p>Egisonを開発している間に考える始めるようになった解決することがむずかしそうな大きな未解決問題を紹介する．</p>
+<h3><span class="heading-number">15.3.1</span>二次元以上のデータの表現</h3>
+<p>改行やインデントを使って，二次元的にプログラムを視覚化することができるが，基本的にプログラムは一次元の文字列データである． プログラムは構文木により内部的にはツリー構造によって表現される． プログラムを表現する文字列は，このツリー構造を深さ優先の順番で並べたものである． そのため，ツリーの形に落とし込めないデータやプログラムの構造は，きれいにプログラムとして表現できない．</p>
+<p>ツリーの形に落とし込めないデータには，たとえばグラフがある． グラフを一次元の文字列に落とし込むと，二次元の紙面の上に図示したグラフとくらべて，どうしても読みにくいものになる． その他にもオセロ盤や碁盤も一次元の文字列に落とすのがむずかしいデータである． オセロの挟むという概念や，碁の囲むという概念は，直感的には簡単な概念であるのにプログラム上で表現するのはむずかしい．</p>
+<p>ツリーの形にきれいに落とし込めないプログラムの構造には，複数の引数をとって複数の結果を返す関数の適用がある． 一般的なプログラムでは，たいていの関数は複数の引数をとるが一つの返り値を返す． そのため，<span class="math-inline">\(f(g(x),h(y))\)</span>のように，ある関数の結果を別の関数の結果にわたすような関数適用のネストがきれいに書ける． 一つの引数をとり，複数の結果を返す関数の適用もツリーの形にきれいに落とし込める． 実はこの構文がパターンマッチである． パターン<code>$x :: $y :: _</code>は一つの引数をとって二つの返り値を返す関数<code>::</code>の適用をネストしたものと考えることができる． 複数の引数をとって複数の結果を返す関数のネストした適用は，これらのようにツリーの形にきれいに落とし込めない．</p>
+<p>複数の引数をとって複数の結果を返す関数が頻出する分野に量子アルゴリズムがある． 量子アルゴリズムの記述のために，量子回路が記述されることが多いが，基本的に量子回路へのqビットの入力と出力は同数である． 量子アルゴリズムの紹介には，量子回路の図が付随することが多いが，この図のほうがプログラムより理解しやすい．</p>
+<p>これらの問題を解決するには，ツリー構造以外を使って内部的にプログラムを表現する，文字列以外を使ってプログラムを記述するなどといった根本的な変化が必要であるようにみえる． プログラムを二次元の図として記述する手法には，ヴィジュアル・プログラミングという分野の手法が知られている． このような視点で新しいプログラミング言語を考えることを面白そうに感じている．</p>
+<h3><span class="heading-number">15.3.2</span>数以外のユーザー定義データ型もシンボリックに処理できる数式処理システム</h3>
+<p>Egisonを含む多くの数式処理システムは，数の計算をシンボリックに扱うことができる． しかし，シンボリックに扱いたい対象は数だけではない． リストや，ツリー，グラフなどもっとさまざまなユーザ定義データ型をシンボリックに扱いたいこともある． Egison上の数式処理システムは数のシンボリックな扱いが組み込みで実装されており，任意のデータ型にシンボリックな計算を拡できるようになっていない． そこで，シンボリックな計算が柔軟にできるもっと一般的な数式処理システムを作れたら面白いと感じている．</p>
+<h3><span class="heading-number">15.3.3</span>複数のプログラミング・スタイルの表現力の差をくらべるための理論</h3>
+<p>ことなるプログラミング・スタイルで記述された複数のプログラムの読みやすさ・書きやすさを客観的にくらべる手法は確立されていない． このような手法がないことは，新しい記法の開発があまり活発でない原因の一つであると考えられる． また，もしこのような手法があればEgisonプログラムの読みやすさ・書きやすさを客観的に示すことができ，Egisonを広めやすくなると考えている． そのようなわけで，あるプログラムの読みやすさ・書きやすさを測る手法について考察している． 本節では，この問題に関する現時点の考えを書く．</p>
+<p>プログラムの読みやすさ・書きやすさとは，プログラムの理解のしやすさと同じである． プログラムの理解のしやすさを定義するには，プログラムを理解するとはどういうことか定義する必要がある． プログラムを理解するとはどういうことか定義できれば，あとはそれにかかる計算量がプログラムの理解のしやすさということになる．</p>
+<p>プログラムの理解には無数の段階がある． たとえば，マージソートを実装したプログラムについて，</p>
+<ul>
+<li>リストを引数にとってリストを返すプログラム
+</li>
+<li>順序に沿って並べ直したリストを返すプログラム
+</li>
+<li>リストの長さを<span class="math-inline">\(n\)</span>としたとき，時間計算量<span class="math-inline">\(n \log(n)\)</span>で結果を返すプログラム
+</li>
+</ul>
+<p>などいろいろな視点から解析し理解できる． これらのプログラムの性質は，プログラムの型として表現でき，型が合っているか検査したり，型を推論できる場合があることが知られている．</p>
+<p>そこで，プログラムの理解のしやすさを計測するために型検査に必要なステップ数を使えるのではと考えている． 新しいプログラミング・スタイルの優位性を示すには，そのプログラミング・スタイルによってある特定のプログラムの性質が示しやすくなることを示す． 実際，計算量のような複雑なプログラムの性質については，Egisonのパターンマッチを用いたプログラムは，通常の関数型のプログラムよりも，少ない手間で検査・推論できそうな直感がある．</p>
+  </main>
+  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+</body>
+</html>

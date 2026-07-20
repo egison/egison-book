@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>Defining Matchers — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="prev" href="mechanism.html">← Previous</a><a rel="next" href="etc.html">Next →</a><a class="language" href="../ja/matcher.html">日本語</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">6</span>Defining Matchers</h1>
+<p><span id="ref-matcher" class="anchor"></span></p>
+<p>This chapter explains how users can define their own matchers.</p>
+<h2><span class="heading-number">6.1</span><code>inductive pattern</code> Declaration</h2>
+<p><span id="ref-matcher-inductive" class="anchor"></span></p>
+<p>When defining a matcher, the pattern constructors that the matcher handles must be declared in advance using an <em>inductive pattern declaration</em>.</p>
+<p>An inductive pattern declaration is a syntax for declaring the types of pattern constructors independently from the definitions of data constructors and matchers. For example, the pattern constructors for the list type <code>[a]</code> are declared as follows.</p>
+<pre class="listing"><code class="language-egison">inductive pattern [a] :=
+  | []
+  | (::) a [a]
+  | (++) [a] [a]</code></pre>
+<p>This declaration states that the pattern constructors <code>[]</code>, <code>::</code>, and <code>++</code> are all pattern constructors targeting the list type <code>[a]</code>. The types following each pattern constructor represent the types of that pattern constructor&#x27;s arguments—that is, the types of the values passed as next targets upon successful pattern matching.</p>
+<p>An important feature of inductive pattern declarations is that a pattern constructor such as <code>::</code> is shared across multiple matchers, including the <code>list</code> matcher, the <code>multiset</code> matcher, and the <code>set</code> matcher. Each matcher implements a different decomposition method for <code>::</code>, but the type of the pattern constructor is managed centrally through the inductive pattern declaration.</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2, 3] as list integer with
+  | $x :: $xs -&gt; (x, xs)
+-- [(1,[2,3])]
+
+matchAll [1, 2, 3] as multiset integer with
+  | $x :: $xs -&gt; (x, xs)
+-- [(1,[2,3]),(2,[1,3]),(3,[1,2])]</code></pre>
+<p>Even with the same pattern <code>$x :: $xs</code>, the meaning (decomposition method) changes depending on which matcher is used.</p>
+<p>The relationship between inductive pattern declarations and matcher definitions is analogous to the relationship between type classes and instance definitions. Just as a type class declaration declares the types of methods and an instance definition provides their concrete implementations, an inductive pattern declaration declares the types of pattern constructors and a matcher definition provides the concrete decomposition methods for those pattern constructors.</p>
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td><strong>Type classes</strong></td><td><strong>Pattern matching</strong></td></tr><tr><td>Type class declaration</td><td>Inductive pattern declaration</td></tr><tr><td>Instance definition</td><td>Matcher definition</td></tr><tr><td>Method name</td><td>Pattern constructor name</td></tr><tr><td>Method type</td><td>Pattern constructor type</td></tr><tr><td>Instance dispatch (static)</td><td>Matcher dispatch (dynamic)</td></tr></tbody></table></div>
+</div>
+<p>However, unlike type class instance selection, which is statically determined at compile time, matcher selection is explicitly specified by the user at runtime in <code>match</code> and <code>matchAll</code> expressions (dynamic selection).</p>
+<h2><span class="heading-number">6.2</span>Basics of Matcher Definitions</h2>
+<p><span id="ref-matcher-basic" class="anchor"></span></p>
+<p>This section explains the basics of matcher definitions by examining the matcher definition for unordered pairs (pairs that ignore the order of elements), one of the simplest non-free data types.</p>
+<p>First, let us confirm the behavior of the <code>unorderedIntegerPair</code> matcher for unordered pairs of integers. Using the <code>pair</code> pattern with <code>unorderedIntegerPair</code>, both orderings of the elements are matched as follows.</p>
+<pre class="listing"><code class="language-egison">matchAll (1, 2) as unorderedIntegerPair with
+| pair $x $y -&gt; (x, y)
+-- [(1,2),(2,1)]</code></pre>
+<p>Thanks to this, pattern matching succeeds even when the first argument of <code>pair</code> is the second element of the target.</p>
+<pre class="listing"><code class="language-egison">matchAll (1, 2) as unorderedIntegerPair with
+| pair #2 $y -&gt; y
+-- [1]</code></pre>
+<p>When the pattern is a pattern variable, the target is bound as is.</p>
+<pre class="listing"><code class="language-egison">matchAll (1, 2) as unorderedIntegerPair with
+| $p -&gt; p
+-- [(1,2)]</code></pre>
+<p>The <code>unorderedIntegerPair</code> matcher that behaves as described above can be defined as follows. First, the <code>pair</code> pattern constructor must be declared with an inductive pattern declaration.</p>
+<pre class="listing"><code class="language-egison">inductive pattern (Integer, Integer) :=
+  | pair Integer Integer</code></pre>
+<p>This declaration states that <code>pair</code> is a pattern constructor targeting the integer pair type <code>(Integer, Integer)</code> and takes two arguments of type <code>Integer</code>. Next, the <code>unorderedIntegerPair</code> matcher is defined as follows, with a type annotation indicating that it is a matcher for integer pairs.</p>
+<pre class="listing"><code class="language-egison">def unorderedIntegerPair : Matcher (Integer, Integer) := matcher
+  | pair $ $ as (integer, integer) with
+    | ($x, $y) -&gt; [(x, y), (y, x)]
+  | $ as something with
+    | $tgt -&gt; [tgt]</code></pre>
+<p><code>matcher</code> is a built-in syntax for creating matchers.</p>
+<pre class="listing"><code class="language-egison">matcher
+| `primitive pattern-pattern` as `next matcher expression` with
+  | `primitive data pattern` -&gt; `body`
+  ...
+...</code></pre>
+<p>A <code>matcher</code> expression takes multiple <em>matcher clauses</em>. A matcher clause consists of a <em>primitive pattern-pattern</em>, a next matcher expression, and multiple <em>primitive match clauses</em>. A primitive match clause consists of a <em>primitive data pattern</em> and a body.</p>
+<p>Let us examine the first matcher clause of <code>unorderedIntegerPair</code> (lines 2--3). First, the primitive pattern-pattern of this matcher clause is <code>pair $ $</code>. A primitive pattern-pattern is a pattern on patterns. This primitive pattern-pattern matches the <code>pair</code> pattern, and this matcher clause defines how pattern matching is performed for the <code>pair</code> pattern. A pattern constructor that appears in a primitive pattern-pattern, such as <code>pair</code>, is called a <em>primitive pattern-pattern constructor</em>. The <code>$</code> appearing as arguments of the <code>pair</code> pattern is called a <em>pattern hole</em>, a component of primitive pattern-patterns that matches any pattern. A pattern that matches a pattern hole is called a <em>next pattern</em>. Pattern matching of primitive pattern-patterns is performed in essentially the same way as pattern matching on algebraic data types in typical functional programming languages. Next, the next matcher expression of this matcher clause is <code>(integer, integer)</code>. This expresses that the two patterns bound to the pattern holes above (the arguments of the <code>pair</code> pattern) will be recursively pattern-matched using the <code>integer</code> matcher. This matcher clause takes one primitive match clause (line 3). The primitive data pattern is matched against the target. Pattern matching of primitive data patterns is also performed in essentially the same way as pattern matching on algebraic data types in typical functional programming languages. The body of a primitive match clause returns the decomposition results of the target. <code>(x, y)</code> and <code>(y, x)</code> are called <em>next targets</em> and are recursively pattern-matched using the next patterns and next matchers.</p>
+<p>The primitive pattern-pattern of the second matcher clause (lines 4--5) is a pattern hole. Since a pattern hole matches any pattern, all patterns not matched by the first matcher clause are handled by the second matcher clause. The only patterns for <code>unorderedIntegerPair</code> that do not match the first matcher clause are wildcards and pattern variables, so this matcher clause handles these patterns. This matcher clause simply changes the matcher to <code>something</code> without changing the pattern or target. The pattern and target are then pattern-matched using <code>something</code>. <code>something</code> is the only built-in matcher and handles the following three types of patterns.</p>
+<ul>
+<li><strong>Wildcard</strong>: Always succeeds in pattern matching without producing any bindings.
+</li>
+<li><strong>Pattern variable</strong> <code>$x</code>: Succeeds in pattern matching and binds the target value to <code>x</code>.
+</li>
+<li><strong>Value pattern</strong> <code>#e</code>: Evaluates the expression <code>e</code> and compares the result with the target value using <em>built-in structural equality</em> (equality comparison based on the structure of data constructors). If they are equal, the pattern match succeeds.
+</li>
+</ul>
+<p>The handling of value patterns directly by <code>something</code> is a design change accompanying the introduction of static typing (see Section&nbsp;<a class="reference" href="matcher.html#ref-matcher-eq">6.3</a> below for details).</p>
+<p>The following <code>unorderedPair</code> can be defined as a matcher for unordered pairs that takes a matcher for the data type of the pair&#x27;s elements as an argument.</p>
+<pre class="listing"><code class="language-egison">matchAll (1, 2) as unorderedPair integer with
+| pair $x $y -&gt; (x, y)
+-- [(1,2),(2,1)]</code></pre>
+<p>To do this, first change the inductive pattern declaration to a generic form using type parameters.</p>
+<pre class="listing"><code class="language-egison">inductive pattern {a} (a, a) :=
+  | pair a a</code></pre>
+<p>Then, define <code>unorderedPair</code> as a function that takes a matcher as an argument and returns a matcher. The next matcher expression of the matcher clause for the <code>pair</code> pattern uses <code>m</code>, the argument of <code>unorderedPair</code>. The type annotation indicates that it takes a type parameter <code>{a}</code> and a matcher argument <code>(m: Matcher a)</code>, and returns a matcher for the pair type <code>(a, a)</code>.</p>
+<pre class="listing"><code class="language-egison">def unorderedPair {a} (m: Matcher a) : Matcher (a, a) := matcher
+  | pair $ $ as (m, m) with
+    | ($x, $y) -&gt; [(x, y), (y, x)]
+  | $ as something with
+    | $tgt -&gt; [tgt]</code></pre>
+<h2><span class="heading-number">6.3</span>Definition of the <code>eq</code> Matcher</h2>
+<p><span id="ref-matcher-eq" class="anchor"></span></p>
+<p>The <code>eq</code> matcher can also be defined by the user using a <code>matcher</code> expression. The <code>eq</code> matcher handles only value patterns, wildcards, and pattern variables, so it has no special pattern constructors. Therefore, no inductive pattern declaration is needed for the <code>eq</code> matcher itself. The type annotation indicates that it is a matcher for a type parameter <code>a</code> with the type constraint <code>{Eq a}</code>.</p>
+<pre class="listing"><code class="language-egison">def eq {Eq a} : Matcher a := matcher
+  | #$val as () with
+    | $tgt -&gt; if val == tgt then [()] else []
+  | $ as something with
+    | $tgt -&gt; [tgt]</code></pre>
+<p>The first matcher clause of the <code>eq</code> matcher (lines 2--3) is a matcher clause for value patterns. <code>#$val</code> is a primitive pattern-pattern that matches value patterns. Such a primitive pattern-pattern is called a <em>primitive value pattern</em>. The variable <code>val</code> is bound to the content of the value pattern. Since the primitive pattern-pattern of this matcher clause does not contain any pattern holes, the next matcher expression is the empty tuple. The primitive match clause checks whether the content of the value pattern and the target value are equal.</p>
+<h5>Difference between <code>something</code> and <code>eq</code>.</h5>
+<p><code>something</code> handles value patterns using built-in structural equality, while <code>eq</code> compares using the user-defined <code>==</code> operator, which is a method of the <code>Eq</code> type class. The distinction between these two is deeply related to the design of matchers that take matchers as arguments (matcher-parameterized matchers).</p>
+<p>For example, when processing a value pattern in a matcher like <code>multiset</code> that takes an argument matcher <code>m</code>, the question arises as to which matcher should handle the base case of recursive comparison. If <code>something</code> could not handle value patterns, the only option would be to delegate to the <code>eq</code> matcher, and since <code>eq</code> requires the <code>Eq</code> type class constraint, the type of <code>multiset</code> would become <code>multiset : {Eq a} =&gt; Matcher a -&gt; Matcher [a]</code>, requiring the <code>Eq</code> constraint. However, since many uses of <code>multiset</code> do not use value patterns, this constraint would be overly restrictive.</p>
+<p>To solve this problem, built-in structural equality-based value pattern handling was incorporated into <code>something</code>. This allows matcher-parameterized matchers to use <code>something</code> as the base case without imposing type class constraints, giving <code>multiset : Matcher a -&gt; Matcher [a]</code>, a type without constraints. On the other hand, when user-defined equality comparison (<code>==</code>) is desired, one can explicitly specify the <code>eq</code> matcher.</p>
+<p>Primitive pattern-patterns consist of the four components we have seen so far: pattern holes, applications of primitive pattern-pattern constructors, primitive value patterns, and primitive wildcards.</p>
+<pre class="listing"><code class="language-egison">`primitive pattern-pattern` ::= $ | c `primitive pattern-pattern`* | #$`ID` | _</code></pre>
+<p>Usage examples of primitive wildcards are presented in Section&nbsp;<a class="reference" href="matcher.html#ref-matcher-wildcard">6.6</a>.</p>
+<p>Primitive data patterns consist of wildcards, pattern variables, and applications of primitive data pattern constructors.</p>
+<pre class="listing"><code class="language-egison">`primitive data pattern` ::= _ | $`ID` | C `primitive data pattern`*</code></pre>
+<h2><span class="heading-number">6.4</span>Definition of the <code>multiset</code> Matcher</h2>
+<p><span id="ref-matcher-multiset" class="anchor"></span></p>
+<p>This section explains the definition of the <code>multiset</code> matcher. The <code>multiset</code> matcher handles the pattern constructors (<code>[]</code>, <code>::</code>, <code>++</code>) declared in the inductive pattern declaration for the list type <code>[a]</code> shown in Section&nbsp;<a class="reference" href="matcher.html#ref-matcher-inductive">6.1</a>. The type annotation indicates that it takes a type parameter <code>{a}</code> and a matcher argument <code>(m: Matcher a)</code>, and returns a matcher for the list type <code>[a]</code>.</p>
+<pre class="listing"><code class="language-egison">def multiset {a} (m: Matcher a) : Matcher [a] := matcher
+  | [] as () with
+    | $tgt -&gt; match tgt as (mutiset m) with
+                | [] -&gt; [()]
+                | _ -&gt; []
+  | $ :: $ as (m, multiset m) with
+    | $tgt -&gt; matchAll tgt as list m with
+                | $hs ++ $x :: $ts -&gt; (x, hs ++ ts)
+  | #$val as () with
+    | $tgt -&gt; match (val, tgt) as (list m, multiset m) with
+                | ([], []) -&gt; [()]
+                | ($x :: $xs, #x :: #xs) -&gt; [()]
+                | (_, _) -&gt; []
+  | $ as something with
+    | $tgt -&gt; [tgt]</code></pre>
+<p>The first and fourth matcher clauses are nearly self-explanatory, so let us examine the second and third matcher clauses.</p>
+<p>Let us look at the second matcher clause (lines 6--8). The primitive pattern-pattern is <code>$ :: $</code>, and the next matcher expression is <code>(a, multiset a)</code>. Here, <code>a</code> is the argument matcher of <code>multiset</code>. The next targets are defined using a <code>matchAll</code> expression. When the target is <code>[1,2,3]</code>, this <code>matchAll</code> expression returns <code>[(1,[2,3]),(2,[1,3]),(3,[1,2])]</code>. Each next target contained in this list is recursively pattern-matched using the next patterns and next matchers. For example, the next targets <code>1</code> and <code>[2,3]</code> are pattern-matched with the first and second arguments of the cons pattern using the next matchers <code>a</code> and <code>multiset a</code>.</p>
+<p>Let us look at the third matcher clause. The primitive pattern-pattern of this matcher clause is the primitive value pattern <code>#$val</code>. This matcher clause handles value patterns. This matcher clause compares whether the content of the value pattern (<code>val</code>) and the target (<code>tgt</code>) are equal. The first and third match clauses of this <code>match</code> expression are self-explanatory, so we omit their explanation. The pattern of the second match clause extracts the first element of <code>val</code> from <code>tgt</code>. It then recursively pattern-matches the collection obtained by removing one identical element from both <code>val</code> and <code>tgt</code>, using the patterns <code>$xs</code> and <code>#xs</code>. Although this matcher clause is recursively called during the pattern matching of <code>#xs</code>, since the length of the collection decreases by one each time, it eventually reaches either the first or third match clause.</p>
+<h2><span class="heading-number">6.5</span>Definition of the <code>sortedList</code> Matcher</h2>
+<p><span id="ref-matcher-sorted" class="anchor"></span></p>
+<p>The program that enumerates pairs of primes of the form <span class="math-inline">\((p,p+6)\)</span> using doubly nested join-cons patterns takes increasingly longer to enumerate later pairs of primes. The reason is that the doubly nested join-cons pattern examines all combinations of primes. For example, this pattern examines all prime pairs such as <span class="math-inline">\((3,5)\)</span>, <span class="math-inline">\((3,7)\)</span>, <span class="math-inline">\((3,11)\)</span>, <span class="math-inline">\((3,13)\)</span>, <span class="math-inline">\((3, 17)\)</span>, <span class="math-inline">\((3,19)\)</span>. However, starting from <span class="math-inline">\((3,11)\)</span>—the first prime pair whose difference exceeds <span class="math-inline">\(6\)</span>—there is no need to check whether they are of the form <span class="math-inline">\((p,p+6)\)</span>.</p>
+<pre class="listing"><code class="language-egison">take 10 (matchAll primes as sortedList integer with
+         | _ ++ $p :: (_ ++  #(p + 6) :: _) -&gt; (p, p + 6))
+-- [(5,11),(7,13),(11,17),(13,19),(17,23),(23,29),(31,37),(37,43),(41,47),(47,53)]</code></pre>
+<p>By using a matcher specialized for sorted lists, this unnecessary search can be avoided. By adding a matcher clause with <code>$ ++ #$px : $</code> as the primitive pattern-pattern to the standard <code>list</code> matcher, a matcher specialized for sorted lists can be created. This matcher clause reduces the computational complexity of the doubly nested join-cons pattern that matches prime pairs of the form <span class="math-inline">\((p,p+6)\)</span> from <span class="math-inline">\(O(n^2)\)</span> to <span class="math-inline">\(O(n)\)</span>. The type annotation indicates that it takes a type parameter <code>a</code> with the type constraint <code>{Ord a}</code> and a matcher argument <code>(m: Matcher a)</code>, and returns a matcher for the sorted list type <code>[a]</code>.</p>
+<pre class="listing"><code class="language-egison">def sortedList {Ord a} (m: Matcher a) : Matcher [a] := matcher
+  | $ ++ #$px :: $ as (sortedList m, sortedList m) with
+    | \$tgt -&gt; matchAll tgt as list m with
+               | loop $i (1, $n)
+                   ((?(\x -&gt; x &lt; px) &amp; $h_i) :: ...)
+                   (#px :: $ts)
+                 -&gt; (map (\i -&gt; h_i) [1..n], ts)
+  ...</code></pre>
+<p>This optimization, which defines a pattern-matching algorithm directly for nested patterns, is called <em>pattern fusion</em>.</p>
+<h2><span class="heading-number">6.6</span>Optimization with Primitive Wildcards</h2>
+<p><span id="ref-matcher-wildcard" class="anchor"></span></p>
+<p>When a pattern contains wildcards, pattern matching can be sped up by omitting the computation of targets that match wildcards. In Egison, this optimization can be performed by using primitive wildcards in primitive pattern-patterns. This section presents such an optimization for the <code>multiset</code> matcher introduced in Section&nbsp;<a class="reference" href="matcher.html#ref-matcher-multiset">6.4</a>. This kind of optimization is called <em>wildcard optimization</em>.</p>
+<p>The target of the optimization presented in this section is the case where the second argument of the cons pattern is a wildcard. In this case, there is no need to compute the remaining collection after removing one element from the target collection. By using primitive wildcards, we can instruct the <code>multiset</code> matcher to skip this computation.</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2, 3, 4, 5] as multiset eq with
+| $x :: _ -&gt; x
+-- [1, 2, 3, 4, 5]</code></pre>
+<p>This optimization can be achieved by adding the matcher clause on lines 2--3 below to the definition of the <code>multiset</code> matcher from Section&nbsp;<a class="reference" href="matcher.html#ref-matcher-multiset">6.4</a>. A primitive wildcard is used in the primitive pattern-pattern of this matcher clause. Since the pattern hole is only in the first argument of the cons pattern, the next matcher is just <code>m</code>, and since the next target is each element of <code>tgt</code>, <code>tgt</code> is returned as is.</p>
+<pre class="listing"><code class="language-egison">def multiset {a} (m: Matcher a) : Matcher [a] := matcher
+  | $ :: _ as m with
+    | $tgt -&gt; tgt
+  | $ :: $ as (m, multiset m) with
+    | $tgt -&gt; matchAll tgt as list m with
+              | $hs ++ $x :: $ts -&gt; (x, hs ++ ts)
+  ...</code></pre>
+<p>The <code>sortedList</code> matcher from Section&nbsp;<a class="reference" href="matcher.html#ref-matcher-sorted">6.5</a> can be similarly optimized. The matcher clause on lines 2--7 below serves to skip the computation of the first argument of the join pattern.</p>
+<pre class="listing"><code class="language-egison">def sortedList {Ord a} (m: Matcher a) : Matcher [a] := matcher
+  | _ ++ #$px :: $ as sortedList m
+    | \tgt -&gt; matchAll tgt as list m with
+              | loop $i (1, _)
+                  (?(\x -&gt; x &lt; px) :: ...)
+                  (#px :: $ts)
+                -&gt; ts
+  | $ ++ #$px :: $ as (sortedList m, sortedList m)
+    | \tgt -&gt; matchAll tgt as list m with
+              | loop $i (1, $n)
+                  ((?(\x -&gt; x &lt; px) &amp; $h_i) :: ...)
+                  (#px :: $ts)
+                -&gt; (map (\i -&gt; h_i) [1..n], ts)
+  ...</code></pre>
+<h2><span class="heading-number">6.7</span>The <code>assocMultiset</code> Matcher</h2>
+<p><span id="ref-matcher-assoc" class="anchor"></span></p>
+<p>Egison provides <code>assocMultiset</code> as a matcher for multisets. This section introduces its usage and definition.</p>
+<p>A multiset can be represented as an association list of elements and their multiplicities. The <code>assocMultiset</code> matcher is a matcher for multisets represented as such association lists. For example, the following program performs pattern matching on a multiset containing <span class="math-inline">\(4\)</span> copies of <span class="math-inline">\(1\)</span>, <span class="math-inline">\(3\)</span> copies of <span class="math-inline">\(2\)</span>, and <span class="math-inline">\(1\)</span> copy of <span class="math-inline">\(3\)</span>. A pattern that extracts elements appearing <span class="math-inline">\(3\)</span> or more times in the target multiset is expressed.</p>
+<pre class="listing"><code class="language-egison">matchAll [(1, 4), (2, 3), (3, 1)] as assocMultiset eq with
+  | $x ^ #3 :: $rs -&gt; (x, rs)
+-- [(1, [(1, 1), (2, 3), (3, 2)]), (2, [(1, 4), (3, 2)])]</code></pre>
+<h2><span class="heading-number">6.8</span>Types of Matchers and Patterns</h2>
+<p><span id="ref-matcher-types" class="anchor"></span></p>
+<p>The matcher definitions so far carried type annotations such as <code>Matcher (Integer, Integer)</code>. From this section on, we explain how pattern matching is checked by the type system.</p>
+<p>In Egison&#x27;s type system, matchers and patterns each have types. <code>Matcher a</code> is the type of matchers whose targets have type <code>a</code>, and <code>Pattern a</code> is the type of patterns that match values of type <code>a</code>. Matchers are first-class values, so functions such as <code>multiset</code> that take a matcher and return a matcher also have types. For example, the basic collection matchers have the following types.</p>
+<pre class="listing"><code class="language-egison">something : Matcher a
+eq        : {Eq a} =&gt; Matcher a
+list      : MatcherSlot a a -&gt; Matcher [a]
+multiset  : MatcherSlot a a -&gt; Matcher [a]
+set       : MatcherSlot a a -&gt; Matcher [a]</code></pre>
+<p>Argument-matcher positions use the <em>slot type</em> <code>MatcherSlot a b</code>, not <code>Matcher</code>. A slot type takes two types. The first component <code>a</code> is the type of the decomposition (structure) demanded by the pattern used at that position, and the second component <code>b</code> is the type of the target (the value being decomposed) there. When the two coincide, as at the element position of <code>list</code> and <code>multiset</code>, one may read it as “takes roughly a <code>Matcher a</code>”. The reason a slot type carries the decomposition type and the target type separately is to check, <strong>per use site, whether the matcher supplied there can actually decompose the pattern at that position</strong>. We return to this check in Section&nbsp;<a class="reference" href="matcher.html#ref-matcher-match-typing">6.10</a>.</p>
+<p>One design point hides in this list of types: the types of <code>list</code> and <code>multiset</code> carry <em>no</em> <code>Eq</code> constraint. Value patterns (such as <code>#5</code>) are handled at the level of <code>something</code> by structural equality, so the collection matchers themselves demand no equality on the elements. Thanks to this, matchers such as <code>multiset</code> can be used as-is even at types without a defined equality (symbolic mathematical expressions, abstract syntax trees, and so on). Using the <code>eq</code> matcher explicitly, as in <code>intersect</code> of Section&nbsp;<a class="reference" href="quick.html#ref-quick-matcher-composition">2.10</a> of Chapter&nbsp;<a class="reference" href="quick.html#ref-quick">2</a>, is for matching with the custom equality of an <code>Eq</code> type-class instance.</p>
+<h2><span class="heading-number">6.9</span>Type Checking of Patterns</h2>
+<p><span id="ref-matcher-pattern-typing" class="anchor"></span></p>
+<p>Patterns are typed independently of the matcher they are used with (<em>matcher polymorphism</em>). For example, <code>$x :: $xs</code> has type <code>Pattern [a]</code>, which is exactly why the same pattern can be used with both <code>list integer</code> and <code>multiset integer</code>.</p>
+<p>Type checking of value patterns involves the order of bindings. A pattern is checked from left to right with a growing set of bindings, and the expression <code>e</code> of a value pattern <code>#e</code> may refer to the pattern variables bound so far.</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2, 3, 1] as multiset integer with
+  | $x :: #x :: _ -&gt; x
+-- [1, 1]</code></pre>
+<p>This non-linear pattern expresses “some element <code>x</code> together with another occurrence of the same value”, and <code>#x</code> is type-checked under the binding of the preceding <code>$x</code> (of type <code>Integer</code>).</p>
+<p>The type checker detects statically the mistakes that a dynamic implementation would answer only with a silent match failure. First, type errors inside a value pattern&#x27;s expression are reported directly.</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2, 3] as multiset integer with
+  | $x :: #(x ++ [1]) :: _ -&gt; x
+-- Type error: (++) expects [Integer] but x is Integer</code></pre>
+<p>Second, a value pattern placed at the wrong position is detected.</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2, 3] as multiset integer with
+  | $x :: #x -&gt; x
+-- Type error: the second argument of :: requires
+--   Pattern [Integer], but #x has type Pattern Integer</code></pre>
+<p>The programmer&#x27;s intent was “<code>x</code> appears again in the rest”, but the second argument of <code>::</code> is the position matching the whole remaining list; the correct pattern is <code>$x :: #x :: _</code>. A dynamic implementation would simply fail to match, reporting nothing. Finally, referring to a variable to the left of its binding is detected as an unbound-variable warning (and as a type error in strict mode).</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2, 3] as multiset integer with
+  | #x :: $x :: _ -&gt; x
+-- Warning: unbound variable x
+--   (#x refers to x left of its binding $x)</code></pre>
+<h2><span class="heading-number">6.10</span>Type Checking of <code>match</code> Expressions</h2>
+<p><span id="ref-matcher-match-typing" class="anchor"></span></p>
+<p>In <code>match</code> and <code>matchAll</code> expressions, the types of the target, the matcher, the patterns, and the bodies must all agree. If the target has type <code>a</code>, the matcher must have type <code>Matcher a</code>, every match clause&#x27;s pattern must have type <code>Pattern a</code>, and the bodies of all match clauses must share one type.</p>
+<p>For example, combining a collection pattern constructor with an integer matcher is a type error.</p>
+<pre class="listing"><code class="language-egison">matchAll 5 as integer with
+  | $x :: _ -&gt; x
+-- Type error: :: targets collections [a], but the
+--   target and the matcher are for Integer</code></pre>
+<p>Body type mismatches are detected as well. In the <code>twin</code> example of Section&nbsp;<a class="reference" href="quick.html#ref-quick-pat-fun">2.9</a> of Chapter&nbsp;<a class="reference" href="quick.html#ref-quick">2</a>, writing the body as <code>[n, ns]</code> is a type error because the list would mix <code>Integer</code> and <code>[Integer]</code>; a tuple <code>(n, ns)</code> is used instead.</p>
+<p>In addition, the checker verifies that the matcher can provide the <em>decomposition</em> the pattern demands (the admissibility check). A pattern using only variable and value patterns demands no decomposition, so it combines with <code>something</code> at any type; a pattern using a constructor such as <code>::</code> needs a matcher that can decompose it. Since <code>something</code> only matches any value as a whole and offers no means of decomposition, combining it with a cons pattern is a type error.</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2, 3] as something with
+  | $x :: $xs -&gt; (x, xs)
+-- Type error: something (Matcher a) does not fit
+--   MatcherSlot [_] [Integer]
+--   (something offers no way to decompose a list)</code></pre>
+<p>This is why matcher-receiving positions are typed with a slot type rather than <code>Matcher</code>. Here the cons pattern demands <code>[_]</code> (list decomposition) in the slot&#x27;s decomposition component, which <code>something</code> cannot provide. A naive type system that treats <code>something</code> as <code>Matcher [Integer]</code> would accept this expression and then get stuck at runtime, where <code>something</code> cannot decompose a cons. Egison&#x27;s type system checks decomposition admissibility per use site, so it rejects the error statically. This check is computed from the structure of the pattern alone, so wrong combinations are rejected statically, without running the matcher.</p>
+<h2><span class="heading-number">6.11</span>Consistency of Matcher Definitions</h2>
+<p><span id="ref-matcher-consistency" class="anchor"></span></p>
+<p>Matcher definitions themselves are also type-checked. For each matcher clause, besides the type agreement of the primitive pattern pattern, the next-matcher expression, and the primitive data patterns, the <em>exhaustiveness of the data-pattern arms</em> is required. Once a clause&#x27;s primitive pattern pattern matches the pattern, the target is matched against that clause&#x27;s arms alone, and missing all of them is a runtime error. A matcher definition whose arm set is not exhaustive is therefore rejected as a type error.</p>
+<pre class="listing"><code class="language-egison">def bad {a} (m : MatcherSlot a a) : Matcher [a] :=
+  matcher
+    | $ :: $ as (m, bad m) with
+      | $x :: $xs -&gt; [(x, xs)]    -- missing final | _ -&gt; []
+    | $ as something with
+      | $tgt -&gt; [tgt]
+-- Type error: the data-pattern arms of matcher
+--   clause :: $ $ are non-exhaustive</code></pre>
+<p>If the cons clause has only the arm <code>$x :: $xs</code>, an empty-list target matches no arm and fails at runtime. Appending <code>| _ -&gt; []</code> means “match failure (no candidates) when the target cannot be decomposed” and makes the arms exhaustive. The recognized exhaustive arm shapes are (1) a trailing wildcard arm, (2) the pair of <code>[]</code> and <code>::</code> (complete for collections), and (3) a single irrefutable arm (such as <code>$tgt</code>).</p>
+<h2><span class="heading-number">6.12</span>Types of Pattern Functions</h2>
+<p><span id="ref-matcher-patfun-types" class="anchor"></span></p>
+<p>Pattern functions, introduced in Section&nbsp;<a class="reference" href="quick.html#ref-quick-pat-fun">2.9</a> of Chapter&nbsp;<a class="reference" href="quick.html#ref-quick">2</a>, are typed as well.</p>
+<pre class="listing"><code class="language-egison">def pattern twin {a} (pat1: a) (pat2: [a]) : [a] :=
+  (~pat1 &amp; $x) :: #x :: ~pat2</code></pre>
+<p>In this definition, the parameter annotation <code>(pat1: a)</code> says “<code>pat1</code> is a pattern matching values of type <code>a</code>”, and the result position <code>: [a]</code> says “the application is a pattern matching values of type <code>[a]</code>”. That is, the type of <code>twin</code> reads roughly as <code>Pattern a -&gt; Pattern [a] -&gt; Pattern [a]</code>. Argument patterns are checked at application sites.</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2] as multiset integer with
+  | twin ($y :: _) _ -&gt; y
+-- Type error: the first argument requires
+--   Pattern Integer, but $y :: _ is Pattern [Integer]</code></pre>
+<p>For the admissibility check (Section&nbsp;<a class="reference" href="matcher.html#ref-matcher-match-typing">6.10</a>), an application of a pattern function behaves as the <em>skeleton of its body pattern</em>. The body of <code>twin</code> is nested cons patterns, so a match expression using <code>twin</code> needs a matcher that can decompose cons (<code>list</code> or <code>multiset</code>). Conversely, a pattern function whose body is just a parameter imposes no structure of its own; only the demands of the argument patterns propagate. In this way, “which matchers this pattern needs” is tracked statically even through pattern functions.</p>
+  </main>
+  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>パターンマッチ指向プログラミング問題集 — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="direction.html">← 前へ</a><a rel="next" href="problem2.html">次へ →</a><a class="language" href="../en/problem.html">English</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">A</span>パターンマッチ指向プログラミング問題集</h1>
+<p>パターンマッチ指向プログラミングを体験していただくために，クイズ形式で問題を用意した．</p>
+<h2><code>member</code>関数</h2>
+<p>下記の空白をうめて<code>member</code>関数を完成させよ．</p>
+<pre class="listing"><code class="language-egison">def member x xs :=
+  match xs as list eq with
+  | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` -&gt; True
+  | _ -&gt; False
+
+member 1 [1,2,3,4]
+-- True
+
+member 5 [1,2,3,4]
+-- False</code></pre>
+<h2><code>concat</code>関数</h2>
+<p>下記の空白をうめて<code>concat</code>関数を完成させよ．</p>
+<pre class="listing"><code class="language-egison">def concat xss :=
+  matchAllDFS xss as `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` with
+  | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}2\vphantom{0}\hspace{5em}}` -&gt; `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}3\vphantom{0}\hspace{5em}}`
+
+concat [[1,2],[3],[4,5]]
+-- [1,2,3,4,5]</code></pre>
+<h2>四つ子素数</h2>
+<p>四つ子素数を列挙するプログラムを記述せよ． 四つ子素数とは，<span class="math-inline">\((p,p + 2,p + 6,p + 8)\)</span>という形の素数の四つ組のことをいう．</p>
+<pre class="listing"><code class="language-egison">take 4 (matchAll primes as list integer with
+        | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` -&gt; (p, p + 2, p + 6, p + 8))
+-- [(5, 7, 11, 13), (11, 13, 17, 19), (101, 103, 107, 109), (191, 193, 197, 199)]</code></pre>
+<h2>差が<span class="math-inline">\(6\)</span>の素数のペア</h2>
+<p>下記の空白をうめて素数のペア<span class="math-inline">\((p, p+6)\)</span>を抽出せよ．</p>
+<pre class="listing"><code class="language-egison">take 6 (matchAll primes as list integer with
+        | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` -&gt; (p, p + 6))
+-- [(5, 11), (7, 13), (11, 17), (13, 19), (17, 23), (23, 29)]</code></pre>
+<h2><code>intersect</code>関数</h2>
+<p>下記の空白をうめて，2つのコレクションの共通部分を抽出する<code>intersect</code>関数を完成させよ．</p>
+<pre class="listing"><code class="language-egison">def intersect xs ys :=
+  matchAllDFS (xs, ys) as `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` with
+  | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}2\vphantom{0}\hspace{5em}}` -&gt; `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}3\vphantom{0}\hspace{5em}}`
+
+intersect [1,2,3,4] [2,4,5]
+-- [2,4]</code></pre>
+<h2><code>difference</code>関数</h2>
+<p>下記の空白をうめて，第二引数のコレクションに含まれていない第一引数のコレクションの要素のみを抽出する<code>difference</code>関数を完成させよ．</p>
+<pre class="listing"><code class="language-egison">def difference xs ys :=
+  matchAllDFS (xs, ys) as `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` with
+  | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}2\vphantom{0}\hspace{5em}}` -&gt; `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}3\vphantom{0}\hspace{5em}}`
+
+difference [1,2,3,4] [2,4,5]
+-- [1,3]</code></pre>
+<h2><code>doubles</code>関数</h2>
+<p>コレクション中にちょうど<span class="math-inline">\(2\)</span>回現れる要素のみを抽出する<code>doubles</code>関数を完成させよ．</p>
+<pre class="listing"><code class="language-egison">def doubles xs :=
+  matchAllDFS xs as `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}` with
+  | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}2\vphantom{0}\hspace{5em}}` -&gt; `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}3\vphantom{0}\hspace{5em}}`
+
+doubles [1,2,3,2,1,1,4,5,3]
+-- [2,3]</code></pre>
+<h2><code>tails</code>関数</h2>
+<p><code>tails</code>関数をパターンマッチを使って定義せよ． ループ・パターンを使う回答とそうでない回答の2つを考えてみよ．</p>
+<pre class="listing"><code class="language-egison">def tails xs :=
+  matchAll xs as list something with
+  | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}`
+  -&gt; ts
+
+tails [1,2,3,4]
+-- [[1, 2, 3, 4], [2, 3, 4], [3, 4], [4], []]</code></pre>
+<h2>多重集合の同値性チェック</h2>
+<p>多重集合の同値性をチェックする2引数述語<code>equalMultiset</code>をパターンマッチを使って定義してみよ．</p>
+<pre class="listing"><code class="language-egison">def equalMultiset xs ys :=
+  match (xs, ys) as (list eq, multiset eq) with
+  | ([], [])
+  -&gt; True
+  | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}`
+  -&gt; equalMultiset xs&#x27; ys&#x27;
+  | _
+  -&gt; False
+
+equalMultiset [1,1,2] [2,1,1]
+-- True
+
+equalMultiset [1,1,2] [1,2,2]
+-- False</code></pre>
+<p>ループ・パターンを使って再帰関数を使わずに書いてみよ．</p>
+<pre class="listing"><code class="language-egison">def equalMultiset xs ys :=
+  match (xs, ys) as (list eq, multiset eq) with
+  | `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}2\vphantom{0}\hspace{5em}}`
+  -&gt; True
+  | _
+  -&gt; False</code></pre>
+<h2>ジョーカーの存在を考慮するポーカーの役判定</h2>
+<p><a class="reference" href="pmo.html#ref-pmo">3</a>章<a class="reference" href="pmo.html#ref-pmo-poker">3.2.2</a>節のポーカーの役判定のためのパターンマッチ（<code>poker</code>関数）の実装を一切変更せずに，<code>card</code>マッチャーの定義だけを変更して，ジョーカーの存在を考慮するポーカーの役判定をできるようにせよ．</p>
+<pre class="listing"><code class="language-egison">def card := matcher
+  | card $ $ as (suit, mod 13) with
+    | Card $s $n -&gt; [(s, n)]
+    | Joker -&gt; `\fcolorbox{black}[gray]{1.0}{\vphantom{0}\hspace{5em}1\vphantom{0}\hspace{5em}}`
+  | $ as something with
+    | $tgt -&gt; [tgt]
+
+poker [Card Spade 5, Card Spade 6, Joker, Card Spade 8, Card Spade 9]
+-- &quot;Straight flush&quot;
+poker [Card Spade 5, Card Diamond 5, Joker, Card Club 5, Card Heart 7]
+-- &quot;Four of a kind&quot;</code></pre>
+  </main>
+  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+</body>
+</html>

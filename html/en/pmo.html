@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>Introduction to Pattern-Match-Oriented Programming — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="prev" href="quick.html">← Previous</a><a rel="next" href="essence.html">Next →</a><a class="language" href="../ja/pmo.html">日本語</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">3</span>Introduction to Pattern-Match-Oriented Programming</h1>
+<p><span id="ref-pmo" class="anchor"></span></p>
+<p>This chapter explains what kind of programming is possible using the syntax for pattern matching and the various built-in patterns introduced in Chapter&nbsp;<a class="reference" href="quick.html#ref-quick">2</a>. To that end, we present frequently occurring patterns in programming that leverages Egison pattern matching. We hope this chapter gives you a concrete picture of programming with Egison&#x27;s pattern matching.</p>
+<h2><span class="heading-number">3.1</span>List Programming with Pattern Matching</h2>
+<p>This section observes how list programming changes with Egison&#x27;s pattern matching. Here, by list programming, we mean the kind of programming involved in defining functions typically provided by the list libraries of general programming languages, including functional programming languages. The join pattern <code>_ ++ $x :: _</code>, whose second argument is a cons pattern, appears frequently in list programming. For this reason, we have given this pattern a name and call it the <em>join-cons pattern</em>. As this section shows, many functions on lists can be defined using the join-cons pattern.</p>
+<h3><span class="heading-number">3.1.1</span>A Single Join-Cons Pattern — the <code>map</code> Function and Its Relatives</h3>
+<p>For the <code>list</code> matcher, the pattern <code>_ ++ $x :: _</code> matches each element of the target. As a result, the following <code>matchAll</code> expression matches each element of <code>xs</code> and returns the result of applying the function <code>f</code> to each of them. This is precisely the definition of the <code>map</code> function. The type annotation indicates that the <code>map</code> function takes a list of an arbitrary type <code>a</code> and returns a list of type <code>b</code>.</p>
+<pre class="listing"><code class="language-egison">def map (f: a -&gt; b) (xs: [a]) : [b] := matchAll xs as list something with
+  | _ ++ $x :: _ -&gt; f x</code></pre>
+<p>By modifying this <code>matchAll</code> expression, we can define various functions. For example, the <code>filter</code> function can be defined by inserting a predicate pattern. The type annotation indicates that the predicate function <code>pred</code> takes a value of type <code>a</code> and returns a <code>Bool</code>.</p>
+<pre class="listing"><code class="language-egison">def filter (pred: a -&gt; Bool) (xs: [a]) : [a] := matchAll xs as list something with
+  | _ ++ (?pred &amp; $x) :: _ -&gt; x</code></pre>
+<p>The <code>member</code> function can be defined by inserting a value pattern. The <code>member</code> function is a predicate that determines whether the first argument is contained in the collection given as the second argument. The <code>member</code> function is defined using a <code>match</code> expression. The <code>match</code> expression is implemented as an alias for <code>car (matchAll ...)</code><span class="footnote" role="note"><code>car</code> is a function that extracts the first element of a collection.</span>. This implementation is possible because Egison lazily evaluates <code>matchAll</code> expressions.</p>
+<p>The type annotation indicates that the <code>member</code> function takes a value and a list of an arbitrary type <code>a</code> and returns a <code>Bool</code>.</p>
+<pre class="listing"><code class="language-egison">def member (x: a) (xs: [a]) : Bool := match xs as list eq with
+  | _ ++ #x :: _ -&gt; True
+  | _            -&gt; False</code></pre>
+<p>}</p>
+<p>The <code>delete</code> function can be implemented by slightly modifying the <code>member</code> function. The <code>delete</code> function removes the first occurrence of the first argument <code>x</code> from the collection <code>xs</code> given as the second argument.</p>
+<pre class="listing"><code class="language-egison">def delete (x: a) (xs: [a]) : [a] := match xs as list eq with
+  | $hs ++ #x :: $ts -&gt; hs ++ ts
+  | _                -&gt; xs</code></pre>
+<p>}</p>
+<p>The predicates <code>any</code> and <code>every</code> can similarly be implemented using <code>match</code> expressions. <code>any</code> is a predicate that determines whether any element in the collection given as the second argument satisfies the predicate given as the first argument. <code>every</code> is a predicate that determines whether all elements in the collection given as the second argument satisfy the predicate given as the first argument.</p>
+<pre class="listing"><code class="language-egison">def any (pred: a -&gt; Bool) (xs: [a]) : Bool := match xs as list something with
+  | _ ++ ?pred :: _ -&gt; True
+  | _               -&gt; False
+
+def every (pred: a -&gt; Bool) (xs: [a]) : Bool := match xs as list something with
+  | _ ++ !?pred :: _ -&gt; False
+  | _                -&gt; True</code></pre>
+<h3><span class="heading-number">3.1.2</span>Nesting Join-Cons Patterns — the <code>unique</code> and <code>concat</code> Functions</h3>
+<p><span id="ref-pmo-nested-join-cons" class="anchor"></span></p>
+<p>By combining multiple join-cons patterns, we can create even more powerful patterns. As an example, we introduce the <code>unique</code> function. When the <code>unique</code> function is defined using pattern-match-oriented programming, it looks as follows. The type annotation indicates that the <code>unique</code> function takes a list of an arbitrary type <code>a</code> and returns a list of the same type.</p>
+<pre class="listing"><code class="language-egison">def unique (xs: [a]) : [a] := matchAllDFS xs as list eq with
+  | _ ++ $x :: !(_ ++ #x :: _) -&gt; x</code></pre>
+<p>The not pattern is used to express that <code>x</code> does <em>not</em> appear any further after itself. As a result, this pattern matches the last occurrence of each element.</p>
+<pre class="listing"><code class="language-egison">unique [1,2,3,2,4] -- [1,3,2,4]</code></pre>
+<p>It is also possible to define a <code>unique</code> function that returns a collection consisting of the first occurrence of each element by making good use of predicate patterns. To match only the first occurrence, we need to write a pattern that matches when the same element does not appear before that element. Because Egison&#x27;s pattern matching processes patterns from left to right, such a pattern cannot be written by simply combining cons patterns and join patterns.</p>
+<pre class="listing"><code class="language-egison">def unique2 (xs: [a]) : [a] := matchAllDFS xs as list eq with
+  | $hs ++ (!?(\x -&gt; member x hs) &amp; $x) :: _ -&gt; x
+
+unique2 [1,2,3,2,4] -- [1,2,3,4]</code></pre>
+<p>Another more elegant approach is to use sequential patterns. The same pattern can be expressed using a sequential pattern with a deferred pattern variable in the first argument of the join pattern.</p>
+<pre class="listing"><code class="language-egison">def unique (xs: [a]) : [a] := matchAllDFS xs as list eq with
+  |  {@               ++ $x :: _,
+      !(_ ++ #x :: _)}
+  -&gt; x</code></pre>
+<p>Another example of nested join-cons patterns is the <code>concat</code> function introduced in Section&nbsp;<a class="reference" href="quick.html#ref-quick-matchalldfs">2.5</a> of Chapter&nbsp;<a class="reference" href="quick.html#ref-quick">2</a>. By combining matcher composition (Section&nbsp;<a class="reference" href="quick.html#ref-quick-matcher-composition">2.10</a> of Chapter&nbsp;<a class="reference" href="quick.html#ref-quick">2</a>) with the join-cons pattern, we can define <code>concat</code> using pattern-match-oriented programming. The type annotation indicates that the <code>concat</code> function takes a list of lists and returns a flattened list.</p>
+<pre class="listing"><code class="language-egison">def concat (xss: [[a]]) : [a] := matchAllDFS xss as list (list something) with
+  | _ ++ (_ ++ $x :: _) :: _ -&gt; x</code></pre>
+<h2><span class="heading-number">3.2</span>Multiset Programming</h2>
+<p>The ability to directly pattern-match on multisets is a major feature of Egison. This section introduces techniques for programming that takes advantage of multiset pattern matching. From this point on, nearly all pattern matching in this book involves multiset pattern matching.</p>
+<h3><span class="heading-number">3.2.1</span>Cons Patterns on Multisets</h3>
+<p>The cons pattern of the <code>multiset</code> matcher is useful for pattern matching on collections while ignoring the order of elements. Such situations frequently arise when describing mathematical algorithms.</p>
+<p>Let us start with a simple example. The <code>lookup</code> function on association lists can be defined with a single cons pattern. A single multiset cons pattern can also be replaced with a list join-cons pattern. The type annotation indicates that the <code>lookup</code> function takes a key <code>k</code> and an association list and returns the corresponding value.</p>
+<pre class="listing"><code class="language-egison">def lookup (k: a) (ls: [(a, b)]) : b := match ls as multiset (eq, something) with
+  | (#k, $x) :: _ -&gt; x</code></pre>
+<p>However, nested multiset cons patterns cannot be replaced with list join-cons patterns. A <span class="math-inline">\(k\)</span>-fold nested multiset cons pattern can be used to enumerate <span class="math-inline">\(P(n,k) = \frac{n!}{(n-k)!}\)</span> permutations of <span class="math-inline">\(k\)</span> elements, whereas a <span class="math-inline">\(k\)</span>-fold nested list join-cons pattern can be used to enumerate <span class="math-inline">\(C(n,k) = \frac{n!}{k!(n-k)!}\)</span> combinations of <span class="math-inline">\(k\)</span> elements.</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2, 3] as list something with
+| _ ++ $x :: _ ++ $y :: _ -&gt; (x, y)
+-- [(1,2),(1,3),(2,3)]
+
+matchAll [1, 2, 3] as multiset something with
+| $x :: $y :: _ -&gt; (x, y)
+-- [(1,2),(1,3),(2,1),(2,3),(3,1),(3,2)]</code></pre>
+<p>An equivalent program can be written in traditional functional programming using list comprehensions as follows. <code>tails</code> is a function that returns the suffixes of the argument list. <code>splits</code> is a function that decomposes the argument list into a prefix and the remaining list.</p>
+<pre class="listing"><code class="language-egison">[ (x, y) | x : ts &lt;- tails [1, 2, 3], y &lt;- ts ]
+-- [(1,2),(1,3),(2,3)]
+
+[ (x, y) | (hs, x : ts) &lt;- splits [1, 2, 3], y &lt;- hs ++ ts ]
+-- [(1,2),(1,3),(2,1),(2,3),(3,1),(3,2)]</code></pre>
+<p>Although traditional programming languages also provide libraries for multisets, there are many situations where collections that one wants to treat as multisets must be reconsidered as lists. In fact, in the enumeration of <span class="math-inline">\(C(n,2)\)</span> combinations using list comprehensions above, two list-processing functions—<code>splits</code> and <code>++</code>—are used, describing processing that reconsiders the target collection as a list. Pattern matching on multisets hides such list-based reconversion inside the pattern definition (in this case, the definition of the <code>::</code> pattern of the <code>multiset</code> matcher), thereby broadening the opportunities to directly treat collections that one wants to handle as multisets. The remainder of this book describes various patterns on multisets, combined with the patterns introduced in Chapter&nbsp;<a class="reference" href="quick.html#ref-quick">2</a>.</p>
+<h3><span class="heading-number">3.2.2</span>Poker Hand Evaluation</h3>
+<p><span id="ref-pmo-poker" class="anchor"></span></p>
+<p>As an application of non-linear patterns on multisets, we present poker hand evaluation. Using non-linear patterns on multisets, every poker hand can be expressed as a single pattern. <span class="footnote" role="note">When the author designed Egison&#x27;s match expressions, the ability to concisely write a program for poker hand evaluation was one of the design requirements.</span> The pattern “<code>[</code><span class="math-inline">\(p_1\)</span><code>,</code> <span class="math-inline">\(p_2\)</span><code>,</code> <span class="math-inline">\(...\)</span><code>,</code> <span class="math-inline">\(p_n\)</span><code>]</code>” is syntactic sugar that expands to “<span class="math-inline">\(p1\)</span> <code>:</code> <span class="math-inline">\(p_2\)</span> <code>:</code> <span class="math-inline">\(...\)</span> <code>:</code> <span class="math-inline">\(p_n\)</span> <code>: []</code>”.</p>
+<pre class="listing"><code class="language-egison">def poker (cs: [Card]) : String :=
+  match cs as multiset card with
+  | card $s $n :: card #s #(n-1) :: card #s #(n-2) :: card #s #(n-3) :: card #s #(n-4) :: _
+    -&gt; &quot;Straight flush&quot;
+  | card _ $n :: card _ #n :: card _ #n :: card _ #n :: _ :: []
+    -&gt; &quot;Four of a kind&quot;
+  | card _ $m :: card _ #m :: card _ #m :: card _ $n :: card _ #n :: []
+    -&gt; &quot;Full house&quot;
+  | card $s _ :: card #s _ :: card #s _ :: card #s _ :: card #s _ :: []
+    -&gt; &quot;Flush&quot;
+  | card _ $n :: card _ #(n-1) :: card _ #(n-2) :: card _ #(n-3) :: card _ #(n-4) :: []
+    -&gt; &quot;Straight&quot;
+  | card _ $n :: card _ #n :: card _ #n :: _ :: _ :: []
+    -&gt; &quot;Three of a kind&quot;
+  | card _ $m :: card _ #m :: card _ $n :: card _ #n :: _ :: []
+    -&gt; &quot;Two pair&quot;
+  | card _ $n :: card _ #n :: _ :: _ :: _ :: []
+    -&gt; &quot;One pair&quot;
+  | _ :: _ :: _ :: _ :: _ :: [] -&gt; &quot;Nothing&quot;</code></pre>
+<p>This <code>poker</code> function works as follows.</p>
+<pre class="listing"><code class="language-egison">poker [Card Spade 5, Card Spade 6, Card Spade 7, Card Spade 8, Card Spade 9]
+-- &quot;Straight flush&quot;
+poker [Card Spade 5, Card Diamond 5, Card Spade 7, Card Club 5, Card Heart 5]
+-- &quot;Four of a kind&quot;
+poker [Card Spade 5, Card Diamond 5, Card Spade 7, Card Club 5, Card Heart 7]
+-- &quot;Full house&quot;
+poker [Card Spade 5, Card Spade 6, Card Spade 7, Card Spade 13, Card Spade 9]
+-- &quot;Flush&quot;
+poker [Card Spade 5, Card Club 6, Card Spade 7, Card Spade 8, Card Spade 9]
+-- &quot;Straight&quot;
+poker [Card Spade 5, Card Diamond 5, Card Spade 7, Card Club 5, Card Heart 8]
+-- &quot;Three of a kind&quot;
+poker [Card Spade 5, Card Diamond 10, Card Spade 7, Card Club 5, Card Heart 10]
+-- &quot;Two pair&quot;
+poker [Card Spade 5, Card Diamond 10, Card Spade 7, Card Club 5, Card Heart 8]
+-- &quot;One pair&quot;
+poker [Card Spade 5, Card Spade 6, Card Spade 7, Card Spade 8, Card Diamond 11]
+-- &quot;Nothing&quot;</code></pre>
+<p>Egison has a rule that pattern constructors (such as <code>card</code>) begin with a lowercase letter, while data constructors (such as <code>Card</code>) begin with an uppercase letter. The type annotation of the <code>poker</code> function indicates that it takes a list of cards and returns a string representing the hand.</p>
+<p>Note that in the above example, the card matcher is defined as an algebraic data matcher as follows.</p>
+<pre class="listing"><code class="language-egison">def suit := algebraicDataMatcher
+  | spade
+  | heart
+  | club
+  | diamond
+
+def card := algebraicDataMatcher
+  | card suit (mod 13)</code></pre>
+<h2><span class="heading-number">3.3</span>Comparing Data with Tuple Patterns</h2>
+<p><span id="ref-pmo-tuple" class="anchor"></span></p>
+<p>Situations where one wants to compare multiple pieces of data arise frequently in programming. In such situations, tuple patterns, especially when used together with not patterns, are often useful. For example, the <code>difference</code> function can be defined by inserting a not pattern into the implementation of the <code>intersect</code> function introduced in Section&nbsp;<a class="reference" href="quick.html#ref-quick-matcher-composition">2.10</a> of Chapter&nbsp;<a class="reference" href="quick.html#ref-quick">2</a>. The type annotation indicates that the function takes two sets and returns their difference.</p>
+<pre class="listing"><code class="language-egison">def difference (xs: [a]) (ys: [a]) : [a] := matchAll (xs, ys) as (set eq, set eq) with
+  | ($x :: _, !(#x :: _)) -&gt; x</code></pre>
+<p>By changing the insertion position of the not pattern to <code>!($x :: _, #x :: _)</code>, we can also write a pattern that succeeds when the two collections have no common elements at all.</p>
+<p>By combining these patterns with sequential patterns, we can write even more complex patterns. This is because sequential patterns make it possible to apply a not pattern collectively to multiple separate parts of a pattern. For example, in Section&nbsp;<a class="reference" href="quick.html#ref-quick-seq-pat">2.8</a> of Chapter&nbsp;<a class="reference" href="quick.html#ref-quick">2</a>, we defined the <code>singleCommonElem</code> function, which checks whether two collections have exactly one common element, using pattern matching. Sequential not patterns sometimes become necessary when describing mathematical algorithms. For instance, sequential not patterns also appear in the SAT solver implementation introduced in Section&nbsp;<a class="reference" href="essence.html#ref-essence-sat">4.1</a> of Chapter&nbsp;<a class="reference" href="essence.html#ref-essence">4</a>. The type annotation indicates that the function takes two lists and returns a boolean.</p>
+<pre class="listing"><code class="language-egison">def singleCommonElem (xs: [a]) (ys: [a]) : Bool := match (xs, ys) as (multiset eq, multiset eq) with
+                    | [($x :: @, #x :: @),
+                       !($y :: _, #y :: _)] -&gt; True
+                    | _ -&gt; False</code></pre>
+<p>It is also possible to combine sequential patterns with loop patterns. For example, a pattern that matches the common prefix of two lists can be written using a sequential loop pattern.</p>
+<pre class="listing"><code class="language-egison">match (xs, ys) as (list eq, list eq) with
+| loop $i (1,$n)
+    [($x_i :: @, #x_i :: @), [...]]
+    !($y :: _, #y :: _)
+-&gt; map (\i -&gt; x_i) [1..n]</code></pre>
+<h2><span class="heading-number">3.4</span>Recursive Patterns with Loop Patterns</h2>
+<p><span id="ref-pmo-loop" class="anchor"></span></p>
+<p>Loop patterns are used to express repetition of patterns. Loop patterns are useful for constructing complex patterns by combining simple pattern constructors, or for writing patterns in which the number of pattern variables depends on a parameter. In such situations, complex recursion needs to be written. With loop patterns, such recursion can be pushed into the pattern, enabling intuitive descriptions. This section presents such examples.</p>
+<h3><span class="heading-number">3.4.1</span>The N-Queens Problem</h3>
+<p><span id="ref-pmo-loop-nqueen" class="anchor"></span></p>
+<p>This section introduces a technically sophisticated yet tricky example of loop patterns by presenting a program that solves the N-Queens problem. The N-Queens problem is the problem of placing <span class="math-inline">\(n\)</span> chess queens on an <span class="math-inline">\(n \times n\)</span> chessboard so that no two queens threaten each other. A chess queen can attack any piece that is any number of squares away horizontally, vertically, or diagonally. In terms of Japanese chess (shogi), the queen combines the moves of the rook and the bishop.</p>
+<p>Let us start with a program that solves the <span class="math-inline">\(4\)</span>-Queens problem. In this program, the placement of the <span class="math-inline">\(4\)</span> queens is represented as a list. The <span class="math-inline">\(n\)</span>-th element of the list represents which column the queen in the <span class="math-inline">\(n\)</span>-th row is placed in. In this case, the solution must be a permutation of the elements of the collection <code>[1,2,3,4]</code>, because no two queens can be placed in the same row or column. Therefore, we pattern-match the collection <code>[1,2,3,4]</code> as a multiset of integers. The condition that queens cannot share a diagonal line is expressed by the conditions <span class="math-inline">\(a_1 \pm 1 \neq a_2\)</span>, <span class="math-inline">\(a_1 \pm 2 \neq a_3\)</span>, <span class="math-inline">\(a_2 \pm 1 \neq a_3\)</span>, <span class="math-inline">\(a_1 \pm 3 \neq a_4\)</span>, <span class="math-inline">\(a_2 \pm 2 \neq a_4\)</span>, and <span class="math-inline">\(a_3 \pm 1 \neq a_4\)</span>.</p>
+<pre class="listing"><code class="language-egison">matchAll [1,2,3,4] as multiset integer with
+  $a_1 ::
+   (!#(a_1 - 1) &amp; !#(a_1 + 1) &amp; $a_2) ::
+    (!#(a_1 - 2) &amp; !#(a_1 + 2) &amp; !#(a_2 - 1) &amp; !#(a_2 + 1) &amp; $a_3) ::
+     (!#(a_1 - 3) &amp; !#(a_1 + 3) &amp; !#(a_2 - 2) &amp; !#(a_2 + 2) &amp; !#(a_3 - 1) &amp; !#(a_3 + 1) &amp; $a_4) ::
+      [] -&gt; [a_1,a_2,a_3,a_4]
+-- [[2,4,1,3],[3,1,4,2]]</code></pre>
+<p>To generalize the above program for the <span class="math-inline">\(n\)</span>-Queens problem, doubly nested loop patterns can be used. The index variable <code>i</code> of the outer loop pattern is used in the index range of the inner loop pattern to express the difference in the number of repetitions of the inner loop. Also note that values bound in previous repetition patterns, for example the value bound to <code>$a_j</code>, are referenced as in <code>#(a_j - (i - j))</code> and <code>#(a_j + (i - j))</code>. In this way, the non-linearity of indexed pattern variables (the ability to reference values bound to indexed pattern variables on the left side of the pattern) works effectively. The type annotation indicates that the <code>nQueens</code> function takes an integer <code>n</code> and returns a list of lists of integers.</p>
+<pre class="listing"><code class="language-egison">def nQueens (n: Integer) : [[Integer]] :=
+  matchAll [1..n] as multiset integer with
+  | $a_1 ::
+     (loop $i (2,n)
+           ((loop $j (1, i - 1)
+                  (!#(a_j - (i - j)) &amp; !#(a_j + (i - j)) &amp; ...)
+                  $a_i) :: ...)
+           [] -&gt; map (\i -&gt; a_i) [1..n]
+
+nQueens 4 -- [[2,4,1,3],[3,1,4,2]]</code></pre>
+<h3><span class="heading-number">3.4.2</span>Pattern Matching on Trees</h3>
+<p><span id="ref-pmo-tree" class="anchor"></span></p>
+<p>This section introduces a practical example of loop patterns by demonstrating pattern matching on trees. The tree nodes in this section can have an arbitrary number of subtrees as children, similar to XML. Furthermore, these subtrees are treated as multisets. A matcher for such trees was defined in Section&nbsp;<a class="reference" href="quick.html#ref-quick-matcher-composition">2.10</a> of Chapter&nbsp;<a class="reference" href="quick.html#ref-quick">2</a>. We use that matcher in this section.</p>
+<p>We write patterns against a tree that categorizes programming languages. <code>treeData</code> defines that category tree. For example, <code>&quot;Egison&quot;</code> belongs to the <code>&quot;pattern-match-oriented&quot;</code> category and to the <code>&quot;Dynamically typed&quot;</code> subcategory of the <code>&quot;Functional language&quot;</code> category. Data constructors <code>Node</code> and <code>Leaf</code> begin with uppercase letters.</p>
+<pre class="listing"><code class="language-egison">def treeData :=
+  Node &quot;Programming language&quot;
+    [Node &quot;pattern-match-oriented&quot; [Leaf &quot;Egison&quot;],
+     Node &quot;Functional language&quot;
+       [Node &quot;Strictly typed&quot; [Leaf &quot;OCaml&quot;, Leaf &quot;Haskell&quot;, Leaf &quot;Curry&quot;, Leaf &quot;Coq&quot;],
+        Node &quot;Dynamically typed&quot; [Leaf &quot;Egison&quot;, Leaf &quot;Lisp&quot;, Leaf &quot;Scheme&quot;, Leaf &quot;Racket&quot;]],
+     Node &quot;Logic programming&quot; [Leaf &quot;Prolog&quot;, Leaf &quot;Curry&quot;],
+     Node &quot;Object oriented&quot; [Leaf &quot;C++&quot;, Leaf &quot;Java&quot;, Leaf &quot;Ruby&quot;, Leaf &quot;Python&quot;, Leaf &quot;OCaml&quot;]]</code></pre>
+<p>The following <code>matchAll</code> expression enumerates the categories to which a given language belongs. Because a leaf of the tree can be at any depth, a loop pattern whose index range end value is a pattern (in this case <code>$n</code>) is used. The ellipsis pattern of this loop pattern is positioned not at the end of the repetition pattern. The ability for users to specify the position of repetition is another strength of loop patterns that the Kleene star operator of regular expressions does not have. Pattern constructors <code>node</code> and <code>leaf</code> begin with lowercase letters. The type annotation indicates that the <code>ancestors</code> function takes a string <code>x</code> and a tree <code>t</code> and returns a list of ancestor node paths.</p>
+<pre class="listing"><code class="language-egison">def ancestors (x: String) (t: Tree String) : [[String]] := matchAll t as tree string with
+  | loop $i (1,$n)
+      (node $c_i (... ::  _))
+      (leaf #x)
+  -&gt; map (\i -&gt; c_i) [1..n]
+
+ancestors &quot;Egison&quot; treeData
+-- [[&quot;Programming language&quot;, &quot;pattern-match-oriented&quot;], [&quot;Programming language&quot;, &quot;Functional language&quot;, &quot;Dynamically typed&quot;]]</code></pre>
+<p>It is also possible to write a pattern that enumerates all languages belonging to a given subcategory. By using doubly nested loop patterns, the subcategory can be at any depth. The following pattern enumerates all languages belonging to a specific category. <code>matchAllDFS</code> is used to enumerate languages in the same order as they appear in the tree. The type annotation indicates that the <code>descendants</code> function takes a string <code>x</code> and a tree <code>t</code> and returns a list of descendant nodes.</p>
+<pre class="listing"><code class="language-egison">def descendants (x: String) (t: Tree String) : [String] := matchAllDFS t as tree string with
+  | loop _ (1,_)
+      (node _ (... ::  _))
+      (node #x ((loop _ (1,_)
+                   (node _ (... :: _))
+                   (leaf $y)) :: _))
+  -&gt; y
+
+descendants &quot;Functional language&quot; treeData
+-- [&quot;OCaml&quot;, &quot;Haskell&quot;, &quot;Curry&quot;, &quot;Coq&quot;, &quot;Egison&quot;, &quot;Lisp&quot;, &quot;Scheme&quot;, &quot;Racket&quot;]</code></pre>
+<p>A DSL (domain-specific language) capable of pattern matching on trees is XML Path. An advantage of Egison is that a wide variety of patterns can be described by combining a small number of user-definable pattern constructors with loop patterns. XML Path, by contrast, uses many built-in commands such as the <code>ancestor</code> command to describe patterns.</p>
+<h3><span class="heading-number">3.4.3</span>Pattern Matching on Graphs</h3>
+<p><span id="ref-pmo-graph" class="anchor"></span></p>
+<p>This section introduces pattern matching on graphs. We present pattern matching on both graphs represented as sets of edges and graphs represented as adjacency lists.</p>
+<h4>Graphs as Sets of Edges</h4>
+<p><span id="ref-pmo-graph-set" class="anchor"></span></p>
+<p>This section performs pattern matching on graphs represented as sets of edges. First, we define the following matcher and graph.</p>
+<pre class="listing"><code class="language-egison">def graph := set edge
+def edge := algebraicDataMatcher
+  | edge integer integer
+
+def graphData :=
+  [ Edge 1 2, Edge 2 1, Edge 2 3,  Edge 2 4, Edge 3 4, Edge 4 5, Edge 4 6, Edge 4 7
+  , Edge 5 4, Edge 5 6, Edge 5 7,  Edge 6 4, Edge 6 5, Edge 6 7, Edge 7 4, Edge 7 5
+  , Edge 7 6, Edge 7 8, Edge 9 10, Edge 10 7 ]</code></pre>
+<figure>
+<p><img src="assets/graph.png" alt=""></p>
+<figcaption>Visualization of <code>graphData</code></figcaption>
+<p><span id="ref-fig-graphVis" class="anchor"></span></p>
+</figure>
+<p>The pattern constructor <code>edge</code> begins with a lowercase letter, while the data constructor <code>Edge</code> begins with an uppercase letter. Figure&nbsp;<a class="reference" href="pmo.html#ref-fig-graphVis">3.4.3</a> shows a visualization of the above graph. This section presents several pattern matches on this graph.</p>
+<p>A pattern that enumerates all nodes reachable from a given node <code>s</code> by traversing two edges can be written as follows.</p>
+<pre class="listing"><code class="language-egison">let s := 1 in
+  matchAll graphData as graph with
+  | edge (#s &amp; $x_1) $x_2 :: edge #x_2 $x_3 :: _
+  -&gt; x
+-- [1,3,4,5,6,7]</code></pre>
+<p>A pattern that enumerates nodes connected to node <code>s</code> via an edge originating from <code>s</code>, but which do not themselves have an edge back to <code>s</code>, can be written using a not pattern as follows.</p>
+<pre class="listing"><code class="language-egison">let s := 1 in
+  matchAll graphData as graph with
+  | edge #s $x :: !(edge #x #s :: _)
+  -&gt; x
+-- [4]</code></pre>
+<p>A pattern that enumerates all paths from node <code>s</code> to node <code>e</code> can be written using a loop pattern. Egison allows the use of <code>let</code> expressions within patterns. This <code>let</code> expression is used to bind <code>s</code> to <code>$x_1</code>. Thanks to this <code>let</code> expression, the first repetition of the loop pattern does not need to be treated as a special case.</p>
+<pre class="listing"><code class="language-egison">let (s, e) := (1, 8) in
+  matchAll graphData as graph with
+  | let x_1 := s in
+      loop $i (2, $n)
+           (edge #x_(i - 1) $x_i :: ...)
+           (edge #x_(n - 1) (#e &amp; $x_n) :: _)
+  -&gt; map (\i -&gt; x_i) [1..n]
+-- [[1,4,7,8], ...]</code></pre>
+<p>A pattern that enumerates cliques (subgraphs forming complete graphs) of size <span class="math-inline">\(n\)</span> can be written as follows. It uses doubly nested loop patterns.</p>
+<pre class="listing"><code class="language-egison">let n := 4 in
+  matchAll graphData2 as graph with
+  | edge $x_1 $x_2 :: loop $i (3, n)
+                           (edge #x_1 $x_i :: loop $j (2, i - 1)
+                                                   (edge #x_j #x_i :: ...)
+                                                   ...)
+                          _
+  -&gt; map (\i -&gt; x_i) [1..n]
+-- [[4,5,6,7],...]</code></pre>
+<p>This section presented pattern matching on directed graphs. It is straightforward to modify the above patterns for directed graphs into patterns for undirected graphs: simply use a matcher that identifies <code>Edge a b</code> and <code>Edge b a</code>. Such a matcher for undirected graphs can be defined using the matcher for unordered pairs introduced in Section&nbsp;<a class="reference" href="matcher.html#ref-matcher-basic">6.2</a> of Chapter&nbsp;<a class="reference" href="matcher.html#ref-matcher">6</a>.</p>
+<h4>Adjacency Graphs</h4>
+<p>This section performs pattern matching on graphs represented as weighted adjacency lists. A matcher for weighted adjacency lists can be defined using matcher composition (Section&nbsp;<a class="reference" href="quick.html#ref-quick-matcher-composition">2.10</a> of Chapter&nbsp;<a class="reference" href="quick.html#ref-quick">2</a>). The <code>graphData</code> in the program below represents a network of cities connected by air routes as a weighted adjacency list. The travel time between two cities is represented as an integer weight.</p>
+<pre class="listing"><code class="language-egison">def graph := multiset (string, multiset (string, integer))
+
+def graphData :=
+  [(&quot;Berlin&quot;, [(&quot;New York&quot;, 14), (&quot;London&quot;, 2), (&quot;Tokyo&quot;, 14), (&quot;Vancouver&quot;, 13)]),
+   (&quot;New York&quot;, [(&quot;Berlin&quot;, 14), (&quot;London&quot;, 12), (&quot;Tokyo&quot;, 18), (&quot;Vancouver&quot;, 6)]),
+   (&quot;London&quot;, [(&quot;Berlin&quot;, 2), (&quot;New York&quot;, 12), (&quot;Tokyo&quot;, 15), (&quot;Vancouver&quot;, 10)]),
+   (&quot;Tokyo&quot;, [(&quot;Berlin&quot;, 14), (&quot;New York&quot;, 18), (&quot;London&quot;, 15), (&quot;Vancouver&quot;, 12)]),
+   (&quot;Vancouver&quot;, [(&quot;Berlin&quot;, 13), (&quot;New York&quot;, 6), (&quot;London&quot;, 10), (&quot;Tokyo&quot;, 12)])]</code></pre>
+<p>The pattern in the following program matches routes that depart from Berlin, visit all cities, and return to Berlin. This pattern is used to solve the traveling salesman problem. It makes effective use of non-linear loop patterns. The type annotation indicates that the <code>trips</code> function computes a list of routes from the graph data and returns a list of tuples of total distance and city list.</p>
+<pre class="listing"><code class="language-egison">def trips : [(Integer, [String])] :=
+  let n := length graphData in
+    matchAll graphData as graph with
+    | (#&quot;Berlin&quot;, (($s_1,$p_1) :: _)) ::
+        loop $i (2, n - 1)
+          ((#s_(i - 1), ($s_i, $p_i) :: _) :: ...)
+          ((#s_(n - 1), (#&quot;Berlin&quot; &amp; $s_n, $p_n) :: _) :: [])
+    -&gt; (sum (map (\i -&gt; p_i) [1..n]), map (\i -&gt; s_i) [1..n])
+
+head (sortBy (\(_, x), (_, y) -&gt; compare x y) trips)
+-- (46, [&quot;London&quot;, &quot;New York&quot;, &quot;Vancouver&quot;, &quot;Tokyo&quot;, &quot;Berlin&quot;])</code></pre>
+<p>As with trees (Section&nbsp;<a class="reference" href="pmo.html#ref-pmo-tree">3.4.2</a>), several DSLs for pattern matching on graphs have been developed as query languages for graph databases. An advantage of Egison over these DSLs is that a wide variety of patterns can be expressed by combining a small number of user-defined pattern constructors with a few built-in patterns, including loop patterns.</p>
+  </main>
+  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+</body>
+</html>

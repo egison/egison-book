@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>A Quick Tour of Egison — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="prev" href="intro.html">← Previous</a><a rel="next" href="pmo.html">Next →</a><a class="language" href="../ja/quick.html">日本語</a></nav></header>
+  <main class="book-page">
+    <span id="ref-part-pmo" class="anchor"></span><h1><span class="heading-number">2</span>A Quick Tour of Egison</h1>
+<p><span id="ref-quick" class="anchor"></span></p>
+<p>This chapter introduces Egison&#x27;s features for pattern-match-oriented programming. Once you understand this chapter, you should have a nearly complete understanding of Egison&#x27;s pattern matching specification.</p>
+<p>The first half of this chapter (Sections&nbsp;<a class="reference" href="quick.html#ref-quick-matchall">2.1</a>, <a class="reference" href="quick.html#ref-quick-value-pat">2.2</a>, <a class="reference" href="quick.html#ref-quick-backtrack">2.3</a>, <a class="reference" href="quick.html#ref-quick-matcher">2.4</a>, and <a class="reference" href="quick.html#ref-quick-matchalldfs">2.5</a>) introduces the syntax for pattern matching. Egison&#x27;s pattern matching is designed to efficiently handle non-linear patterns (patterns that reference values bound to pattern variables within the same pattern) with multiple match results, in order to realize pattern matching on non-free data types. The first half of this chapter explains how this functionality is expressed as syntax.</p>
+<p>The second half of this chapter (Sections&nbsp;<a class="reference" href="quick.html#ref-quick-logical-pat">2.6</a>, <a class="reference" href="quick.html#ref-quick-loop-pat">2.7</a>, <a class="reference" href="quick.html#ref-quick-seq-pat">2.8</a>, <a class="reference" href="quick.html#ref-quick-pat-fun">2.9</a>, and <a class="reference" href="quick.html#ref-quick-matcher-composition">2.10</a>) introduces various built-in patterns. Among these, the loop patterns and sequential patterns introduced in the latter sections are patterns not yet implemented in any programming language other than Egison. These built-in patterns may seem specialized and ad hoc at first. It is not a problem if you do not fully understand the meaning of these built-in patterns on first encounter. Please come back to this chapter when practical examples of these patterns are introduced later in the book.</p>
+<h2><span class="heading-number">2.1</span>Pattern Matching with <code>matchAll</code> Expressions</h2>
+<p><span id="ref-quick-matchall" class="anchor"></span></p>
+<p>Egison provides several syntactic constructs for describing pattern matching. The most fundamental of these is the <code>matchAll</code> expression.</p>
+<pre class="listing"><code class="language-egison">matchAll [1,2,3] as list something with
+| $x :: $ts -&gt; (x, ts)
+-- [(1,[2,3])]</code></pre>
+<p>A <code>matchAll</code> expression consists of a <em>target</em> (in the above case, <code>[1,2,3]</code>), a <em>matcher</em> (in the above case, <code>list something</code>), and one or more <em>match clauses</em> (in the above case, <code>$x :: $xs -&gt; (x,xs)</code>). A match clause consists of a <em>pattern</em> (in the above case, <code>$x :: $xs</code>) and a <em>body</em> (in the above case, <code>(x,xs)</code>). Like match expressions in existing programming languages, a <code>matchAll</code> expression attempts to pattern match the target against the pattern, and if it matches, evaluates the body of that match clause.</p>
+<p>The distinguishing features of Egison&#x27;s <code>matchAll</code> expression are (1) that it returns a list as the result, and (2) that it takes an additional argument called a matcher. Feature (1) is designed to support pattern matching with multiple results. A <code>matchAll</code> expression evaluates the body for all pattern matching results and collects them into a list. The <code>::</code> used in the pattern of the above example is a pattern constructor called the <em>cons pattern</em>, which decomposes a list into its head element and the remaining list. Therefore, in the above example, since there is only one pattern matching result, it returns a list of length <span class="math-inline">\(1\)</span>. Feature (2) enables extensibility and polymorphism of pattern matching algorithms. A <em>matcher</em> is a unique object not found in languages other than Egison, designed to hold pattern matching algorithms. Polymorphism of patterns through matchers is covered in Section&nbsp;<a class="reference" href="quick.html#ref-quick-matcher">2.4</a>. Lines beginning with <code>--</code> are comments. In this book, comments immediately following a program indicate the execution result of that program.</p>
+<p>Let us explain the grammar of <code>matchAll</code> expressions in a bit more detail. The matcher is enclosed by the keywords <code>as</code> and <code>with</code>. A <code>matchAll</code> expression can take multiple match clauses.<span class="footnote" role="note"><code>matchAll</code> <span class="math-inline">\(t\)</span> <code>as</code> <span class="math-inline">\(m\)</span> <code>with</code> <span class="math-inline">\(c_1\)</span> <span class="math-inline">\(c_2\)</span> <span class="math-inline">\(...\)</span>is equivalent to (<code>matchAll</code> <span class="math-inline">\(t\)</span> <code>as</code> <span class="math-inline">\(m\)</span> <code>with</code> <span class="math-inline">\(c_1\)</span>) <code>++</code> (<code>matchAll</code> <span class="math-inline">\(t\)</span> <code>as</code> <span class="math-inline">\(m\)</span> <code>with</code> <span class="math-inline">\(c_2\)</span>) <code>++</code> <span class="math-inline">\(...\)</span></span> Each match clause is preceded by <code>|</code>.<span class="footnote" role="note">When there are multiple match clauses, the <code>|</code> before the first match clause is also required.</span> The <code>|</code> improves program readability when match clauses span multiple lines. The pattern and body within a match clause are separated by <code>-&gt;</code>.</p>
+<pre class="listing"><code class="language-egison">matchAll target as matcher with
+| pattern1 -&gt; body1
+| pattern2 -&gt; body2
+...</code></pre>
+<p>When there is only one match clause, the <code>|</code> before the match clause can be omitted as follows.</p>
+<pre class="listing"><code class="language-egison">matchAll target as matcher with pattern -&gt; body</code></pre>
+<p>Let us introduce an example of pattern matching with multiple results. The <code>++</code> used in the pattern of the <code>matchAll</code> expression below is a pattern constructor called the <em>join pattern</em>, which decomposes a list into a prefix list and the remaining list. The <code>matchAll</code> expression evaluates the body expression for all decompositions produced by the join pattern.</p>
+<pre class="listing"><code class="language-egison">matchAll [1,2,3] as list something with
+| $hs ++ $ts -&gt; (hs, ts)
+-- [([], [1, 2, 3]), ([1], [2, 3]), ([1, 2], [3]), ([1, 2, 3], [])]</code></pre>
+<h2><span class="heading-number">2.2</span>Non-Linear Patterns via Value Patterns and Predicate Patterns</h2>
+<p><span id="ref-quick-value-pat" class="anchor"></span></p>
+<p>The <code>matchAll</code> expression reveals its true power when combined with non-linear patterns. For example, the following non-linear pattern succeeds in matching when the target collection contains a pair of equivalent elements.</p>
+<pre class="listing"><code class="language-egison">matchAll [1,2,3,2,4,3] as list integer with
+| _ ++ $x :: _ ++ #x :: _ -&gt; x
+-- [2,3]</code></pre>
+<p>The <em>value pattern</em> plays an important role in expressing non-linear patterns. A value pattern checks whether its content is equal to the target. A value pattern is prefixed with <code>#</code>. Any expression can follow the <code>#</code>. The expression following <code>#</code> is evaluated while referencing values bound to pattern variables that appear to the left of that value pattern. To realize this behavior, Egison&#x27;s patterns are defined to be processed in order from left to right. As a result, a pattern like <code>$x :: #x :: _</code> is valid, but <code>#x :: $x :: _</code> does not work correctly. (If you really need to reference the value of a pattern variable appearing to the right, you can use sequential patterns, introduced in Section&nbsp;<a class="reference" href="quick.html#ref-quick-seq-pat">2.8</a>.)</p>
+<p>As another example of non-linear patterns, we introduce pattern matching for twin primes. Twin primes are pairs of primes whose difference is 2. The infinite sequence of primes is bound to <code>primes</code>.<span class="footnote" role="note"><code>primes</code> is defined in Egison&#x27;s built-in library.</span> This <code>matchAll</code> expression extracts all twin primes from the infinite sequence of primes in order. Egison has a static type system, but type annotations can be omitted thanks to type inference. When needed, types can be explicitly specified as in <code>def twinPrimes : [(Integer, Integer)] := ...</code>.</p>
+<pre class="listing"><code class="language-egison">def twinPrimes := matchAll primes as list integer with
+  | _ ++ $p :: #(p + 2) :: _ -&gt; (p, p + 2)
+
+take 8 twinPrimes
+-- [(3, 5), (5, 7), (11, 13), (17, 19), (29, 31), (41, 43), (59, 61), (71, 73)]</code></pre>
+<p>Sometimes we want to use conditions more general than equality in pattern matching. The <em>predicate pattern</em> is a built-in pattern provided for this purpose. A predicate pattern succeeds in matching when the result of applying its predicate to the target is <code>True</code>. A predicate pattern begins with <code>?</code>, followed by a single-argument predicate.</p>
+<pre class="listing"><code class="language-egison">def twinPrimes := matchAll primes as list integer with
+  | _ ++ $p :: ?(\q -&gt; q = p + 2) :: _ -&gt; (p, p + 2)</code></pre>
+<h2><span class="heading-number">2.3</span>Efficient Non-Linear Pattern Matching via Backtracking</h2>
+<p><span id="ref-quick-backtrack" class="anchor"></span></p>
+<p>The pattern matching algorithm inside Egison uses backtracking to efficiently process non-linear patterns.</p>
+<pre class="listing"><code class="language-egison">matchAll [1..n] as list integer with _ ++ $x :: _ ++ #x :: _ -&gt; x
+-- `\color{P@GrayComment}{Returns}` [] `\color{P@GrayComment}{in O(n\^{}2)}`
+matchAll [1..n] as list integer with _ ++ $x :: _ ++ #x :: _ ++ #x :: _ -&gt; x
+-- `\color{P@GrayComment}{Returns}` [] `\color{P@GrayComment}{in O(n\^{}2)}`</code></pre>
+<p>The two match expressions above extract pairs and triples, respectively, of identical elements from a list of integers from <span class="math-inline">\(1\)</span> to <span class="math-inline">\(n\)</span>. Since neither pairs nor triples of identical elements exist in the target list, both <code>matchAll</code> expressions return the empty list. When the second <code>matchAll</code> expression is evaluated, the Egison interpreter never reaches the second <code>#x</code> pattern. This is because the match fails at the first <code>#x</code>. (As stated in Section&nbsp;<a class="reference" href="quick.html#ref-quick-value-pat">2.2</a>, Egison&#x27;s pattern matching processes patterns from left to right in order.) Therefore, the time complexity of both <code>matchAll</code> expressions is the same. The pattern matching algorithm inside Egison is explained in detail in Chapter&nbsp;<a class="reference" href="mechanism.html#ref-mechanism">5</a>.</p>
+<h2><span class="heading-number">2.4</span>Extensibility and Polymorphism of Patterns via Matchers</h2>
+<p><span id="ref-quick-matcher" class="anchor"></span></p>
+<p>In addition to pattern extensibility, another benefit that matchers provide is <em>ad hoc polymorphism of patterns</em>. Ad hoc polymorphism of patterns is the property that pattern constructors such as <code>::</code> and <code>++</code> can be used with the same name across multiple matchers such as lists and multisets. Ad hoc polymorphism of patterns is extremely important in Egison, which allows pattern matching on various non-free data types. This is because a single piece of data is often pattern matched as different non-free data types at different points in a program. For example, a list may be pattern matched as a multiset or a set. Polymorphism of patterns can significantly reduce the number of pattern constructor names.</p>
+<p>The <code>matchAll</code> expressions below pattern match the <em>collection</em> <code>[1,2,3]</code> as a target, using different matchers with the same cons pattern. We use the term collection here, but this refers to what we have been calling lists. A collection may be pattern matched as a list, a multiset, or a set. Therefore, we henceforth use the term collection to refer collectively to data that may be treated as a list, multiset, set, and so on. When the matcher is a list, the cons pattern decomposes the collection into the head element and the remaining collection. When the matcher is a multiset, the cons pattern decomposes the collection into some element and the remaining collection. When the matcher is a set, the cons pattern decomposes the collection into some element and the target collection itself. This behavior for sets can be considered natural if we think of a set as a collection containing infinitely many copies of every element. (Think of it as <span class="math-inline">\(\infty - 1 = \infty\)</span>.)</p>
+<pre class="listing"><code class="language-egison">matchAll [1,2,3] as list something with $x :: $xs -&gt; (x,xs)
+-- [(1,[2,3])]
+matchAll [1,2,3] as multiset something with $x :: $xs -&gt; (x,xs)
+-- [(1,[2,3]),(2,[1,3]),(3,[1,2])]
+matchAll [1,2,3] as set something with $x :: $xs -&gt; (x,xs)
+-- [(1,[1,2,3]),(2,[1,2,3]),(3,[1,2,3])]</code></pre>
+<p>Polymorphism of patterns is especially useful when expressing value patterns. Like constructor patterns such as the cons pattern, the behavior of value patterns also varies depending on the matcher. For example, the equality of collections such as <code>[1,2,3] == [2,1,3]</code> depends on whether the collection is regarded as a list or a multiset. However, in Egison, thanks to ad hoc polymorphism of patterns, both equalities can be checked using the same pattern. Polymorphism of value patterns significantly improves the readability of programs that deal with non-free data types.</p>
+<pre class="listing"><code class="language-egison">matchAll [1,2,3] as list integer with #[2,1,3] -&gt; &quot;Matched&quot; -- []
+matchAll [1,2,3] as multiset integer with #[2,1,3] -&gt; &quot;Matched&quot; -- [&quot;Matched&quot;]</code></pre>
+<h2><span class="heading-number">2.5</span>Controlling the Order of Pattern Matching Results with <code>matchAllDFS</code></h2>
+<p><span id="ref-quick-matchalldfs" class="anchor"></span></p>
+<p>The internal pattern matching algorithm of the <code>matchAll</code> expression is designed to enumerate all countably infinite results, but the order of enumeration is determined by the interpreter. In some cases, this order matters.</p>
+<p>Let us introduce a typical example. The following <code>matchAll</code> expression enumerates all pairs of natural numbers. The <code>take</code> function is used to extract the first <span class="math-inline">\(8\)</span> pairs. <code>matchAll</code> performs a breadth-first search to traverse all nodes of the pattern matching search tree.<span class="footnote" role="note">The details of this breadth-first search are explained in Section&nbsp;5.2 of the paper on Egison pattern matching design&nbsp;[<a href="bibliography.html#cite-egi2018Aplas">1</a>].</span> As a result, the order of pattern matching results is as follows.</p>
+<pre class="listing"><code class="language-egison">take 8 (matchAll [1..] as set something with
+        | $x :: $y :: _ -&gt; (x,y))
+-- [(1,1),(1,2),(2,1),(1,3),(2,2),(3,1),(2,3),(3,2)]</code></pre>
+<p>The above order is suitable for traversing a search tree that may be infinitely large. However, there are situations where this order is not desirable. <code>matchAllDFS</code>, which performs a depth-first search of the pattern matching search tree, is provided for such situations.</p>
+<pre class="listing"><code class="language-egison">take 8 (matchAllDFS [1..] as set something with
+        | $x :: $y :: _ -&gt; (x,y))
+-- [(1,1),(1,2),(1,3),(1,4),(1,5),(1,6),(1,7),(1,8)]</code></pre>
+<p>For example, when defining the <code>concat</code> function via pattern matching as shown below, using a <code>matchAllDFS</code> expression allows the result collection to be generated in the correct order.</p>
+<pre class="listing"><code class="language-egison">def concat xss := matchAllDFS xss as list (list something) with
+  | _ ++ (_ ++ $x :: _) :: _ -&gt; x</code></pre>
+<p>If <code>matchAll</code> were used instead of <code>matchAllDFS</code>, the elements of the argument&#x27;s list of lists would be enumerated in an interleaved fashion as follows.</p>
+<pre class="listing"><code class="language-egison">take 10 (matchAll [[1..], map neg [1..]] as list (list something) with
+         | _ ++ (_ ++ $x :: _) :: _ -&gt; x)
+--  [1,2,-1,3,-2,4,-3,5,-4,6]</code></pre>
+<h2><span class="heading-number">2.6</span>And-Patterns, Or-Patterns, and Not-Patterns</h2>
+<p><span id="ref-quick-logical-pat" class="anchor"></span></p>
+<p>Logical patterns such as <em>and-patterns</em>, <em>or-patterns</em>, and <em>not-patterns</em> play an important role in expanding the expressiveness of patterns. An and-pattern takes two patterns and succeeds in matching when both patterns match. An or-pattern takes two patterns and succeeds in matching when either one of the patterns matches. A not-pattern takes one pattern and succeeds in matching when that pattern fails to match.</p>
+<p>As an example of and-patterns and or-patterns, we introduce pattern matching for extracting prime triples. A prime triple is a triple of primes of the form <span class="math-inline">\((p,p+2,p+6)\)</span> or <span class="math-inline">\((p,p+4,p+6)\)</span>. The or-pattern <code>(#(p + 2) | #(p + 4))</code> is used to match both <span class="math-inline">\(p+2\)</span> and <span class="math-inline">\(p+4\)</span>. The and-pattern <code>((#(p + 2) | #(p + 4)) &amp; $m)</code> is used to bind the matched value (either <span class="math-inline">\(p+2\)</span> or <span class="math-inline">\(p+4\)</span>) to <code>$m</code>. This use of the and-pattern is similar to the use of as-patterns provided in Haskell.</p>
+<pre class="listing"><code class="language-egison">def primeTriples := matchAll primes as list integer with
+  | _ ++ $p :: ((#(p + 2) | #(p + 4)) &amp; $m) :: #(p + 6) :: _
+  -&gt; (p, m, p + 6)
+
+take 6 primeTriples -- [(5,7,11),(7,11,13),(11,13,17),(13,17,19),(17,19,23),(37,41,43)]</code></pre>
+<p>A not-pattern, as its name suggests, succeeds in matching when the target does not match the pattern. A not-pattern is prefixed with <code>!</code>, followed by an arbitrary pattern. The following <code>matchAll</code> enumerates pairs of adjacent primes that are not twin primes. The not-pattern <code>!#(p + 2)</code> represents a pattern that matches any value other than <span class="math-inline">\(p+2\)</span>.</p>
+<pre class="listing"><code class="language-egison">take 10 (matchAll primes as list integer with
+         | _ ++ $p :: (!#(p + 2) &amp; $q) :: _ -&gt; (p, q))
+-- [(2,3),(7,11),(13,17),(19,23),(23,29),(31,37),(37,41),(43,47),(47,53),(53,59)]</code></pre>
+<h2><span class="heading-number">2.7</span>Loop Patterns</h2>
+<p><span id="ref-quick-loop-pat" class="anchor"></span></p>
+<p>The <em>loop pattern</em> is a built-in pattern for expressing multiple repetitions of a pattern. Loop patterns are an extension of the Kleene star operator (<code>*</code>) in regular expressions.</p>
+<p>Let us begin by considering a pattern match that enumerates all 2-element combinations from a target collection. This can be written with the following <code>matchAll</code> expression.</p>
+<pre class="listing"><code class="language-egison">def comb2 xs := matchAll xs as list something with
+  | _ ++ $x_1 :: _ ++ $x_2 :: _ -&gt; [x_1, x_2]
+
+comb2 [1,2,3,4] -- [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4]]</code></pre>
+<p>Egison allows subscripts to be appended to pattern variables, as in <code>$x_1</code> and <code>$x_2</code> in this example.<span class="footnote" role="note">Because of this, <code>snake_case</code> variable naming cannot be used in Egison.</span> These are called <em>indexed variables</em> and correspond to mathematical expressions like <span class="math-inline">\(x_1\)</span> and <span class="math-inline">\(x_2\)</span>. The expression following <code>_</code> is called a subscript and must evaluate to an integer. An arbitrary number of subscripts can be appended to a variable, as in <code>x_i_j_k</code>. When a value is bound to an indexed variable <code>$x_i</code>, if no value has yet been bound to the variable <code>x</code>, the Egison interpreter creates an associative array and binds it to <code>x</code>. The key of this associative array is the integer <code>i</code>, and the corresponding value is the value matched by the indexed variable <code>$x_i</code>. If an associative array is already bound to the variable <code>x</code>, a new key-value pair is added to this associative array.</p>
+<p>Let us generalize the <span class="math-inline">\(2\)</span> in the above <code>comb2</code> to <span class="math-inline">\(n\)</span>. Here, we can use a loop pattern.</p>
+<pre class="listing"><code class="language-egison">def comb n xs := matchAll xs as list something with
+             | loop $i                 -- `\color{P@GrayComment}{index variable}`
+                    (1, n)             -- `\color{P@GrayComment}{index range}`
+                    (_ ++ $x_i :: ...) -- `\color{P@GrayComment}{repeat pattern}`
+                    _                  -- `\color{P@GrayComment}{terminal pattern}`
+             -&gt; map (\i -&gt; x_i) [1..n]
+
+comb 2 [1,2,3,4] -- [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4]]
+comb 3 [1,2,3,4] -- [[1,2,3],[1,2,4],[1,3,4],[2,3,4]]</code></pre>
+<p>A loop pattern takes an <em>index variable</em>, an <em>index range</em>, a <em>repeat pattern</em>, and a <em>terminal pattern</em> as arguments. The index variable (in the above case, <code>$i</code>) is a variable that holds the current iteration count. The index range (in the above case, <code>(1, n)</code>) is used to specify the range over which the index variable varies. The index range is a pair of a <em>start value</em> and an <em>end value</em>. The repeat pattern (in the above case, <code>(_ ++ $x_i :: ...)</code>) is the pattern that is repeated while the index variable is within the index range. The terminal pattern (in the above case, <code>_</code>) is the pattern that is expanded when the index variable moves outside the index range. Within the repeat pattern, the <em>ellipsis pattern</em> <code>...</code> can be used. The repeat pattern or terminal pattern is expanded at the position of the ellipsis pattern. When the repeat pattern is expanded at an ellipsis pattern, the value of the index variable is incremented. For example, when <span class="math-inline">\(n=3\)</span>, the above loop pattern is expanded as follows.</p>
+<pre class="listing"><code class="language-egison">(loop $i (1, 3) (_ ++ $x_i :: ...) _)
+_ ++ $x_1 :: (loop $i (2, 3) (_ ++ $x_i :: ...) _)
+_ ++ $x_1 :: _ ++ $x_2 :: (loop $i (3, 3) (_ ++ $x_i :: ...) _)
+_ ++ $x_1 :: _ ++ $x_2 :: _ ++ $x_3 :: (loop $i (4, 3) (_ ++ $x_i :: ...) _)
+_ ++ $x_1 :: _ ++ $x_2 :: _ ++ $x_3 :: _</code></pre>
+<p>In the above loop pattern, the number of repetitions was a constant. However, by making the end value of the index range a pattern instead of an integer value, the number of repetitions of the loop pattern can vary depending on the target. When the end value of the index range is a pattern, the ellipsis pattern is expanded into both the repeat pattern and the terminal pattern. The number of repetitions when the ellipsis pattern is expanded into the terminal pattern is matched against the end value pattern of the index range. The following loop pattern enumerates the prefixes of the target collection.</p>
+<pre class="listing"><code class="language-egison">matchAll [1,2,3,4] as list something with
+| loop $i (1, $n) ($x_i :: ...) _ -&gt; map (\i -&gt; x_i) [1..n]
+-- [[],[1],[1,2],[1,2,3],[1,2,3,4]]</code></pre>
+<p>We have introduced two types of index range specification above, but these are expanded into the following more general form of index range specification. <code>(1, n)</code> corresponds to the third case below, and <code>(1, $n)</code> corresponds to the fourth case below.</p>
+<pre class="listing"><code class="language-egison">(`start`)                  &lt;=&gt; (`start`, [`start`..], _)
+(`start`, `end-list`)      &lt;=&gt; (`start`, `end-list` _)
+(`start`, `end`)           &lt;=&gt; (`start`, [`end`] _)
+(`start`, `terminal-pat`)  &lt;=&gt; (`start`, [`start`..], `terminal-pat`)</code></pre>
+<p>In general, an index range consists of three components: a start value, a list of end values, and a terminal pattern. The start value cannot be omitted. When the list of end values is omitted, an infinite list starting from the start value is used as the list of end values. When the list of end values is not a list but a single integer value, it is converted to a list containing only that integer value. When the terminal pattern is omitted, a wildcard is filled in. For example, <code>(1, n)</code> is expanded to <code>(1, [n], _)</code>, and <code>(1, $n)</code> is expanded to <code>(1, [1..], $n)</code>, respectively.</p>
+<p>Loop patterns are used especially often when pattern matching on trees and graphs. Examples of this are introduced in Section&nbsp;<a class="reference" href="pmo.html#ref-pmo-loop">3.4</a> of Chapter&nbsp;<a class="reference" href="pmo.html#ref-pmo">3</a>. The formal syntax and semantics of loop patterns are described in the paper on loop patterns&nbsp;[<a href="bibliography.html#cite-egi2018loop">2</a>].</p>
+<h2><span class="heading-number">2.8</span>Sequential Patterns</h2>
+<p><span id="ref-quick-seq-pat" class="anchor"></span></p>
+<p>The Egison interpreter processes patterns from left to right in order. However, there are cases where one wants to change this processing order, such as when wanting to reference the value of a pattern variable bound on the right side of the pattern. The <em>sequential pattern</em> is a built-in pattern provided for this purpose.</p>
+<p>A sequential pattern allows the user to change the order in which pattern matching is processed. A sequential pattern is represented as a list of patterns. Pattern matching is executed in order from the head of the list. The following sequential pattern matches the target list in the order of the third element, the first element, and the second element.</p>
+<pre class="listing"><code class="language-egison">matchAll [2,3,1,4,5] as list integer with
+| {     @    ::     @    :: $x :: _,
+   (#(x + 1),       @    ),
+                 #(x + 2)}
+-&gt; &quot;Matched&quot; -- [&quot;Matched&quot;]</code></pre>
+<p>The <code>@</code> appearing in a sequential pattern is called a <em>later pattern variable</em>. The target bound to a later pattern variable is pattern matched by the pattern in the next element of the sequential pattern. When multiple later pattern variables appear, the next sequence matches them collectively as a tuple.</p>
+<p>This feature of sequential patterns makes it possible to apply a not-pattern collectively to multiple separate parts of a pattern. For example, the following sequential pattern succeeds in matching when the pair of target collections contains exactly one common element. The sequential pattern enables checking that the respective collections share a common element, and then checking that the remaining collections have no further common elements. The combination of sequential patterns and not-patterns appears when describing mathematical algorithms. For example, it also appears in Section&nbsp;<a class="reference" href="essence.html#ref-essence-sat">4.1</a> of Chapter&nbsp;<a class="reference" href="essence.html#ref-essence">4</a>.</p>
+<pre class="listing"><code class="language-egison">def singleCommonElem xs ys := match (xs, ys) as (multiset eq, multiset eq) with
+| {($x :: @, #x :: @),
+   !($y :: _, #y :: _)} -&gt; True
+| _ -&gt; False</code></pre>
+<p>Some readers may have wondered whether the same thing as a sequential pattern can be expressed by nesting <code>matchAll</code> expressions. In fact, this is impossible for at least two reasons. The first reason stems from the fact that nested <code>matchAll</code> expressions break Egison&#x27;s internal breadth-first search. The second result of the outer <code>matchAll</code> expression is computed only after all results of the inner <code>matchAll</code> expression for the first result of the outer expression have been evaluated. The second reason is that later pattern variables preserve not only the target but also the matcher information. The matcher argument of <code>matchAll</code> may be a parameter originating from a function argument. Therefore, the matcher that should be used in the inner <code>matchAll</code> expression may not be syntactically derivable.</p>
+<h2><span class="heading-number">2.9</span>Modularizing Patterns with Pattern Functions</h2>
+<p><span id="ref-quick-pat-fun" class="anchor"></span></p>
+<p>Pattern constructors such as the cons pattern and the join pattern are defined in matchers, as explained in Chapter&nbsp;<a class="reference" href="matcher.html#ref-matcher">6</a>. These pattern constructors can be combined to create new pattern constructors. To do this, one uses a <em>pattern function</em>, which takes patterns as arguments and returns a pattern.</p>
+<p>A pattern function is defined with the <code>def pattern</code> statement. After the name come type parameters (<code>{a}</code>), parameters with type annotations, and, after <code>:</code>, the type targeted by the pattern that the application produces. The pattern function <code>twin</code> defined below modularizes a doubly nested cons pattern that matches when the first elements are equal. The formal parameters of a pattern function are called <em>variable patterns</em>. In this example, the variable patterns are <code>pat1</code> and <code>pat2</code>. The parameter annotation <code>(pat1: a)</code> says that <code>pat1</code> is a pattern that matches values of type <code>a</code>. When referencing the content of a variable pattern in the body of a pattern function, <code>~</code> is prefixed to the variable pattern. This is to distinguish variable patterns from pattern constructors.</p>
+<pre class="listing"><code class="language-egison">def pattern twin {a} (pat1: a) (pat2: [a]) : [a] :=
+  (~pat1 &amp; $x) :: #x :: ~pat2</code></pre>
+<p>This <code>twin</code> pattern function behaves as follows.</p>
+<pre class="listing"><code class="language-egison">match [1, 1, 2, 3] as list integer with
+| twin $n $ns -&gt; (n, ns)
+-- (1, [2, 3])</code></pre>
+<p>Type checking of pattern functions is explained in Section&nbsp;<a class="reference" href="matcher.html#ref-matcher-patfun-types">6.12</a> of Chapter&nbsp;<a class="reference" href="matcher.html#ref-matcher">6</a>.</p>
+<h2><span class="heading-number">2.10</span>Generating New Matchers via Matcher Composition</h2>
+<p><span id="ref-quick-matcher-composition" class="anchor"></span></p>
+<p>Except for <code>something</code>, which is Egison&#x27;s only built-in matcher, all matchers that have appeared so far can be defined by users. The basic way to define a matcher is to use the <code>matcher</code> expression explained in Chapter&nbsp;<a class="reference" href="matcher.html#ref-matcher">6</a>, but new matchers can also be created by combining existing matchers. Using this method, for example, one can define a matcher for tuples of multisets or a matcher for multisets of multisets.</p>
+<p>A matcher for tuples is represented by a tuple of matchers. A <em>tuple pattern</em> is used for pattern matching with such matchers. For example, the following is the definition of the <code>intersect</code> function, which also appeared in Section&nbsp;<a class="reference" href="intro.html#ref-intro-pmo">1.2</a> of Chapter&nbsp;<a class="reference" href="intro.html#ref-intro">1</a>. It uses a matcher for a tuple of two sets to extract common elements of collections via pattern matching.</p>
+<pre class="listing"><code class="language-egison">def intersect xs ys := matchAll (xs,ys) as (set eq, set eq) with
+  | ($x :: _, #x :: _) -&gt; x</code></pre>
+<p>The <code>eq</code> matcher used above is a user-defined matcher that can be used for pattern matching on data types with defined equality.<span class="footnote" role="note">The type of the <code>eq</code> matcher is <code>{Eq a} =&gt; Matcher a</code>; it is usable at any type with an <code>Eq</code> instance (Section&nbsp;<a class="reference" href="matcher.html#ref-matcher-types">6.8</a> of Chapter&nbsp;<a class="reference" href="matcher.html#ref-matcher">6</a>).</span> When a value pattern is used with the <code>eq</code> matcher, pattern matching is performed by checking equality.</p>
+<p>Furthermore, by combining tuple matchers with functions that take matchers as arguments and return matchers, one can define matchers for various non-free data types. For example, when representing each node of a graph as an integer and each edge as a pair of two nodes, a matcher representing a directed graph can be defined as a multiset of edges as follows.</p>
+<pre class="listing"><code class="language-egison">def graph := multiset (integer, integer)</code></pre>
+<p>A matcher for a graph represented by an adjacency list can also be defined. A graph represented by an adjacency list is defined as a multiset of tuples, each consisting of an integer and a multiset of integers. Here again, node IDs are represented by integers.</p>
+<pre class="listing"><code class="language-egison">def adjacencyGraph := multiset (integer, multiset integer)</code></pre>
+<p>Matchers for algebraic data types can also be defined using the <code>matcher</code> expression, but Egison provides a special syntax <code>algebraicDataMatcher</code> that allows matchers for algebraic data types to be defined with a concise description. The <code>algebraicDataMatcher</code> expression is syntactic sugar that desugars into a <code>matcher</code> expression. Using <code>algebraicDataMatcher</code>, for example, a matcher for binary trees can be defined as follows.</p>
+<pre class="listing"><code class="language-egison">def binaryTree a := algebraicDataMatcher
+  | bLeaf a
+  | bNode a (binaryTree a) (binaryTree a)</code></pre>
+<p>Matchers for algebraic data types and matchers for non-free data types can also be combined. For example, a matcher for a tree with an arbitrary number of children that ignores the order of children can be defined as follows. Pattern matching on this tree is introduced in Section&nbsp;<a class="reference" href="pmo.html#ref-pmo-loop">3.4</a> of Chapter&nbsp;<a class="reference" href="pmo.html#ref-pmo">3</a>.</p>
+<pre class="listing"><code class="language-egison">def tree a := algebraicDataMatcher
+  | leaf a
+  | node a (multiset (tree a))</code></pre>
+  </main>
+  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+</body>
+</html>

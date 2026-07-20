@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>関数型プログラミング言語としてのいくつかの機能 — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="matcher.html">← 前へ</a><a rel="next" href="sweet.html">次へ →</a><a class="language" href="../en/etc.html">English</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">7</span>関数型プログラミング言語としてのいくつかの機能</h1>
+<p><span id="ref-etc" class="anchor"></span></p>
+<p>本章は，関数型のプログラムの記述を便利にするためのEgisonの機能をいくつか紹介する．</p>
+<h2><span class="heading-number">7.1</span>無名パラメーター関数</h2>
+<p>無名パラメーター関数（anonymous parameter function）を使うと引数に名前をつけずに関数を定義できる． ラムダ式を使うと関数の命名を省略できる． 引数の命名まで省略できる無名パラメーター関数は，これをさらにおしすすめたものと考えることができる． たとえば，第一引数を10倍して第二引数と足し合わせる無名パラメーター関数は以下のように定義できる．</p>
+<pre class="listing"><code class="language-egison">2#($1 * 10 + $2) 1 2
+-- 12</code></pre>
+<p><code>#</code>の前の<code>2</code>は<span class="math-inline">\(2\)</span>引数の関数を定義していることを意味する． 関数のボディの中で現れる<code>$1</code>と<code>$2</code>はそれぞれ第一引数と第二引数を表している．</p>
+<p>無名パラメータ関数には，引数にタプルをとるものとリストをとるものの2つの変種がある． この2つの変種は<code>#</code>の前に指定する引数の数を括弧で囲むことによって定義する． <code>#</code>の前の数を<code>()</code>で囲むとタプルを引数に取る無名パラメーター関数を定義できる．</p>
+<pre class="listing"><code class="language-egison">(2)#($1, $2) (10, 20)
+-- (10, 20)</code></pre>
+<p><code>#</code>の前の数を<code>[]</code>で囲むとリストを引数に取る無名パラメーター関数を定義できる．</p>
+<pre class="listing"><code class="language-egison">[2]#($2, $1) [10, 20]
+-- (20, 10)</code></pre>
+<h2><span class="heading-number">7.2</span>無名<code>matchAll</code>関数・無名<code>match</code>関数</h2>
+<p>関数定義のとき，仮引数をすぐにパターンマッチすることが多い． するとその仮引数の名前がそのパターンマッチのターゲットとしてしか役に立たない． この問題を解決するために無名<code>matchAll</code>関数と無名<code>match</code>関数がある．</p>
+<p>まず，無名<code>matchAll</code>関数を紹介する． <code>\</code>にスペースを入れずに<code>matchAll</code>を続けることで無名<code>matchAll</code>関数は定義される． このときっパターンマッチのターゲットは省略される． この無名<code>matchAll</code>関数の引数がターゲットとなるからである．</p>
+<pre class="listing"><code class="language-egison">\matchAll as list something with
+  | $hs ++ $ts -&gt; (hs, ts)</code></pre>
+<p>無名<code>match</code>関数は，無名<code>matchAll</code>関数の<code>matchAll</code>を<code>match</code>に変えるだけで定義できる．</p>
+<pre class="listing"><code class="language-egison">\match as list something with
+  | nil -&gt; True
+  | _ -&gt; False</code></pre>
+<h2><span class="heading-number">7.3</span>中置演算子の定義</h2>
+<p>Egisonはユーザーが新しく中置演算子を定義する機能を提供している． 中置演算子を宣言するには，<code>infix</code>，または<code>infixl</code>，<code>infixr</code>を使う． <code>infix</code>，<code>infixl</code>，<code>infixr</code>はそれぞれ結合性のない演算子，左結合の演算子，右結合の演算子を定義するのに使う． <code>infix</code>，<code>infixl</code>，<code>infixr</code>は共通して三つの引数をとる． 第一引数には，これから定義する中置演算子が関数であるのか，パターンコンストラクタであるのか指定するために，<code>expression</code>か<code>pattern</code>というキーワードをとる． 第二引数には，これから定義する中置演算子の優先度を整数値でとる． 第三引数には，これから定義する中置演算子の名前をとる．</p>
+<p>中置演算子として使う関数を定義する例として論理積<code>&amp;&amp;</code>を定義すると以下のようになる． 型注釈により、2つのブール値を引数にとりブール値を返すことを示している．</p>
+<pre class="listing"><code class="language-egison">infixr expression 5 &amp;&amp;
+
+def (&amp;&amp;) (a: Bool) (b: Bool) : Bool := match (a, b) as (eq, eq) with
+  | (#True, #True) -&gt; True
+  | _              -&gt; False</code></pre>
+<p>中置演算子として使うパターンコンストラクタを定義する例としてジョイン・パターン<code>++</code>を定義すると以下のようになる． 型注釈により、型パラメータ<code>{a}</code>とマッチャー引数<code>(m: Matcher a)</code>を受け取り、リスト型<code>[a]</code>に対するマッチャーを返すことを示している．</p>
+<pre class="listing"><code class="language-egison">infixl pattern 7 ++
+
+def list {a} (m: Matcher a) : Matcher [a] := matcher
+  | $ ++ $ as (list m, list m) with
+    ...</code></pre>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>演算子</td><td>演算子の内容</td><td>優先度</td></tr><tr><td><code>^</code></td><td>べき乗</td><td>8</td></tr><tr><td><code>*</code></td><td>掛け算</td><td>7</td></tr><tr><td><code>/</code></td><td>割り算</td><td>7</td></tr><tr><td><code>%</code></td><td>割り算の余り</td><td>7</td></tr><tr><td><code>.</code></td><td>テンソルの掛け算</td><td>7</td></tr><tr><td><code>+</code></td><td>足し算</td><td>6</td></tr><tr><td><code>-</code></td><td>引き算</td><td>6</td></tr><tr><td><code>::</code></td><td>コンス</td><td>5</td></tr><tr><td><code>++</code></td><td>アペンド</td><td>5</td></tr><tr><td><code>=</code>, <code>&lt;=</code> <code>&gt;=</code>, <code>&lt;</code>, <code>&gt;</code></td><td>比較</td><td>4</td></tr><tr><td><code>&amp;&amp;</code></td><td>論理積</td><td>3</td></tr><tr><td><code>||</code></td><td>論理和</td><td>2</td></tr><tr><td><code>$</code></td><td>関数適用</td><td>0</td></tr></tbody></table></div>
+</div>
+<figcaption>中置演算子一覧（関数）</figcaption>
+<p><span id="ref-tab-infixFunctions" class="anchor"></span></p>
+</figure>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>演算子</td><td>演算子の内容</td><td>優先度</td></tr><tr><td><code>^</code></td><td>べき乗</td><td>8</td></tr><tr><td><code>*</code></td><td>掛け算</td><td>7</td></tr><tr><td><code>/</code></td><td>割り算</td><td>7</td></tr><tr><td><code>+</code></td><td>足し算</td><td>6</td></tr><tr><td><code>::</code></td><td>コンス</td><td>5</td></tr><tr><td><code>++</code></td><td>アペンド</td><td>5</td></tr><tr><td><code>&amp;</code></td><td>andパターン</td><td>3</td></tr><tr><td><code>|</code></td><td>orパターン</td><td>2</td></tr></tbody></table></div>
+</div>
+<figcaption>中置演算子一覧（パターン）</figcaption>
+<p><span id="ref-tab-infixPatterns" class="anchor"></span></p>
+</figure>
+<h2><span class="heading-number">7.4</span>型クラス</h2>
+<p>Egisonは型クラス（type class）をサポートしている． 型クラスは，複数の型に共通する振る舞いを抽象化するための機構である． Egisonの型クラスはHaskellの型クラスに似た構文と意味論をもつ．</p>
+<h3><span class="heading-number">7.4.1</span>型クラスの定義</h3>
+<p>型クラスは<code>class</code>キーワードを使って定義する． 型クラスの定義には，型変数と，その型変数に対して要求される関数のシグネチャを含める． たとえば，等値性を比較できる型を表す<code>Eq</code>型クラスは以下のように定義される．</p>
+<pre class="listing"><code class="language-egison">class Eq a where
+  (==) (x: a) (y: a) : Bool
+  (/=) (x: a) (y: a) : Bool</code></pre>
+<p>この定義は，「型<code>a</code>が<code>Eq</code>のインスタンスであるためには，2つの<code>a</code>型の値を受け取り<code>Bool</code>を返す<code>==</code>と<code>/=</code>という演算を提供しなければならない」ことを意味する．</p>
+<p>Egisonは<code>extends</code>キーワードによる<em>スーパークラス宣言</em>もサポートしている． 型クラスは1つ以上のスーパークラスを宣言でき，サブクラスのインスタンスである型はスーパークラスのインスタンスでもなければならない．</p>
+<p>これらの機能を使って，Egisonは数値型のための以下の代数的型クラス階層を定義している． まず，加法の階層は以下のように定義される．</p>
+<pre class="listing"><code class="language-egison">class AddSemigroup a where
+  (+) (x: a) (y: a) : a
+
+class AddMonoid a extends AddSemigroup a where
+  zero : a
+
+class AddGroup a extends AddMonoid a where
+  neg (x: a) : a</code></pre>
+<p><code>AddSemigroup</code>は加法を提供し，<code>AddMonoid</code>はそれに零元を追加し，<code>AddGroup</code>はさらに符号反転を追加する．</p>
+<p>同様に，乗法の階層は以下のように定義される．</p>
+<pre class="listing"><code class="language-egison">class MulSemigroup a where
+  (*) (x: a) (y: a) : a
+
+class MulMonoid a extends MulSemigroup a where
+  one : a
+
+class MulGroup a extends MulMonoid a where
+  inv (x: a) : a</code></pre>
+<p>これらの階層を組み合わせて複合的な代数構造を定義する． 型クラスはカンマ区切りで<em>複数</em>のスーパークラスを継承できる． 独自のメソッドをもたない型クラスは，スーパークラスを組み合わせるだけの<em>マーカークラス</em>として機能する．</p>
+<pre class="listing"><code class="language-egison">class Ring a extends AddGroup a, MulMonoid a
+class Field a extends Ring a, MulGroup a</code></pre>
+<p><code>Ring</code>は加法群と乗法モノイドの両方の構造を要求し，<code>Field</code>はさらに乗法逆元を要求する．</p>
+<p>数式処理向けの拡張も定義されている．</p>
+<pre class="listing"><code class="language-egison">class GCDDomain a extends Ring a where
+  gcd (x: a) (y: a) : a
+
+class EuclideanDomain a extends GCDDomain a where
+  divMod (x: a) (y: a) : (a, a)</code></pre>
+<h3><span class="heading-number">7.4.2</span>型クラスのインスタンス</h3>
+<p>具体的な型を型クラスのインスタンスにするには<code>instance</code>キーワードを使う． たとえば，<code>Integer</code>型を<code>Eq</code>のインスタンスにするには以下のように書く．</p>
+<pre class="listing"><code class="language-egison">instance Eq Integer where
+  (==) x y := x = y
+  (/=) x y := not (x == y)</code></pre>
+<p><code>MathValue</code>型を代数的型クラス階層のインスタンスにする例は以下のとおりである． 階層の各レベルごとにインスタンス定義が必要になる．</p>
+<pre class="listing"><code class="language-egison">instance AddSemigroup MathValue where
+  (+) x y := plusForMathValue x y
+
+instance AddMonoid MathValue where
+  zero := 0
+
+instance AddGroup MathValue where
+  neg x := minusForMathValue 0 x
+
+instance MulSemigroup MathValue where
+  (*) x y := multForMathValue x y
+
+instance MulMonoid MathValue where
+  one := 1
+
+instance MulGroup MathValue where
+  inv x := divForMathValue 1 x</code></pre>
+<p>メソッドをもたないマーカークラスのインスタンスは<code>where</code>句なしで宣言できる．</p>
+<pre class="listing"><code class="language-egison">instance Ring MathValue
+instance Field MathValue</code></pre>
+<p>型クラスのインスタンス定義には型クラス制約を含めることもできる． たとえば，<code>Tensor a</code>型を<code>Eq</code>のインスタンスにするとき，要素型<code>a</code>も<code>Eq</code>のインスタンスである必要がある場合は以下のように書く．</p>
+<pre class="listing"><code class="language-egison">instance {Eq a} Eq (Tensor a) where
+  (==) t1 t2 := t1 = t2
+  (/=) t1 t2 := not (t1 == t2)</code></pre>
+<h3><span class="heading-number">7.4.3</span>型クラス制約の使い方</h3>
+<p>型クラスを使うことで，多相的な関数に制約を課すことができる． 型クラス制約は波括弧<code>{}</code>で囲んで関数の型シグネチャに記述する． たとえば，2つの値の等値性を比較する関数は以下のように定義できる．</p>
+<pre class="listing"><code class="language-egison">def eqAs {Eq a} (m: Matcher a) (x: a) (y: a) : Bool := ...</code></pre>
+<p>この型シグネチャは「型<code>a</code>が<code>Eq</code>のインスタンスであるとき，<code>eqAs</code>は<code>Matcher a</code>，<code>a</code>，<code>a</code>を受け取り<code>Bool</code>を返す」ことを意味する．</p>
+<p>複数の型クラス制約を課すこともできる． たとえば，順序付けと等値性の両方を必要とする関数は以下のように書ける．</p>
+<pre class="listing"><code class="language-egison">def compare {Eq a, Ord a} (x: a) (y: a) : Ordering := ...</code></pre>
+<p>代数的型クラス階層を使うことで，減算と除算を最小限の型クラス制約をもつ導出演算として定義できる．</p>
+<pre class="listing"><code class="language-egison">def (-) {AddGroup a} (x: a) (y: a) : a := x + neg y
+def (/) {Field a} (x: a) (y: a) : a := x * inv y</code></pre>
+<p>同様に，<code>sum</code>と<code>product</code>も適切な制約で定義される．</p>
+<pre class="listing"><code class="language-egison">def sum {AddMonoid a} (xs: [a]) : a := foldl (+) zero xs
+def product {MulMonoid a} (xs: [a]) : a := foldl (*) one xs</code></pre>
+<p>型クラス制約は，関数だけでなくマッチャーの定義にも使える． たとえば，<code>sortedList</code>マッチャーは，要素型が順序付け可能（<code>Ord</code>のインスタンス）であることを要求する．</p>
+<pre class="listing"><code class="language-egison">def sortedList {Ord a} (m: Matcher a) : Matcher [a] := matcher
+  ...</code></pre>
+<h3><span class="heading-number">7.4.4</span>型クラスの実装：辞書渡しスタイル</h3>
+<p>Egisonの型クラスは<em>辞書渡しスタイル</em>（dictionary-passing style）で実装されている． これは，型クラス制約をもつ関数が，実際にはその型クラスのメソッドを含む辞書を引数として受け取る関数に変換されることを意味する．</p>
+<p>たとえば，以下のような型クラス制約をもつ関数は</p>
+<pre class="listing"><code class="language-egison">def double {AddSemigroup a} (x: a) : a := x + x</code></pre>
+<p>内部的には以下のように辞書パラメータを受け取る関数に変換される．</p>
+<pre class="listing"><code class="language-egison">def double (dict_AddSemigroup_a) (x: a) : a :=
+  (dict_AddSemigroup_a_&quot;plus&quot;) x x</code></pre>
+<p>ここで<code>dict_AddSemigroup_a</code>は<code>AddSemigroup a</code>インスタンスのメソッド（この場合は<code>+</code>）を含むハッシュ（辞書）である．</p>
+<p>具体的な型に対して関数を呼び出す場合，適切なインスタンスの辞書が自動的に渡される． たとえば，<code>double 1</code>は以下のように変換される．</p>
+<pre class="listing"><code class="language-egison">double addSemigroupInteger 1</code></pre>
+<p>ここで<code>addSemigroupInteger</code>は<code>AddSemigroup Integer</code>インスタンスの辞書である．</p>
+<p>この辞書渡しスタイルにより，型クラスの動的ディスパッチ（実行時の型に応じたメソッドの選択）が実現される． また，型クラス制約をもつ関数同士の呼び出しも正しく処理される． たとえば，以下のような関数では</p>
+<pre class="listing"><code class="language-egison">def myPlus {AddSemigroup a} (x: a) (y: a) : a := x + y
+def myPlus2 {AddSemigroup a} (x: a) (y: a) : a := myPlus x y</code></pre>
+<p><code>myPlus2</code>が受け取った辞書が<code>myPlus</code>に正しく渡される．</p>
+<h2><span class="heading-number">7.5</span><code>IO</code>入出力</h2>
+<p>遅延評価を基本の評価戦略とするEgisonは，副作用をもつプログラムを記述するための特別な構文をもつ． Egisonは静的型システムをもつ言語であり，Haskellと同じような方法で副作用をもつプログラムを記述する．</p>
+<h3><span class="heading-number">7.5.1</span><code>main</code>関数</h3>
+<p>たとえば，”Hello world!”という文字列を出力するプログラムは以下のように書ける． 型注釈により、コマンドライン引数の文字列リストを受け取り、IO処理を実行することを示している．</p>
+<pre class="listing"><code class="language-egison">def main (args: [String]) : IO () := write &quot;Hello world!\n&quot;</code></pre>
+<p>コマンドラインオプション<code>-t</code>がない場合は，Egisonは<code>main</code>関数を実行する． 上記のプログラムは以下のように実行できる．</p>
+<pre class="listing"><code class="language-egison">$ cat hello.egi
+def main (args: [String]) : IO () := write &quot;Hello world!\n&quot;
+$ egison hello.egi
+Hello world!</code></pre>
+<p><code>write</code>はEgisonに組み込みで実装されているIO関数である． <code>write</code>は第一引数に文字列をとり，その文字列を標準出力に印字する． IO関数には<code>write</code>以外にもいくつもある． 図<a class="reference" href="etc.html#ref-tab-ioFunctions">7.5.1</a>にその一覧をまとめた．</p>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>関数名</td><td>関数の内容</td></tr><tr><td><code>return</code> <span class="math-inline">\(x\)</span></td><td><span class="math-inline">\(x\)</span>をIO関数の結果として返す．</td></tr><tr><td><code>openInputFile</code> <span class="math-inline">\(path\)</span></td><td>パス<span class="math-inline">\(path\)</span>のファイルを読み込みモードで開き，そのファイルへの入力ポートを返す．</td></tr><tr><td><code>openOutputFile</code> <span class="math-inline">\(path\)</span></td><td>パス<span class="math-inline">\(path\)</span>のファイルを書き込みモードで開き，そのファイルへの出力ポートを返す．</td></tr><tr><td><code>closeInputPort</code> <span class="math-inline">\(port\)</span></td><td>入力ポート<span class="math-inline">\(port\)</span>を閉じる．</td></tr><tr><td><code>closeOutputPort</code> <span class="math-inline">\(port\)</span></td><td>出力ポート<span class="math-inline">\(port\)</span>を閉じる．</td></tr><tr><td><code>readChar</code></td><td>標準入力から一文字読み取り，その文字を返す．</td></tr><tr><td><code>readLine</code></td><td>標準入力から一行読み取り，その文字列を返す．</td></tr><tr><td><code>writeChar</code> <span class="math-inline">\(c\)</span></td><td>標準出力に文字<span class="math-inline">\(c\)</span>を書き込む．</td></tr><tr><td><code>write</code> <span class="math-inline">\(s\)</span></td><td>標準出力に文字列<span class="math-inline">\(s\)</span>を書き込む．</td></tr><tr><td><code>readCharFromPort</code> <span class="math-inline">\(port\)</span></td><td>入力ポート<span class="math-inline">\(port\)</span>から一文字読み取り，その文字を返す．</td></tr><tr><td><code>readLineFromPort</code> <span class="math-inline">\(port\)</span></td><td>入力ポート<span class="math-inline">\(port\)</span>から一行読み取り，その文字列を返す．</td></tr><tr><td><code>writeCharToPort</code> <span class="math-inline">\(c\)</span> <span class="math-inline">\(port\)</span></td><td>文字<span class="math-inline">\(c\)</span>を出力ポート<span class="math-inline">\(port\)</span>に書き込む．</td></tr><tr><td><code>writeToPort</code> <span class="math-inline">\(s\)</span> <span class="math-inline">\(port\)</span></td><td>文字列<span class="math-inline">\(s\)</span>を出力ポート<span class="math-inline">\(port\)</span>に書き込む．</td></tr><tr><td><code>isEof</code></td><td>標準入力がEOF（ファイルの終端）に達しているか調べ，達していれば<code>True</code>，そうでなければ<code>False</code>を返す．</td></tr><tr><td><code>isEofPort</code> <span class="math-inline">\(port\)</span></td><td>入力ポート<span class="math-inline">\(port\)</span>がEOFに達しているか調べ，達していれば<code>True</code>，そうでなければ<code>False</code>を返す．</td></tr><tr><td><code>flush</code></td><td>標準出力のバッファに溜まっている内容を即座に出力する．</td></tr><tr><td><code>flushPort</code> <span class="math-inline">\(port\)</span></td><td>出力ポート<span class="math-inline">\(port\)</span>のバッファに溜まっている内容を即座に出力する．</td></tr><tr><td><code>readFile</code> <span class="math-inline">\(path\)</span></td><td>パス<span class="math-inline">\(path\)</span>のファイルの全内容を文字列として読み込んで返す．</td></tr><tr><td><code>rand</code> <span class="math-inline">\(n_1\)</span> <span class="math-inline">\(n_2\)</span></td><td>整数<span class="math-inline">\(n_1\)</span>から<span class="math-inline">\(n_2\)</span>までの範囲の整数をランダムに返す（両端を含む）．</td></tr><tr><td><code>f.rand</code> <span class="math-inline">\(f_1\)</span> <span class="math-inline">\(f_2\)</span></td><td>浮動小数点数<span class="math-inline">\(f_1\)</span>から<span class="math-inline">\(f_2\)</span>までの範囲の浮動小数点数をランダムに返す．</td></tr><tr><td><code>newIORef</code></td><td>変更可能な変数（参照）を生成してその参照を返す．初期値は未定義．</td></tr><tr><td><code>writeIORef</code> <span class="math-inline">\(ref\)</span> <span class="math-inline">\(x\)</span></td><td>参照<span class="math-inline">\(ref\)</span>が参照する変更可能な変数の値を<span class="math-inline">\(x\)</span>に更新する．</td></tr><tr><td><code>readIORef</code> <span class="math-inline">\(ref\)</span></td><td>参照<span class="math-inline">\(ref\)</span>が参照する変更可能な変数の現在の値を返す．</td></tr><tr><td><code>readProcess</code> <span class="math-inline">\(cmd\)</span> <span class="math-inline">\(args\)</span> <span class="math-inline">\(input\)</span></td><td>コマンド<span class="math-inline">\(cmd\)</span>を引数リスト<span class="math-inline">\(args\)</span>で実行し，標準入力に文字列<span class="math-inline">\(input\)</span>を与え，その標準出力を文字列として返す．</td></tr><tr><td><code>io</code> <span class="math-inline">\(ioAction\)</span></td><td>IO関数<span class="math-inline">\(ioAction\)</span>を純粋な関数の中で実行し，その結果を返す（<code>unsafePerformIO</code>に相当）．</td></tr></tbody></table></div>
+</div>
+<figcaption>IO関数一覧</figcaption>
+<p><span id="ref-tab-ioFunctions" class="anchor"></span></p>
+</figure>
+<p><code>main</code>の第一引数にはコマンドライン引数がはいる． コマンドライン引数は文字列として<code>main</code>の第一引数に渡される．</p>
+<pre class="listing"><code class="language-egison">$ cat args.egi
+def main (args: [String]) : IO () := write (show args)
+$ egison args.egi hello world 1
+[&quot;hello&quot;, &quot;world&quot;, &quot;1&quot;]</code></pre>
+<p>Egisonでつくったスクリプトをコマンドにしたい場合はシェバン（shebang）を使えばよい．</p>
+<pre class="listing"><code class="language-egison">$ cat args
+#!/usr/local/egison
+
+def main (args: [String]) : IO () := write (show args)
+$ args hello world 1
+[&quot;hello&quot;, &quot;world&quot;, &quot;1&quot;]</code></pre>
+<h3><span class="heading-number">7.5.2</span><code>do</code>式</h3>
+<p><code>do</code>式を使うと，複数のIO関数を一つにまとめ，順番に実行することができる． <code>do</code>式はHaskellの<code>do</code>記法に対応している． たとえば，以下のプログラムはユーザーの入力を一行読み取り，それを出力する．</p>
+<pre class="listing"><code class="language-egison">def main (arg: [String]) : IO () := do
+  let line := readLine ()
+  write line</code></pre>
+<p><code>do</code>式と再帰関数を組み合わせることができる． 以下はインタプリタのREPL（Read-Eval-Print Loop）のEvalをぬいたプログラムである．</p>
+<pre class="listing"><code class="language-egison">def main (arg: [String]) : IO () := repl
+
+def repl : IO () := do
+  write &quot;&gt; &quot;
+  flush ()
+  let line := readLine ()
+  write line
+  flush ()
+  repl</code></pre>
+<p>Haskellと同様に，オフサイドルールを使わない<code>do</code>記法の構文もサポートしている．</p>
+<pre class="listing"><code class="language-egison">do { print &quot;foo&quot; ; print &quot;bar&quot; ; print &quot;baz&quot; }</code></pre>
+<p>なお，Egisonの<code>do</code>式はIOモナドに対してのみ使用可能であり，Haskellのようにリストモナドやその他のモナドに対して使うことはできない．</p>
+<h3><span class="heading-number">7.5.3</span><code>io</code>関数</h3>
+<p><code>io</code>関数はHaskellの<code>unsafePerformanceIO</code>関数に対応する組み込み関数である． <code>io</code>関数を使うとIO関数でない通常の関数のなかでIO関数を呼び出せるようになる． これはprintfデバッグをしたりするのに便利である．</p>
+<p>以下のプログラムは二つのサイコロをふりそれらの目の合計値を返す．</p>
+<pre class="listing"><code class="language-egison">def dice : Integer := io (rand 1 6)
+
+dice + dice</code></pre>
+<h2><span class="heading-number">7.6</span>組み込み関数</h2>
+<p>Egisonには多数の組み込み関数（primitive functions）が用意されている． これらの関数は言語処理系に組み込まれており，ユーザーが直接利用できる． 本節では主要な組み込み関数をカテゴリ別に紹介する．</p>
+<h3><span class="heading-number">7.6.1</span>算術演算関数</h3>
+<p>整数演算と浮動小数点演算のための組み込み関数が提供されている． 表<a class="reference" href="etc.html#ref-tab-arithFunctions">7.6.1</a>に主要な算術演算関数を示す．</p>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>関数名</td><td>関数の内容</td></tr><tr><td><code>i.+</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>整数<span class="math-inline">\(x\)</span>と<span class="math-inline">\(y\)</span>の和を返す．</td></tr><tr><td><code>i.-</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>整数<span class="math-inline">\(x\)</span>と<span class="math-inline">\(y\)</span>の差を返す．</td></tr><tr><td><code>i.*</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>整数<span class="math-inline">\(x\)</span>と<span class="math-inline">\(y\)</span>の積を返す．</td></tr><tr><td><code>i./</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>整数<span class="math-inline">\(x\)</span>を<span class="math-inline">\(y\)</span>で割った商を有理数として返す．</td></tr><tr><td><code>i.modulo</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>整数<span class="math-inline">\(x\)</span>を<span class="math-inline">\(y\)</span>で割った剰余を返す（<code>mod</code>）．</td></tr><tr><td><code>i.quotient</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>整数<span class="math-inline">\(x\)</span>を<span class="math-inline">\(y\)</span>で割った商を返す（<code>quot</code>）．</td></tr><tr><td><code>i.%</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>整数<span class="math-inline">\(x\)</span>を<span class="math-inline">\(y\)</span>で割った剰余を返す（<code>rem</code>）．</td></tr><tr><td><code>i.power</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>整数<span class="math-inline">\(x\)</span>の<span class="math-inline">\(y\)</span>乗を返す．</td></tr><tr><td><code>i.abs</code> <span class="math-inline">\(x\)</span></td><td>整数<span class="math-inline">\(x\)</span>の絶対値を返す．</td></tr><tr><td><code>i.neg</code> <span class="math-inline">\(x\)</span></td><td>整数<span class="math-inline">\(x\)</span>の符号を反転した値を返す．</td></tr><tr><td><code>i.&lt;</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>整数<span class="math-inline">\(x\)</span>が<span class="math-inline">\(y\)</span>より小さければ<code>True</code>，そうでなければ<code>False</code>を返す．</td></tr><tr><td><code>i.&lt;=</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>整数<span class="math-inline">\(x\)</span>が<span class="math-inline">\(y\)</span>以下であれば<code>True</code>，そうでなければ<code>False</code>を返す．</td></tr><tr><td><code>i.&gt;</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>整数<span class="math-inline">\(x\)</span>が<span class="math-inline">\(y\)</span>より大きければ<code>True</code>，そうでなければ<code>False</code>を返す．</td></tr><tr><td><code>i.&gt;=</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>整数<span class="math-inline">\(x\)</span>が<span class="math-inline">\(y\)</span>以上であれば<code>True</code>，そうでなければ<code>False</code>を返す．</td></tr><tr><td><code>f.+</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>浮動小数点数<span class="math-inline">\(x\)</span>と<span class="math-inline">\(y\)</span>の和を返す．</td></tr><tr><td><code>f.-</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>浮動小数点数<span class="math-inline">\(x\)</span>と<span class="math-inline">\(y\)</span>の差を返す．</td></tr><tr><td><code>f.*</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>浮動小数点数<span class="math-inline">\(x\)</span>と<span class="math-inline">\(y\)</span>の積を返す．</td></tr><tr><td><code>f./</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>浮動小数点数<span class="math-inline">\(x\)</span>を<span class="math-inline">\(y\)</span>で割った商を返す．</td></tr><tr><td><code>f.abs</code> <span class="math-inline">\(x\)</span></td><td>浮動小数点数<span class="math-inline">\(x\)</span>の絶対値を返す．</td></tr><tr><td><code>f.neg</code> <span class="math-inline">\(x\)</span></td><td>浮動小数点数<span class="math-inline">\(x\)</span>の符号を反転した値を返す．</td></tr><tr><td><code>f.&lt;</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>浮動小数点数<span class="math-inline">\(x\)</span>が<span class="math-inline">\(y\)</span>より小さければ<code>True</code>，そうでなければ<code>False</code>を返す．</td></tr><tr><td><code>f.&lt;=</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>浮動小数点数<span class="math-inline">\(x\)</span>が<span class="math-inline">\(y\)</span>以下であれば<code>True</code>，そうでなければ<code>False</code>を返す．</td></tr><tr><td><code>f.&gt;</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>浮動小数点数<span class="math-inline">\(x\)</span>が<span class="math-inline">\(y\)</span>より大きければ<code>True</code>，そうでなければ<code>False</code>を返す．</td></tr><tr><td><code>f.&gt;=</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>浮動小数点数<span class="math-inline">\(x\)</span>が<span class="math-inline">\(y\)</span>以上であれば<code>True</code>，そうでなければ<code>False</code>を返す．</td></tr><tr><td><code>round</code> <span class="math-inline">\(x\)</span></td><td>浮動小数点数<span class="math-inline">\(x\)</span>を最も近い整数に丸める．</td></tr><tr><td><code>floor</code> <span class="math-inline">\(x\)</span></td><td>浮動小数点数<span class="math-inline">\(x\)</span>以下の最大の整数を返す（床関数）．</td></tr><tr><td><code>ceiling</code> <span class="math-inline">\(x\)</span></td><td>浮動小数点数<span class="math-inline">\(x\)</span>以上の最小の整数を返す（天井関数）．</td></tr><tr><td><code>truncate</code> <span class="math-inline">\(x\)</span></td><td>浮動小数点数<span class="math-inline">\(x\)</span>の小数部分を切り捨てた整数を返す．</td></tr></tbody></table></div>
+</div>
+<figcaption>算術演算関数一覧</figcaption>
+<p><span id="ref-tab-arithFunctions" class="anchor"></span></p>
+</figure>
+<p>また，浮動小数点数に対する数学関数も提供されている（表<a class="reference" href="etc.html#ref-tab-mathFunctions">7.6.1</a>）．</p>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>関数名</td><td>関数の内容</td></tr><tr><td><code>f.sqrt</code> <span class="math-inline">\(x\)</span></td><td>浮動小数点数<span class="math-inline">\(x\)</span>の平方根を返す．</td></tr><tr><td><code>f.exp</code> <span class="math-inline">\(x\)</span></td><td>自然対数の底<span class="math-inline">\(e\)</span>の<span class="math-inline">\(x\)</span>乗を返す．</td></tr><tr><td><code>f.log</code> <span class="math-inline">\(x\)</span></td><td>浮動小数点数<span class="math-inline">\(x\)</span>の自然対数を返す．</td></tr><tr><td><code>f.sin</code> <span class="math-inline">\(x\)</span></td><td><span class="math-inline">\(x\)</span>のサイン（正弦）を返す．</td></tr><tr><td><code>f.cos</code> <span class="math-inline">\(x\)</span></td><td><span class="math-inline">\(x\)</span>のコサイン（余弦）を返す．</td></tr><tr><td><code>f.tan</code> <span class="math-inline">\(x\)</span></td><td><span class="math-inline">\(x\)</span>のタンジェント（正接）を返す．</td></tr><tr><td><code>f.asin</code> <span class="math-inline">\(x\)</span></td><td><span class="math-inline">\(x\)</span>のアークサイン（逆正弦）を返す．</td></tr><tr><td><code>f.acos</code> <span class="math-inline">\(x\)</span></td><td><span class="math-inline">\(x\)</span>のアークコサイン（逆余弦）を返す．</td></tr><tr><td><code>f.atan</code> <span class="math-inline">\(x\)</span></td><td><span class="math-inline">\(x\)</span>のアークタンジェント（逆正接）を返す．</td></tr><tr><td><code>f.sinh</code> <span class="math-inline">\(x\)</span></td><td><span class="math-inline">\(x\)</span>の双曲線サイン（双曲正弦）を返す．</td></tr><tr><td><code>f.cosh</code> <span class="math-inline">\(x\)</span></td><td><span class="math-inline">\(x\)</span>の双曲線コサイン（双曲余弦）を返す．</td></tr><tr><td><code>f.tanh</code> <span class="math-inline">\(x\)</span></td><td><span class="math-inline">\(x\)</span>の双曲線タンジェント（双曲正接）を返す．</td></tr><tr><td><code>f.asinh</code> <span class="math-inline">\(x\)</span></td><td><span class="math-inline">\(x\)</span>の逆双曲線サイン（逆双曲正弦）を返す．</td></tr><tr><td><code>f.acosh</code> <span class="math-inline">\(x\)</span></td><td><span class="math-inline">\(x\)</span>の逆双曲線コサイン（逆双曲余弦）を返す．</td></tr><tr><td><code>f.atanh</code> <span class="math-inline">\(x\)</span></td><td><span class="math-inline">\(x\)</span>の逆双曲線タンジェント（逆双曲正接）を返す．</td></tr></tbody></table></div>
+</div>
+<figcaption>数学関数一覧</figcaption>
+<p><span id="ref-tab-mathFunctions" class="anchor"></span></p>
+</figure>
+<p>数学定数として，円周率<code>f.pi</code>（<span class="math-inline">\(\pi \approx 3.14159\)</span>）と自然対数の底<code>f.e</code>（<span class="math-inline">\(e \approx 2.71828\)</span>）が定義されている．</p>
+<h3><span class="heading-number">7.6.2</span>文字列操作関数</h3>
+<p>文字列を操作するための組み込み関数が提供されている（表<a class="reference" href="etc.html#ref-tab-stringFunctions">7.6.2</a>）．</p>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>関数名</td><td>関数の内容</td></tr><tr><td><code>pack</code> <span class="math-inline">\(cs\)</span></td><td>文字のリスト<span class="math-inline">\(cs\)</span>を文字列に変換する．</td></tr><tr><td><code>unpack</code> <span class="math-inline">\(s\)</span></td><td>文字列<span class="math-inline">\(s\)</span>を文字のリストに変換する．</td></tr><tr><td><code>unconsString</code> <span class="math-inline">\(s\)</span></td><td>文字列<span class="math-inline">\(s\)</span>の先頭文字と残りの文字列のタプルを返す．</td></tr><tr><td><code>lengthString</code> <span class="math-inline">\(s\)</span></td><td>文字列<span class="math-inline">\(s\)</span>の長さ（文字数）を返す．</td></tr><tr><td><code>appendString</code> <span class="math-inline">\(s_1\)</span> <span class="math-inline">\(s_2\)</span></td><td>文字列<span class="math-inline">\(s_1\)</span>と<span class="math-inline">\(s_2\)</span>を連結した文字列を返す．</td></tr><tr><td><code>splitString</code> <span class="math-inline">\(pat\)</span> <span class="math-inline">\(s\)</span></td><td>文字列<span class="math-inline">\(s\)</span>をパターン<span class="math-inline">\(pat\)</span>で分割し，部分文字列のリストを返す．</td></tr><tr><td><code>regex</code> <span class="math-inline">\(pat\)</span> <span class="math-inline">\(s\)</span></td><td>正規表現<span class="math-inline">\(pat\)</span>で文字列<span class="math-inline">\(s\)</span>をマッチし，マッチ前・マッチ部分・マッチ後の3つ組を返す．</td></tr><tr><td><code>regexCg</code> <span class="math-inline">\(pat\)</span> <span class="math-inline">\(s\)</span></td><td>正規表現<span class="math-inline">\(pat\)</span>で文字列<span class="math-inline">\(s\)</span>をマッチし，キャプチャグループを含む結果を返す．</td></tr><tr><td><code>read</code> <span class="math-inline">\(s\)</span></td><td>文字列<span class="math-inline">\(s\)</span>をEgisonの式として解析し，評価した結果を返す．</td></tr><tr><td><code>readTsv</code> <span class="math-inline">\(s\)</span></td><td>タブ区切り文字列<span class="math-inline">\(s\)</span>を解析し，評価した結果を返す．</td></tr><tr><td><code>show</code> <span class="math-inline">\(x\)</span></td><td>値<span class="math-inline">\(x\)</span>を文字列表現に変換する．</td></tr><tr><td><code>showTsv</code> <span class="math-inline">\(x\)</span></td><td>値<span class="math-inline">\(x\)</span>をタブ区切り形式の文字列に変換する．</td></tr></tbody></table></div>
+</div>
+<figcaption>文字列操作関数一覧</figcaption>
+<p><span id="ref-tab-stringFunctions" class="anchor"></span></p>
+</figure>
+<h3><span class="heading-number">7.6.3</span>型変換・型チェック関数</h3>
+<p>型変換と型チェックのための組み込み関数が提供されている（表<a class="reference" href="etc.html#ref-tab-typeFunctions">7.6.3</a>）．</p>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>関数名</td><td>関数の内容</td></tr><tr><td><code>itof</code> <span class="math-inline">\(n\)</span></td><td>整数<span class="math-inline">\(n\)</span>を浮動小数点数に変換する．</td></tr><tr><td><code>rtof</code> <span class="math-inline">\(r\)</span></td><td>有理数<span class="math-inline">\(r\)</span>を浮動小数点数に変換する．</td></tr><tr><td><code>ctoi</code> <span class="math-inline">\(c\)</span></td><td>文字<span class="math-inline">\(c\)</span>をそのUnicodeコードポイント（整数）に変換する．</td></tr><tr><td><code>itoc</code> <span class="math-inline">\(n\)</span></td><td>整数<span class="math-inline">\(n\)</span>を対応するUnicode文字に変換する．</td></tr><tr><td><code>isInteger</code> <span class="math-inline">\(x\)</span></td><td>値<span class="math-inline">\(x\)</span>が整数であれば<code>True</code>，そうでなければ<code>False</code>を返す．</td></tr><tr><td><code>isRational</code> <span class="math-inline">\(x\)</span></td><td>値<span class="math-inline">\(x\)</span>が有理数であれば<code>True</code>，そうでなければ<code>False</code>を返す．</td></tr></tbody></table></div>
+</div>
+<figcaption>型変換・型チェック関数一覧</figcaption>
+<p><span id="ref-tab-typeFunctions" class="anchor"></span></p>
+</figure>
+<p>注：Egisonでは<code>MathValue</code>，<code>Integer</code>，<code>Rational</code>が同一視されるため，<code>isInteger</code>と<code>isRational</code>は数式処理システムで数値の性質を判定するために使われる．</p>
+<h3><span class="heading-number">7.6.4</span>テンソル関連関数</h3>
+<p>テンソルの情報を取得するための組み込み関数が提供されている（表<a class="reference" href="etc.html#ref-tab-tensorFunctions">7.6.4</a>）．</p>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>関数名</td><td>関数の内容</td></tr><tr><td><code>tensorShape</code> <span class="math-inline">\(t\)</span></td><td>テンソル<span class="math-inline">\(t\)</span>の形状（各次元のサイズ）をリストとして返す．</td></tr><tr><td><code>tensorToList</code> <span class="math-inline">\(t\)</span></td><td>テンソル<span class="math-inline">\(t\)</span>の要素をリストに変換する．</td></tr><tr><td><code>dfOrder</code> <span class="math-inline">\(t\)</span></td><td>微分形式<span class="math-inline">\(t\)</span>の階数を返す．</td></tr><tr><td><code>addSubscript</code> <span class="math-inline">\(sym\)</span> <span class="math-inline">\(sub\)</span></td><td>シンボル<span class="math-inline">\(sym\)</span>に下付き添字<span class="math-inline">\(sub\)</span>を追加する．</td></tr><tr><td><code>addSuperscript</code> <span class="math-inline">\(sym\)</span> <span class="math-inline">\(sup\)</span></td><td>シンボル<span class="math-inline">\(sym\)</span>に上付き添字<span class="math-inline">\(sup\)</span>を追加する．</td></tr></tbody></table></div>
+</div>
+<figcaption>テンソル関連関数一覧</figcaption>
+<p><span id="ref-tab-tensorFunctions" class="anchor"></span></p>
+</figure>
+<h3><span class="heading-number">7.6.5</span>デバッグ・テスト関数</h3>
+<p>プログラムのデバッグとテストのための組み込み関数が提供されている（表<a class="reference" href="etc.html#ref-tab-debugFunctions">7.6.5</a>）．</p>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>関数名</td><td>関数の内容</td></tr><tr><td><code>assert</code> <span class="math-inline">\(label\)</span> <span class="math-inline">\(test\)</span></td><td>テスト<span class="math-inline">\(test\)</span>が<code>True</code>でなければラベル<span class="math-inline">\(label\)</span>を含むアサーションエラーを発生させる．</td></tr><tr><td><code>assertEqual</code> <span class="math-inline">\(label\)</span> <span class="math-inline">\(actual\)</span> <span class="math-inline">\(expected\)</span></td><td>値<span class="math-inline">\(actual\)</span>と<span class="math-inline">\(expected\)</span>が等しくなければラベル<span class="math-inline">\(label\)</span>を含むアサーションエラーを発生させる．</td></tr></tbody></table></div>
+</div>
+<figcaption>デバッグ・テスト関数一覧</figcaption>
+<p><span id="ref-tab-debugFunctions" class="anchor"></span></p>
+</figure>
+<h2><span class="heading-number">7.7</span><code>seq</code>式</h2>
+<p><code>seq</code>式は，プログラムを部分的に遅延評価ではなく正格評価したいときに使う． 遅延評価は便利であるが，ときに，メモリを無駄に確保し効率が悪いことがある． 部分的にプログラムを正格評価することで，プログラムの効率が向上することがある． <code>seq</code>式は第一引数のプログラムを正格評価したあと，第二引数のプログラムを評価する． たとえば，<code>foldl</code>は以下のように<code>seq</code>式を使うと効率が向上することが知られている． 型注釈により、畳み込み関数、初期値、リストを受け取り、累積結果を返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def foldl {a, b} (fn: b -&gt; a -&gt; b) (init: b) (ls: [a]) : b :=
+  match ls as list something with
+    | [] -&gt; init
+    | $x :: $xs -&gt;
+      let z := fn init x
+        in seq z (foldl fn z xs)</code></pre>
+  </main>
+  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+</body>
+</html>

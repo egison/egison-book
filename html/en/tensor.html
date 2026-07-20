@@ -1,0 +1,809 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>Tensor Computation — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="prev" href="casdetail.html">← Previous</a><a rel="next" href="funcsym.html">Next →</a><a class="language" href="../ja/tensor.html">日本語</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">12</span>Tensor Computation</h1>
+<p><span id="ref-tensor" class="anchor"></span></p>
+<p>Egison has features developed specifically for conveniently describing tensor computations. This chapter introduces these features.</p>
+<h2><span class="heading-number">12.1</span>What Are Tensors?</h2>
+<p>A tensor is a generalization of vectors and matrices. A vector is a first-order tensor, and a matrix is a second-order tensor. In programs, vectors are often represented as one-dimensional arrays and matrices as two-dimensional arrays. An <span class="math-inline">\(n\)</span>th-order tensor is represented by an <span class="math-inline">\(n\)</span>-dimensional array.</p>
+<p>Below are examples of a vector, a matrix, and a second-order tensor expressed in mathematical notation.</p>
+<div class="math-display">\[\begin{pmatrix}
+a_{1} &amp; a_{2} &amp; a_{3}\\
+\end{pmatrix}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a_{11} &amp; a_{12} &amp; a_{13} \\
+a_{21} &amp; a_{22} &amp; a_{23}
+\end{pmatrix}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+
+\begin{pmatrix}
+a_{111} &amp; a_{112} &amp; a_{113} \\
+a_{121} &amp; a_{122} &amp; a_{123}
+\end{pmatrix}
+
+\begin{pmatrix}
+a_{211} &amp; a_{212} &amp; a_{213} \\
+a_{221} &amp; a_{222} &amp; a_{223}
+\end{pmatrix}
+
+\begin{pmatrix}
+a_{311} &amp; a_{312} &amp; a_{313} \\
+a_{321} &amp; a_{322} &amp; a_{323}
+\end{pmatrix}
+
+\end{pmatrix}\]</div>
+<p>The above mathematical expressions are represented in Egison as follows. In Egison, tensors are represented by enclosing their components in <code>[| |]</code>. Matrices are represented as vectors of vectors, and second-order tensors as vectors of matrices. This is similar to the notation for multidimensional arrays in languages such as C.</p>
+<pre class="listing"><code class="language-egison">[| a_1, a_2, a_3 |]
+
+[| [| a_11, a_12, a_13 |],
+   [| a_21, a_22, a_23 |] |]
+
+[| [| [| a_111, a_112, a_113 |],
+      [| a_121, a_122, a_123 |] |],
+   [| [| a_211, a_212, a_213 |],
+      [| a_221, a_222, a_223 |] |],
+   [| [| a_311, a_312, a_313 |],
+      [| a_321, a_322, a_323 |] |] |]</code></pre>
+<h2><span class="heading-number">12.2</span>Index Notation for Tensors</h2>
+<p>Most tensor computations can be expressed as combinations of the tensor product, Hadamard product, and inner product of vectors. The tensor product returns a matrix consisting of all combinations of vector components. The Hadamard product returns a vector consisting only of corresponding component pairs. The inner product returns a scalar value obtained by summing the components of the Hadamard product.</p>
+<div class="math-display">\[\begin{pmatrix}
+a_{1} &amp; a_{2}
+\end{pmatrix}
+\otimes
+\begin{pmatrix}
+b_{1} &amp; b_{2}
+\end{pmatrix}
+=
+\begin{pmatrix}
+a_{1} b_{1} &amp; a_{1} b_{2} \\
+a_{2} b_{1} &amp; a_{2} b_{2}
+\end{pmatrix}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a_{1} &amp; a_{2}
+\end{pmatrix}
+\circ
+\begin{pmatrix}
+b_{1} &amp; b_{2}
+\end{pmatrix}
+=
+\begin{pmatrix}
+a_{1} b_{1} &amp; a_{2} b_{2}
+\end{pmatrix}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a_{1} &amp; a_{2}
+\end{pmatrix}
+\cdot
+\begin{pmatrix}
+b_{1} &amp; b_{2}
+\end{pmatrix}
+=
+a_{1} b_{1} + a_{2} b_{2}\]</div>
+<p>For example, the multiplication of matrix <span class="math-inline">\(A\)</span> and matrix <span class="math-inline">\(B\)</span> can be interpreted as an operation that takes the tensor product over the rows of <span class="math-inline">\(A\)</span> and columns of <span class="math-inline">\(B\)</span>, and the inner product over the columns of <span class="math-inline">\(A\)</span> and rows of <span class="math-inline">\(B\)</span>.</p>
+<div class="math-display">\[\begin{pmatrix}
+a_{11} &amp; a_{12} \\
+a_{21} &amp; a_{22}
+\end{pmatrix}
+\begin{pmatrix}
+b_{11} &amp; b_{12} \\
+b_{21} &amp; b_{22}
+\end{pmatrix}
+=
+\begin{pmatrix}
+a_{11} b_{11} + a_{12} b_{21} &amp; a_{11} b_{12} + a_{12} b_{22} \\
+a_{21} b_{11} + a_{22} b_{21} &amp; a_{21} b_{12} + a_{22} b_{22}
+\end{pmatrix}\]</div>
+<p>For vectors, there are only three types of multiplication: tensor product, Hadamard product, and inner product. However, for matrices and higher-order tensors, there are infinitely many ways to multiply. Naming all these multiplications would be impractical. Therefore, mathematicians attach symbolic indices to tensors and use these indices as parameters to express these multiplications. For example, when different symbols are attached to each vector, it represents the tensor product; when the same symbol appears at the same position on each vector, it represents the Hadamard product; and when the same symbol appears in the superscript and subscript positions of the vectors, it represents the inner product. There are two types of indices: superscripts and subscripts. The positional relationship distinguishes between the Hadamard product and the inner product. This notation of using symbolic indices to specify how tensors are multiplied is called index notation. The mathematical expressions below can be represented in Egison using the program shown in Section&nbsp;<a class="reference" href="cas.html#ref-cas-linear">9.6</a>.</p>
+<div class="math-display">\[\begin{pmatrix}
+a_{1} &amp; a_{2}
+\end{pmatrix}_{i}
+\begin{pmatrix}
+b_{1} &amp; b_{2}
+\end{pmatrix}_{j}
+=
+\begin{pmatrix}
+a_{1} b_{1} &amp; a_{1} b_{2} \\
+a_{2} b_{1} &amp; a_{2} b_{2}
+\end{pmatrix}_{ij}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a_{1} &amp; a_{2}
+\end{pmatrix}_{i}
+\begin{pmatrix}
+b_{1} &amp; b_{2}
+\end{pmatrix}_{i}
+=
+\begin{pmatrix}
+a_{1} b_{1} &amp; a_{2} b_{2}
+\end{pmatrix}_{i}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a_{1} &amp; a_{2}
+\end{pmatrix}^{i}
+\begin{pmatrix}
+b_{1} &amp; b_{2}
+\end{pmatrix}_{i}
+=
+a_{1} b_{1} + a_{2} b_{2}\]</div>
+<p>Matrix multiplication can also be neatly expressed using index notation. By reversing the superscript/subscript positions and using the same symbol for the columns of A and the rows of B (where the inner product is taken), matrix multiplication can be expressed.</p>
+<div class="math-display">\[\begin{pmatrix}
+a_{11} &amp; a_{12} \\
+a_{21} &amp; a_{22}
+\end{pmatrix}^{i}_{\ j}
+\begin{pmatrix}
+b_{11} &amp; b_{12} \\
+b_{21} &amp; b_{22}
+\end{pmatrix}^{j}_{\ k}
+=
+\begin{pmatrix}
+a_{11} b_{11} + a_{12} b_{21} &amp; a_{11} b_{12} + a_{12} b_{22} \\
+a_{21} b_{11} + a_{22} b_{21} &amp; a_{21} b_{12} + a_{22} b_{22}
+\end{pmatrix}^{i}_{\ k}\]</div>
+<h2><span class="heading-number">12.3</span>Key Ideas for Introducing Index Notation to Programming</h2>
+<p><span id="ref-tensor-idea" class="anchor"></span></p>
+<p>The reason introducing index notation to programming is difficult is that the rules for symbolic indices differ for each operator. In particular, the index rules differ between tensor addition and multiplication. Let us introduce some examples. Let <span class="math-inline">\(u\)</span> and <span class="math-inline">\(v\)</span> each be vectors.</p>
+<ul>
+<li><span class="math-inline">\(u_{i} + v_{i}\)</span> returns a vector. In contrast, <span class="math-inline">\(u_{i} v_{i}\)</span> is an invalid expression.
+<p>(In Euclidean space, where superscript and subscript indices can be freely interchanged, <span class="math-inline">\(u_{i} v_{i}\)</span> returns the inner product. However, we do not consider such exceptions here.)</p>
+</li>
+<li><span class="math-inline">\(u^{i} + v_{i}\)</span> is invalid. In contrast, <span class="math-inline">\(u^{i} v_{i}\)</span> returns the inner product.
+</li>
+<li><span class="math-inline">\(u_{i} + v_{j}\)</span> is invalid. In contrast, <span class="math-inline">\(u_{i} v_{j}\)</span> returns the tensor product.
+</li>
+</ul>
+<p>As shown, the rules for symbolic indices differ for each operator. Therefore, every time a function that handles tensors is defined, the symbolic index rules must be specified. This is a tedious task. Moreover, a new syntax for describing index rules may be needed in some cases. Such new syntax would make the programming language more complex.</p>
+<p>Egison solves this problem by simplifying the rules for symbolic indices. The simplification of index rules does not change the interpretation of valid expressions. However, some expressions that were previously invalid become valid. For example, <span class="math-inline">\(v_{i} + v_{j}\)</span> was an invalid expression, but under the new index rules it becomes valid. Figure&nbsp;<a class="reference" href="tensor.html#ref-fig-ruleAdd">12.3</a> shows the simplified index rules for tensor addition. By relaxing the index rules, many tensor operations can be viewed as variants of tensor addition. For example, tensor multiplication can be viewed as an operation that combines components in the same form as addition, followed by an additional process called contraction (Figure&nbsp;<a class="reference" href="tensor.html#ref-fig-ruleMult">12.3</a>). Tensor contraction is the operation of summing the diagonal components when there are superscript and subscript indices with the same symbol. This perspective reduces the amount of index rule descriptions needed when defining functions on tensors.</p>
+<figure>
+<div class="minipage">
+<div class="subfigure">
+<div class="center">
+<div class="math-display">\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
++
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}_{i}
+=
+\begin{pmatrix}
+a + c \\
+b + d
+\end{pmatrix}_{i}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
++
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}_{j}
+=
+\begin{pmatrix}
+a + c &amp; a + d \\
+b + c &amp; b + d
+\end{pmatrix}_{ij}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
++
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}^{i}
+=
+\begin{pmatrix}
+a + c &amp; a + d \\
+b + c &amp; b + d
+\end{pmatrix}_{i}^{\ i}\]</div>
+</div>
+<figcaption>Index rules for addition</figcaption>
+<p><span id="ref-fig-ruleAdd" class="anchor"></span></p>
+</div>
+</div>
+<div class="minipage">
+<div class="subfigure">
+<div class="center">
+<div class="math-display">\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}_{i}
+=
+contract
+\begin{pmatrix}
+a c \\
+b d
+\end{pmatrix}_{i}
+=
+\begin{pmatrix}
+a c \\
+b d
+\end{pmatrix}_{i}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}_{j}
+=
+contract
+\begin{pmatrix}
+a c &amp; a d \\
+b c &amp; b d
+\end{pmatrix}_{ij}
+=
+\begin{pmatrix}
+a c &amp; a d \\
+b c &amp; b d
+\end{pmatrix}_{ij}\]</div>
+<div class="math-display">\[\begin{pmatrix}
+a \\
+b
+\end{pmatrix}_{i}
+\begin{pmatrix}
+c \\
+d
+\end{pmatrix}^{i}
+=
+contract
+\begin{pmatrix}
+a c &amp; a d \\
+b c &amp; b d
+\end{pmatrix}_{i}^{\ i}
+= a c + b d\]</div>
+</div>
+<figcaption>Index rules for multiplication</figcaption>
+<p><span id="ref-fig-ruleMult" class="anchor"></span></p>
+</div>
+</div>
+<figcaption>Simplified index rules</figcaption>
+<p><span id="ref-fig-rule" class="anchor"></span></p>
+</figure>
+<h2><span class="heading-number">12.4</span>Scalar Parameters and Tensor Parameters</h2>
+<p><span id="ref-tensor-params" class="anchor"></span></p>
+<p>The introduction of tensor index notation to programming is achieved through (i) a type system that distinguishes between scalar functions and tensor functions, and (ii) appropriate index reduction rules. Starting from this section, we explain these concepts.</p>
+<p>First, we explain the distinction between scalar functions and tensor functions through the type system. In Egison, whether a function is a scalar function or a tensor function is determined by the type annotations of its formal parameters. If the type of a formal parameter is not <code>Tensor a</code>, that parameter is treated as a scalar. If the type of a formal parameter is <code>Tensor a</code>, that parameter is treated as a tensor. When a tensor is passed as an argument to a parameter treated as a scalar, the function&#x27;s processing is mapped over each component of the tensor. When a tensor is passed as an argument to a parameter treated as a tensor, the tensor is passed as-is to the parameter. In the following example, the type variable <code>a</code> is inferred to be a scalar type, and when a tensor is passed, the processing is mapped over each component.</p>
+<pre class="listing"><code class="language-egison">(\u v -&gt; (u, v)) [| a, b |]_i [| x, y |]_j
+-- [| [| (a, x), (a, y) |],
+--    [| (b, x), (b, y) |] |]_i_j</code></pre>
+<p>On the other hand, when the <code>Tensor</code> type is explicitly specified, the tensor is passed as-is.</p>
+<pre class="listing"><code class="language-egison">(\(u: Tensor a) (v: Tensor a) -&gt; (u, v)) [| a, b |]_i [| x, y |]_j
+-- ([| a, b |]_i, [| x, y |]_j)</code></pre>
+<p>Egison&#x27;s type system distinguishes between two kinds of functions: <em>scalar functions</em> (<em>scalar function</em>) and <em>tensor functions</em> (<em>tensor function</em>). A scalar function is a function that, when given a tensor as an argument, maps its processing over each component. For example, “<code>+</code>”, “<code>-</code>”, “<code>*</code>”, “<code>/</code>”, and “<span class="inline-code"><span class="math-inline">\(\partial\)</span>/<span class="math-inline">\(\partial\)</span></span>” are scalar functions. A tensor function is a function that, when given a tensor as an argument, processes the tensor as a tensor directly. For example, a function that computes the determinant or a function for tensor multiplication cannot be defined by automatically mapping over each component, so they must be defined as tensor functions. Whether a function is a scalar function or a tensor function is determined by type annotations. If the type of a formal parameter is not <code>Tensor a</code>, tensors passed as arguments are automatically mapped component-wise (scalar function). If the type of a formal parameter is <code>Tensor a</code>, tensors are passed as-is (tensor function). Examples of scalar and tensor function definitions are explained in Figures&nbsp;<a class="reference" href="tensor.html#ref-fig-minFunction">12.4</a> and&nbsp;<a class="reference" href="tensor.html#ref-fig-dotFunction">12.4</a>.</p>
+<figure>
+<div class="subfigure">
+<pre class="listing"><code class="language-egison">def min (x: a) (y: a) : a := if x &lt; y then x else y</code></pre>
+<figcaption>Definition of the <code>min</code> function (the type annotation indicates it works for any comparable type <code>a</code>)</figcaption>
+<p><span id="ref-fig-minDef" class="anchor"></span></p>
+</div>
+<div class="subfigure">
+<p><span class="small"></span></p>
+<span class="math-inline">\(min(\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i},  \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{j}) = \begin{pmatrix} min(1,10) &amp; min(1,20) &amp; min(1,30) \\ min(2,10) &amp; min(2,20) &amp; min(2,30) \\ min(3,10) &amp; min(3,20) &amp; min(3,30) \\ \end{pmatrix}_{ij}
+    = \begin{pmatrix} 1 &amp; 1 &amp; 1 \\ 2 &amp; 2 &amp; 2 \\ 3 &amp; 3 &amp; 3 \\ \end{pmatrix}_{ij}\)</span>
+<p>}</p>
+<figcaption>Applying the <code>min</code> function to vectors with different indices</figcaption>
+<p><span id="ref-fig-minDiff" class="anchor"></span></p>
+</div>
+<div class="subfigure">
+<p><span class="small"></span></p>
+<span class="math-inline">\(min(\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i},  \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{i}) = \begin{pmatrix} min(1,10) &amp; min(1,20) &amp; min(1,30) \\ min(2,10) &amp; min(2,20) &amp; min(2,30) \\ min(3,10) &amp; min(3,20) &amp; min(3,30) \\ \end{pmatrix}_{ii}
+  = \begin{pmatrix} min(1,10) \\ min(2,20) \\ min(3,30) \end{pmatrix}_{i} = \begin{pmatrix} 1 \\ 2 \\ 3 \end{pmatrix}_{i}\)</span>
+<p>}</p>
+<figcaption>Applying the <code>min</code> function to vectors with the same index</figcaption>
+<p><span id="ref-fig-minSame" class="anchor"></span></p>
+</div>
+<figcaption>Definition and application examples of the <code>min</code> function as an example of a scalar function</figcaption>
+<p><span id="ref-fig-minFunction" class="anchor"></span></p>
+</figure>
+<p>Figure&nbsp;<a class="reference" href="tensor.html#ref-fig-minFunction">12.4</a> introduces the definition of the <code>min</code> function and its application examples as an example of a scalar function. Since the body uses <code>&lt;</code>, the parameter type is inferred as a type variable under the constraint <code>{Ord a}</code>, which the <code>Tensor</code> type cannot satisfy (a scalar parameter — the precise criterion is given in Section&nbsp;<a class="reference" href="tensor.html#ref-tensor-tensormap">12.10</a>). Therefore, when a tensor is passed as an argument, the function is automatically applied component-wise. As a result of component-wise application, the function is applied in the same form as a tensor product, as shown in Figure&nbsp;<a class="reference" href="tensor.html#ref-fig-minDiff">12.4</a>. The index reduction rules for tensors are simple. The only rule is that when a tensor with two or more indices of the same symbol is generated as a result of applying a scalar function (as in Figure&nbsp;<a class="reference" href="tensor.html#ref-fig-minSame">12.4</a>), it is reduced to a tensor consisting of its diagonal components. The detailed specification of the index reduction rules is discussed in the next section.</p>
+<figure>
+<div class="subfigure">
+<pre class="listing"><code class="language-egison">def (.) (t1: Tensor a) (t2: Tensor a) : Tensor a := contractWith (+) (t1 * t2)</code></pre>
+<figcaption>Definition of the “<code>.</code>” function (the type annotation indicates it receives tensors and returns a tensor)</figcaption>
+<p><span id="ref-fig-dotDef" class="anchor"></span></p>
+</div>
+<div class="subfigure">
+<p><span class="small"></span></p>
+<span class="math-inline">\(\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}^{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{i} = contractWith(+, \begin{pmatrix} 10 &amp; 20 &amp; 30 \\ 20 &amp; 40 &amp; 60 \\ 30 &amp; 60 &amp; 90 \\ \end{pmatrix}^{i}_{\;i})
+  = 10 + 40 + 90 = 140\)</span>
+<p><br>  <br></p>
+<span class="math-inline">\(\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{i} = contractWith(+, \begin{pmatrix} 10 \\ 40 \\ 90 \\ \end{pmatrix}_{i}) = \begin{pmatrix} 10 \\ 40 \\ 90 \\ \end{pmatrix}_{i}\)</span>
+<p><br>  <br> <span class="math-inline">\(\begin{pmatrix} 1 \\ 2 \\ 3 \\ \end{pmatrix}_{i} \cdot \begin{pmatrix} 10 \\ 20 \\ 30 \\ \end{pmatrix}_{j} = contractWith(+, \begin{pmatrix} 10 &amp; 20 &amp; 30 \\ 20 &amp; 40 &amp; 60 \\ 30 &amp; 60 &amp; 90 \\ \end{pmatrix}_{ij})
+  = \begin{pmatrix} 10 &amp; 20 &amp; 30 \\ 20 &amp; 40 &amp; 60 \\ 30 &amp; 60 &amp; 90 \\ \end{pmatrix}_{ij}\)</span> <br> }</p>
+<figcaption>Application of the “<code>.</code>” function</figcaption>
+<p><span id="ref-fig-dotApp" class="anchor"></span></p>
+</div>
+<figcaption>Definition and application examples of the “<code>.</code>” function as an example of a tensor function</figcaption>
+<p><span id="ref-fig-dotFunction" class="anchor"></span></p>
+</figure>
+<p>Figure&nbsp;<a class="reference" href="tensor.html#ref-fig-dotFunction">12.4</a> introduces the definition and application examples of the “<code>.</code>” function, a tensor multiplication function, as an example of a tensor function. Since the formal parameter type is <code>Tensor a</code>, when a tensor is passed as an argument, it is passed as-is. As shown in Figure&nbsp;<a class="reference" href="tensor.html#ref-fig-dotApp">12.4</a>, Egison has built-in support for both superscript and subscript indices. When the same symbol is used for a superscript and subscript, contraction can be performed using the <code>contractWith</code> function.</p>
+<p>Superscripts are represented in programs using “<code>~</code>” and subscripts using “<code>_</code>”. For example, the first computation example in Figure&nbsp;<a class="reference" href="tensor.html#ref-fig-dotApp">12.4</a> is expressed in Egison as follows.</p>
+<pre class="listing"><code class="language-egison">[| 1, 2, 3 |]~i . [| 10, 20, 30 |]_i
+-- 140</code></pre>
+<h2><span class="heading-number">12.5</span>Three Types of Indices</h2>
+<p><span id="ref-tensor-index" class="anchor"></span></p>
+<p>Egison introduces three types of indices for handling tensor index notation. The first two are the superscripts and subscripts introduced in the previous section, represented by <code>~</code> and <code>_</code>. The third is called the superscript-subscript index, represented by <code>~_</code>. Superscript-subscript indices appear when a scalar function is applied to a tensor that has both a superscript and subscript index with the same symbol.</p>
+<pre class="listing"><code class="language-egison">[| 1 2 3 |]_i * [| 10 20 30 |]_i -- [| 10, 40, 90 |]_i
+[| 1 2 3 |]~i * [| 10 20 30 |]~i -- [| 10, 40, 90 |]~i
+[| 1 2 3 |]~i * [| 10 20 30 |]_i -- [| 10, 40, 90 |]~_i</code></pre>
+<p>The <code>contractWith</code> function, which also appeared in the previous section, converts diagonal components of superscript-subscript indices into a list and folds it with the function given as the first argument.</p>
+<pre class="listing"><code class="language-egison">contractWith (+) [| 10, 40, 90 |]_i -- [| 10, 40, 90 |]_i
+contractWith (+) [| 10, 40, 90 |]~i -- [| 10, 40, 90 |]~i
+contractWith (+) [| 10, 40, 90 |]~_i -- 130</code></pre>
+<p><code>contractWith</code> is a library function defined using the built-in function <code>contract</code>. The built-in function <code>contract</code> returns the list of components at the slot with a superscript-subscript index.</p>
+<pre class="listing"><code class="language-egison">contract [| 1, 2, 3 |]~_i -- [1, 2, 3]
+contract [| [| 11, 12 |], [| 21, 22 |] |]~_i_j -- [[| 11, 12 |]_j, [| 21, 22 |]_j]
+contract [| [| 11, 12 |], [| 21, 22 |] |]_i~_j -- [[| 11, 21 |]_j, [| 12, 22 |]_i]
+contract [| [| 11, 12 |], [| 21, 22 |] |]~_i~_j -- [11, 12, 21, 22]</code></pre>
+<h2><span class="heading-number">12.6</span>Index Reduction Rules</h2>
+<p><span id="ref-tensor-rules" class="anchor"></span></p>
+<figure>
+<div class="center">
+<pre class="listing"><code class="language-egison">E({A, xs}) =
+  if e(xs) = [] then
+    {A, xs})
+  elsif e(xs) = [{k,j}, …] &amp; p(k,xs) = p(j,xs) then
+    E({diag(k, j, A), remove(j, xs))
+  elsif e(xs) = [{k,j}, …] &amp; p(k,xs) != p(j,xs) then
+    E({diag(k, j, A), update(k, 0, remove(j, xs)))</code></pre>
+</div>
+<figcaption>Pseudocode for index reduction</figcaption>
+<p><span id="ref-fig-semanticsRules" class="anchor"></span></p>
+</figure>
+<p>This section explains the index reduction rules using pseudocode. As explained in Section&nbsp;<a class="reference" href="tensor.html#ref-tensor-params">12.4</a>, since applying a scalar function to tensors always maps the processing component-wise in the form of a tensor product, we only need to define the reduction rules for a single tensor.</p>
+<p>Figure&nbsp;<a class="reference" href="tensor.html#ref-fig-semanticsRules">12.6</a> shows the pseudocode for index reduction. <code>E(A,xs)</code> is a function that reduces an indexed tensor. <code>A</code> is the array of tensor components, and <code>xs</code> is the list of indices attached to <code>A</code>. For example, <code>E(A,xs)</code> operates on a tensor with indices “<code>~i_j_i</code>” as follows. The flags <code>1</code>, <code>-1</code>, and <code>0</code> represent superscript, subscript, and superscript-subscript indices, respectively.</p>
+<pre class="listing"><code class="language-egison">E({[|[|[|1,2|],[|3,4|]|]
+    ,[|[|5,6|],[|7,8|]|]|]
+ ,[{i,1}, {j,-1}, {i,-1}]}) =
+{[|[|1,3|],[|6,8|]|], [{i,0}, {j,-1}]}</code></pre>
+<p>Let us explain the auxiliary functions used in the pseudocode. <code>e(xs)</code> finds pairs of indices with the same symbol in <code>xs</code>. <code>diag(k, j, A)</code> computes the tensor consisting of the diagonal components of <code>A</code> with respect to the <code>k</code>-th and <code>j</code>-th slots. <code>remove(k, xs)</code> removes the <code>k</code>-th element from the list <code>xs</code>. <code>p(k, xs)</code> retrieves the value of the <code>k</code>-th entry from the association list <code>xs</code>. <code>update(k, p, xs)</code> updates the value of the <code>k</code>-th entry in the association list <code>xs</code> to <code>p</code>. These auxiliary functions operate as follows.</p>
+<pre class="listing"><code class="language-egison">e([{i, 1}, {j, -1}, {i, -1}])        = [{1,3}]
+diag(1, 2, [|[|11,12|],[|21,22|]|]) = [|11,22|]
+p(2, [{i, 1}, {j, -1}])             = -1
+remove(2, [{i, 1}, {j, -1}])        = [{i, 1}]
+update(2, 0, [{i, 1}, {j, -1}])     = [{i, 1}, {j, 0}]</code></pre>
+<h2><span class="heading-number">12.7</span>Differences from Classical Index Notation — Unified Index Rules</h2>
+<p><span id="ref-tensor-unified" class="anchor"></span></p>
+<p>In classical tensor index notation, the validity conditions for indices differ from operation to operation. For example, <span class="math-inline">\(u_i + v_i\)</span> is valid but <span class="math-inline">\(u_i + v_j\)</span> is not, and under the Einstein summation convention <span class="math-inline">\(u^i v_i\)</span> denotes a contraction while the same-variance repetition <span class="math-inline">\(u_i v_i\)</span> is invalid. Egison simplifies and unifies these rules: <strong>every operation is treated by one semantics — element-wise lifting (<code>tensorMap</code> insertion) followed by index reduction</strong>. As a result, expressions valid in the classical notation keep their meaning, and formerly invalid expressions receive a consistent meaning as well.</p>
+<pre class="listing"><code class="language-egison">declare symbol i, j
+
+[|1,2,3|]_i + [|10,20,30|]_j
+-- [| [| 11, 21, 31 |], [| 12, 22, 32 |], [| 13, 23, 33 |] |]_i_j
+
+[|1,2,3|]_i + [|10,20,30|]_i
+-- [| 11, 22, 33 |]_i
+
+[|1,2,3|]_i * [|10,20,30|]_j
+-- [| [| 10, 20, 30 |], [| 20, 40, 60 |], [| 30, 60, 90 |] |]_i_j
+
+[|1,2,3|]_i * [|10,20,30|]_i
+-- [| 10, 40, 90 |]_i
+
+[|1,2,3|]~i . [|10,20,30|]_i
+-- 140</code></pre>
+<p>Note that <code>+</code> and <code>*</code> follow <em>exactly the same rules</em>. With distinct indices the result takes the shape of a tensor product (all combinations); a repeated subscript extracts the diagonal (for <code>*</code> this coincides with the Hadamard product). The classically invalid <span class="math-inline">\(u_i + v_j\)</span> becomes a tensor with the natural meaning “all combinations of the sum”. Contraction happens when a superscript--subscript pair is passed to a tensor function such as <code>.</code> (Section&nbsp;<a class="reference" href="tensor.html#ref-tensor-tensorfunc">12.8</a>).</p>
+<p>In the repeated-index case, the intermediate form right after lifting is a square array holding all combinations, but index reduction (Section&nbsp;<a class="reference" href="tensor.html#ref-tensor-rules">12.6</a>) extracts the diagonal immediately, so the user only ever observes the reduced value.</p>
+<h2><span class="heading-number">12.8</span>Application of Tensor Functions</h2>
+<p><span id="ref-tensor-tensorfunc" class="anchor"></span></p>
+<p>When an indexed tensor is passed to a tensor function, it is applied to the tensor function together with its indices. Let us verify this behavior with the “<code>.</code>” function defined in Figure&nbsp;<a class="reference" href="tensor.html#ref-fig-dotDef">12.4</a>. Figure&nbsp;<a class="reference" href="tensor.html#ref-fig-dotApp">12.4</a> displays the expansion step by step when the “<code>.</code>” function is applied. Indexed tensors appear inside <code>contractWith</code>, which is made possible by tensors being passed to tensor functions together with their indices. Thanks to this behavior, tensor functions can be applied using tensor index notation as follows.</p>
+<pre class="listing"><code class="language-egison">[|1,2,3|]~i . [|10,20,30|]_i -- 140
+[|1,2,3|]_i . [|10,20,30|]_j -- [|[|10,20,30|],[|20,40,60|],[|30,60,90|]|]_i_j
+[|1,2,3|]_i . [|10,20,30|]_i -- [|10,40,90|]_i</code></pre>
+<p>Sometimes, additional indices need to be attached to a tensor passed as an argument inside a tensor function. To attach new indices, insert <code>...</code> between the tensor and the indices as follows. This feature is implemented as syntactic sugar using the built-in functions <code>subrefs</code> and <code>suprefs</code>, which are introduced in Section&nbsp;<a class="reference" href="tensor.html#ref-tensor-refs">12.14</a>. Usage examples of this feature are presented in Chapter&nbsp;<a class="reference" href="diffgeo.html#ref-diffgeo">14</a>.</p>
+<pre class="listing"><code class="language-egison">A..._i_j</code></pre>
+<h2><span class="heading-number">12.9</span>Index Completion for Omitted Indices</h2>
+<p><span id="ref-tensor-completion" class="anchor"></span></p>
+<p>When a tensor with omitted indices is applied to a function, Egison automatically completes the indices. This section explains the rules for this completion.</p>
+<p>Let <code>A</code> and <code>B</code> be second-order tensors, i.e., matrices. When <code>A</code> and <code>B</code> are applied to a scalar function simultaneously with their indices omitted, the same combination of indices is completed as shown below.</p>
+<pre class="listing"><code class="language-egison">A + B -- A_t1_t2 + B_t1_t2</code></pre>
+<p>When “<code>!</code>” is prefixed to the function application, different indices are completed as shown below.</p>
+<pre class="listing"><code class="language-egison">A !+ B -- A_t1_t2 + B_t3_t4</code></pre>
+<p>When a tensor with omitted indices is applied to a tensor function, no completion is performed.</p>
+<p>The above index completion rules are in fact necessary for a reason. Setting the index completion rules for omitted indices as described above allows differential form operators to be defined concisely. Concrete examples of differential form operator definitions are presented in Chapter&nbsp;<a class="reference" href="diffgeo.html#ref-diffgeo">14</a>. As also mentioned later in Chapter&nbsp;<a class="reference" href="diffgeo.html#ref-diffgeo">14</a>, “<code>!</code>” only needs to be used within the definitions of differential form operators. Therefore, users generally do not need to be aware of “<code>!</code>”.</p>
+<h2><span class="heading-number">12.10</span>Mechanism of Automatic <code>tensorMap</code> Insertion</h2>
+<p><span id="ref-tensor-tensormap" class="anchor"></span></p>
+<p>This section explains the mechanism of automatic <code>tensorMap</code> insertion by the type system.</p>
+<h3><span class="heading-number">12.10.1</span>Basic Principle</h3>
+<p>For every function application, Egison&#x27;s type system decides <strong>whether the formal parameter&#x27;s type can—taking its type class constraints into account—be instantiated to <code>Tensor a</code></strong>. A parameter for which this is possible is called <em>tensor-compatible</em>. <code>tensorMap</code> is inserted exactly when the following two conditions hold:</p>
+<ul>
+<li>the formal parameter is not tensor-compatible (it is a <em>scalar parameter</em>), and
+</li>
+<li>the actual argument&#x27;s type is <code>Tensor a</code>.
+</li>
+</ul>
+<p><code>tensorMap</code> is a built-in function that applies the function given as the first argument to each component of the tensor given as the second argument and returns a tensor.</p>
+<p>Whether a parameter type is tensor-compatible is determined as follows:</p>
+<ul>
+<li>concrete scalar types such as <code>Integer</code> — not tensor-compatible (scalar parameters);
+</li>
+<li>explicit <code>Tensor a</code> types — tensor-compatible;
+</li>
+<li>type variables — decided by <strong>whether the <code>Tensor</code> type can satisfy all the attached class constraints</strong>.
+<p>An unconstrained type variable is always tensor-compatible. The <code>a</code> of <code>{Eq a}</code> is tensor-compatible as well, because the library provides <code>instance {Eq a} Eq (Tensor a)</code>. By contrast, the <code>a</code> of <code>{Ord a}</code> or <code>{AddSemigroup a}</code> is not tensor-compatible: the <code>Tensor</code> type has no instances of those classes.</p>
+</li>
+</ul>
+<p>This classification is determined by the function&#x27;s <em>principal type</em> (its inferred type) alone, so where <code>tensorMap</code> is inserted is deterministic, and type annotations are never needed to control insertion. Moreover, the decision stays entirely within Hindley--Milner inference: no index information is lifted to the type level, and no dependent typing is required.</p>
+<h3><span class="heading-number">12.10.2</span>Concrete Example</h3>
+<p>Let us verify the behavior using the <code>min</code> function defined in Figure&nbsp;<a class="reference" href="tensor.html#ref-fig-minFunction">12.4</a>.</p>
+<pre class="listing"><code class="language-egison">def min (x: a) (y: a) : a := if x &lt; y then x else y
+
+min [|1,2,3|]_i [|10,20,30|]_j
+-- Internally transformed to:
+-- tensorMap (\xi -&gt; tensorMap (\yi -&gt; min xi yi) [|10,20,30|]_j) [|1,2,3|]_i
+-- Result: [|[|1,1,1|],[|2,2,2|],[|3,3,3|]|]_i_j
+
+min [|1,2,3|]_i [|10,20,30|]_i
+-- Result: [|1,2,3|]_i</code></pre>
+<p>Since the body of <code>min</code> uses <code>&lt;</code>, its parameter type is inferred as the type variable <code>a</code> under the constraint <code>{Ord a}</code>. The <code>Tensor</code> type is not an instance of the <code>Ord</code> class, so <code>a</code> cannot be instantiated to a <code>Tensor</code> type. The parameters of <code>min</code> are therefore scalar parameters, and when a tensor is passed, <code>tensorMap</code> is inserted automatically. Writing the definition without any annotations, <code>def min x y := if x &lt; y then x else y</code>, infers the same type and behaves identically — whether to lift follows from the inferred principal type alone.</p>
+<p>The indices of the resulting tensor for the first expression are “<code>_i_j</code>”. When the result of applying the first argument&#x27;s function to the second argument&#x27;s tensor components in <code>tensorMap</code> is itself a tensor, <code>tensorMap</code> moves the indices of that result tensor to the end of the indices of the overall result tensor. This is why the result tensor has the indices “<code>_i_j</code>”. This mechanism enables the application of scalar functions using tensor index notation.</p>
+<h3><span class="heading-number">12.10.3</span>Tensor-Compatibility of Type Variables</h3>
+<p>For type variables, the dividing line is <strong>not the presence of constraints but whether the <code>Tensor</code> type can satisfy the attached constraints</strong>. An unconstrained type variable can be instantiated to any type — including <code>Tensor</code> types — so it is tensor-compatible. Passing a tensor to the identity function, for example, inserts no <code>tensorMap</code>: the tensor passes through as-is.</p>
+<pre class="listing"><code class="language-egison">def myId (x: a) : a := x
+
+myId [|1,2,3|]_i -- [| 1, 2, 3 |]_i</code></pre>
+<p>It is thanks to this classification that generic higher-order functions carrying tensors as elements (list operations and the like) work as expected.</p>
+<p>A constrained type variable stays tensor-compatible when the <code>Tensor</code> type has an instance of the class. For example, <code>{Eq a}</code> poses no obstacle because of <code>instance {Eq a} Eq (Tensor a)</code>: equality is decided on whole tensors, not lifted component-wise.</p>
+<pre class="listing"><code class="language-egison">def eqTest {Eq a} (x: a) (y: a) : Bool := x == y
+
+eqTest [|1,2|]_i [|1,2|]_i -- True
+eqTest [|1,2|]_i [|1,3|]_i -- False</code></pre>
+<p>By contrast, a constraint whose class has no <code>Tensor</code> instance makes the parameter a scalar parameter.</p>
+<pre class="listing"><code class="language-egison">def double {AddSemigroup a} (x: a) : a := x + x
+
+double [|1,2,3|]_i
+-- Since Tensor is not an instance of AddSemigroup,
+-- tensorMap is automatically inserted:
+-- tensorMap (\xi -&gt; double xi) [|1,2,3|]_i
+-- Result: [|2,4,6|]_i</code></pre>
+<p>The constraint <code>AddSemigroup a</code> restricts <code>a</code> to instances of the <code>AddSemigroup</code> class. The <code>Tensor</code> type is not among them, so when a tensor is passed, <code>tensorMap</code> is inserted automatically and <code>double</code> is applied to each component (of type <code>Integer</code>).</p>
+<h3><span class="heading-number">12.10.4</span>The Case of Tensor Functions</h3>
+<p>On the other hand, when the formal parameter type is explicitly <code>Tensor a</code>, <code>tensorMap</code> is not inserted.</p>
+<pre class="listing"><code class="language-egison">def (.) (t1: Tensor a) (t2: Tensor a) : Tensor a :=
+  contractWith (+) (t1 * t2)
+
+[|1,2,3|]~i . [|10,20,30|]_i
+-- tensorMap is not inserted; the tensor is passed as-is
+-- Result: 140</code></pre>
+<h3><span class="heading-number">12.10.5</span>Functions Passed to Higher-Order Functions</h3>
+<p><span id="ref-tensor-hof" class="anchor"></span></p>
+<p>Insertion also applies to functions passed as arguments to higher-order functions. In this case, <code>tensorMap</code> is inserted not at an application site but by <strong>eta-expanding the function argument itself</strong>: the supplied function <code>f</code> is transformed into a wrapper such as <code>\x -&gt; tensorMap f x</code> or <code>\x y -&gt; tensorMap2 f x y</code>, and the component-wise application happens in the wrapper&#x27;s body.</p>
+<pre class="listing"><code class="language-egison">def inc (x: Integer) : Integer := x + 1
+
+map inc [[|1,2|]_i, [|10,20|]_i]
+-- inc is eta-expanded to \x -&gt; tensorMap inc x
+-- Result: [[|2,3|]_i, [|11,21|]_i]
+
+foldl1 (+) [[|1,2|]_i, [|10,20|]_i]
+-- (+) is eta-expanded to \x y -&gt; tensorMap2 (+) x y
+-- Result: [|11,22|]_i</code></pre>
+<p>The condition for eta-expansion depends on the shape of the function argument. A unary scalar function is eta-expanded when the callback type expected by the call site mentions tensors (in the <code>map</code> example above, the types reveal that the list elements are tensors). By contrast, <strong>a binary scalar function is eta-expanded to its <code>tensorMap2</code> version without exception, whether or not tensors are visible in the types</strong>. Since <code>tensorMap</code> and <code>tensorMap2</code> act as the identity on scalar values, this unconditional wrapping is always safe. Thanks to this design, arguments that turn from scalars into tensors mid-computation — such as the accumulator of <code>foldl</code> — are handled correctly.</p>
+<pre class="listing"><code class="language-egison">foldl (+) 0 [[|1,2|]_i, [|10,20|]_i]
+-- The accumulator starts as the scalar 0 and becomes
+-- a tensor at the first addition
+-- Result: [|11,22|]_i</code></pre>
+<p>Callbacks whose parameters have <code>Tensor a</code> types, such as “<code>.</code>”, are not eta-expanded; tensors are passed to them as-is.</p>
+<h3><span class="heading-number">12.10.6</span>Optimization Techniques</h3>
+<p>In the actual implementation, a built-in function called <code>tensorMap2</code> is also used for optimization. When using nested <code>tensorMap</code>, a tensor with non-diagonal components is generated even when only diagonal components are needed for diagonalization. <code>tensorMap2</code> takes a binary function and two tensors as arguments and is implemented to compute only the components needed for the result tensor.</p>
+<h2><span class="heading-number">12.11</span>Index Reversal and the <code>flipIndices</code> Function</h2>
+<p>The partial differentiation function <span class="inline-code"><span class="math-inline">\(\partial\)</span>/<span class="math-inline">\(\partial\)</span></span> is a scalar function. However, <span class="inline-code"><span class="math-inline">\(\partial\)</span>/<span class="math-inline">\(\partial\)</span></span> is not just an ordinary scalar function. <span class="inline-code"><span class="math-inline">\(\partial\)</span>/<span class="math-inline">\(\partial\)</span></span> reverses the superscript/subscript positions of the second argument tensor&#x27;s indices. For example, <span class="inline-code">(<span class="math-inline">\(\partial\)</span>/<span class="math-inline">\(\partial\)</span> <span class="math-inline">\(\Gamma\)</span>~i_j_k x~l)</span> returns a fourth-order tensor with indices “<code>~i_j_k_l</code>”.</p>
+<p>To achieve this behavior, Egison provides a built-in function called <code>flipIndices</code>. <code>flipIndices</code> reverses the superscript/subscript positions of all indices of its argument tensor. Superscript-subscript indices remain as superscript-subscript indices even after reversal.</p>
+<p>The <span class="inline-code"><span class="math-inline">\(\partial\)</span>/<span class="math-inline">\(\partial\)</span></span> function is defined using <code>flipIndices</code> as follows.</p>
+<pre class="listing"><code class="language-egison">def `$\partial$`/`$\partial$` (f: Tensor MathValue) (x: Tensor MathValue)
+    : Tensor MathValue :=
+  tensorMap2 partialDiffMV f (flipIndices x)
+
+-- partialDiffMV is an auxiliary function that computes
+-- partial differentiation on scalar values
+def partialDiffMV (f: MathValue) (x: MathValue) : MathValue := ...</code></pre>
+<p>Through <code>tensorMap2</code>, the <code>partialDiffMV</code> function is applied to each component of <code>f</code> and <code>flipIndices x</code>. Since <code>flipIndices x</code> reverses the indices of the second argument, the indices of the result tensor are also reversed.</p>
+<p>Below is a usage example of <span class="inline-code"><span class="math-inline">\(\partial\)</span>/<span class="math-inline">\(\partial\)</span></span>.</p>
+<pre class="listing"><code class="language-egison">declare symbol r, `$\theta$`, i, j
+
+`$\partial$`/`$\partial$` [|(r * (sin `$\theta$`)),(r * (cos `$\theta$`))|]_i [|r,`$\theta$`|]_j
+-- [| [| &#x27;sin `$\theta$`, (&#x27;cos `$\theta$`) * r |], [| &#x27;cos `$\theta$`, - (&#x27;sin `$\theta$`) * r |] |]_i~j
+`$\partial$`/`$\partial$` [|(r * (sin `$\theta$`)),(r * (cos `$\theta$`))|]_i [|r,`$\theta$`|]_i
+-- [| &#x27;sin `$\theta$`, - (&#x27;sin `$\theta$`) * r |]~_i</code></pre>
+<p>In the first example, the index of the second argument is reversed from <code>_j</code> to <code>~j</code>, and the result has indices <code>_i~j</code>.</p>
+<h2><span class="heading-number">12.12</span>Generating Tensors with <code>generateTensor</code> Expressions</h2>
+<p>The <code>generateTensor</code> expression is a convenient built-in syntax for initializing tensors. <code>generateTensor</code> takes a function that accepts a list as the first argument and the desired tensor size as the second argument. For example, to generate a matrix of size <span class="math-inline">\((3, 4)\)</span> with all components equal to <span class="math-inline">\(1\)</span>, write the <code>generateTensor</code> expression as follows.</p>
+<pre class="listing"><code class="language-egison">generateTensor [2]#1 [3, 4]
+-- [| [| 1, 1, 1, 1 |], [| 1, 1, 1, 1 |], [| 1, 1, 1, 1 |] |]</code></pre>
+<p>When combined with anonymous <code>match</code> functions, various tensors can be generated with concise descriptions. For example, to generate the identity matrix, do the following.</p>
+<pre class="listing"><code class="language-egison">generateTensor (\match as list integer with
+                  | [$n, #n] -&gt; 1
+                  | _ -&gt; 0)
+               [3, 3]
+-- [| [| 1, 0, 0 |], [| 0, 1, 0 |], [| 0, 0, 1 |] |]</code></pre>
+<h2><span class="heading-number">12.13</span>Declaring Tensors</h2>
+<p>This section explains how to bind tensors to variables. First, tensors can be defined using <code>def</code> or <code>let</code> expressions, just like ordinary values.</p>
+<pre class="listing"><code class="language-egison">def A : Tensor Integer := [| [| 11, 12 |], [| 21, 22 |] |]
+
+A -- [| [| 11, 12 |], [| 21, 22 |] |]</code></pre>
+<p>In mathematics and physics, it is common to assign different values to tensors with the same variable name but different index types (superscript vs.subscript). Egison supports this convention by allowing different tensors to be defined for each index type. When referencing a variable, Egison uses both the variable name and the index type. The index type is specified by writing indices after the variable name in the variable definition.</p>
+<pre class="listing"><code class="language-egison">def g_i_j : Tensor MathValue := [| [| 2, 2 |], [| 2, 2 |] |]_i_j
+def g~i~j : Tensor MathValue :=
+  [| [| 1 / 2, 1 / 2 |], [| 1 / 2, 1 / 2 |] |]~i~j
+
+g_1_1 -- 2
+g~1~1 -- 1 / 2</code></pre>
+<p>To reference a variable that has been bound with a specified index type, it is convenient to use <em>dummy symbols</em> (<em>dummy symbol</em>). Dummy symbols are represented by <code>#</code>, and each occurrence is treated as a unique symbol. Dummy symbols are a mechanism built into Egison. Using dummy symbols, <code>g~i~j</code> and <code>g_i_j</code> defined above can be referenced as follows.</p>
+<pre class="listing"><code class="language-egison">g_#_# -- [| [| 2, 2 |], [| 2, 2 |] |]_#_#
+g~#~# -- [| [| 1 / 2, 1 / 2 |], [| 1 / 2, 1 / 2 |] |]~#~#</code></pre>
+<p>You can also specify the index type using declared symbols to reference tensors, but using dummy symbols is more convenient since it requires no declaration.</p>
+<pre class="listing"><code class="language-egison">declare symbol i, j
+
+g_i_j -- [| [| 2, 2 |], [| 2, 2 |] |]_i_j
+g~i~j -- [| [| 1 / 2, 1 / 2 |], [| 1 / 2, 1 / 2 |] |]~i~j</code></pre>
+<p>Note that multiple dummy symbols appearing in a single expression are each treated as distinct symbols.</p>
+<p>As in mathematical notation for tensors, symbols can also be written as indices on the left-hand side variable.</p>
+<pre class="listing"><code class="language-egison">def A_i_j : Tensor Integer := [| [| 11, 12 |], [| 21, 22 |] |]_i_j
+def B_i_j : Tensor Integer := [| [| 11, 12 |], [| 21, 22 |] |]_j_i
+
+A_#_# -- [| [| 11, 12 |], [| 21, 22 |] |]_#_#
+B_#_# -- [| [| 11, 21 |], [| 12, 22 |] |]_#_#</code></pre>
+<p>This feature is implemented in Egison as the following syntactic sugar.</p>
+<pre class="listing"><code class="language-egison">def A_i_j := ...
+-- =&gt; def A__ := withSymbols [i, j]
+--                 transpose [i, j] ...</code></pre>
+<p>The <code>transpose</code> function is a built-in function that transposes tensor components in the order specified by the first argument.</p>
+<h2><span class="heading-number">12.14</span>Convenient Syntax for Attaching Indices</h2>
+<p><span id="ref-tensor-refs" class="anchor"></span></p>
+<p>For a tensor <span class="math-inline">\(A\)</span> whose rank varies with a parameter <span class="math-inline">\(n\)</span>, one may want to attach indices like <span class="math-inline">\(A_{i_{1}...i_{n}}\)</span>. For this purpose, Egison provides built-in functions <code>subrefs</code> and <code>subrefs!</code>. These functions attach the list of indices given as the second argument to the tensor given as the first argument. <code>subrefs</code> appends the index list from the second argument to the existing indices of the first argument&#x27;s tensor, while <code>subrefs!</code> removes the existing indices and attaches new ones.</p>
+<pre class="listing"><code class="language-egison">subrefs! A (map 1#i_$1 [1..n])
+subrefs  A (map 1#i_$1 [1..n])</code></pre>
+<p>Since tensors of the form <span class="math-inline">\(A_{i_{1}...i_{n}}\)</span> appear frequently in mathematical expressions, the following syntactic sugar is provided for the programs using <code>subrefs!</code> and <code>subrefs</code> above.</p>
+<pre class="listing"><code class="language-egison">A_(i_1)...(i_n)
+A..._(i_1)...(i_n)</code></pre>
+<p>The above also applies to tensors with superscripts like <span class="math-inline">\(A^{i_{1}...i_{n}}\)</span>, for which Egison provides the built-in functions <code>suprefs</code> and <code>suprefs!</code>.</p>
+<p>The feature of <code>subrefs</code> and <code>suprefs</code> for appending indices to existing ones is used when defining functions for differential forms, which are introduced in Chapter&nbsp;<a class="reference" href="diffgeo.html#ref-diffgeo">14</a>.</p>
+<h2><span class="heading-number">12.15</span>Declaring Symmetry and Antisymmetry of Tensors</h2>
+<p><span id="ref-tensor-symm" class="anchor"></span></p>
+<figure>
+<div class="subfigure">
+<div class="math-display">\[\begin{pmatrix}
+a_{11} &amp; a_{12} &amp; a_{13} \\
+a_{12} &amp; a_{22} &amp; a_{23} \\
+a_{13} &amp; a_{23} &amp; a_{33} \\
+\end{pmatrix}\]</div>
+<figcaption>Example of a symmetric tensor</figcaption>
+<p><span id="ref-fig-symmtensor" class="anchor"></span></p>
+</div>
+<div class="subfigure">
+<div class="math-display">\[\begin{pmatrix}
+0 &amp; a_{12} &amp; a_{13} \\
+-a_{12} &amp; 0 &amp; a_{23} \\
+-a_{13} &amp; -a_{23} &amp; 0 \\
+\end{pmatrix}\]</div>
+<figcaption>Example of an antisymmetric tensor</figcaption>
+<p><span id="ref-fig-antisymmtensor" class="anchor"></span></p>
+</div>
+<figcaption>Symmetry and antisymmetry of tensors</figcaption>
+<p><span id="ref-fig-symm" class="anchor"></span></p>
+</figure>
+<p>A tensor is said to be <em>symmetric</em> when, as in the example of Figure&nbsp;<a class="reference" href="tensor.html#ref-fig-symmtensor">12.15</a>, the upper triangular components and lower triangular components coincide. A tensor is said to be <em>antisymmetric</em> when, as in the example of Figure&nbsp;<a class="reference" href="tensor.html#ref-fig-antisymmtensor">12.15</a>, the signs of the upper triangular and lower triangular components are reversed. When a tensor is antisymmetric, the diagonal components are 0.</p>
+<p>Many tensors encountered in mathematics and physics possess symmetry. For example, the Riemann curvature tensor <span class="math-inline">\(R_{abcd}\)</span> computed in Section&nbsp;<a class="reference" href="diffgeo.html#ref-diffgeo-riemann">14.2</a> has multiple symmetries: <span class="math-inline">\(R_{abcd} = -R_{abdc}\)</span>, <span class="math-inline">\(R_{abcd} = -R_{bacd}\)</span>, and <span class="math-inline">\(R_{abcd} = R_{cdab}\)</span>. Mathematicians and physicists exploit these symmetries to skip unnecessary calculations. We would like to implement such symmetry-aware computation optimization in Egison, but to do so in a programming language, the tensor&#x27;s symmetry must be explicitly declared. Egison has a notation for declaring tensor symmetry. This section explains the usage and implementation of this notation.</p>
+<h3><span class="heading-number">12.15.1</span>Notation for Declaring Tensor Symmetry</h3>
+<p>In addition to the symmetries above, the Riemann curvature tensor also has a symmetry known as the first Bianchi identity: <span class="math-inline">\(R_{abcd} + R_{acdb} + R_{adbc} = 0\)</span>. There is a notation <span class="math-inline">\(R_{a[bcd]} = 0\)</span> that expresses this first Bianchi identity. The notation implemented in Egison for declaring tensor symmetry was inspired by this notation.</p>
+<p>We introduce the notation using concrete examples. In Egison, the Riemann curvature tensor <span class="math-inline">\(R_{abcd}\)</span> can be defined as follows. The right-hand side contains a complex expression, but it can be ignored for this section. Please focus only on the left-hand side.</p>
+<pre class="listing"><code class="language-egison">def R_a_b_c_d : Tensor MathValue := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)</code></pre>
+<p>To declare the antisymmetry <span class="math-inline">\(R_{abcd} = -R_{abdc}\)</span>, enclose the indices <code>_a_b</code> in curly braces <code>{}</code>.</p>
+<pre class="listing"><code class="language-egison">def R{_a_b}_c_d : Tensor MathValue := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)</code></pre>
+<p>When <span class="math-inline">\(R_{abcd}\)</span> is defined this way, referencing <span class="math-inline">\(R_{21cd}\)</span> will return the sign-reversed value of the computed result for <span class="math-inline">\(R_{12cd}\)</span>. Multiple symmetries can be declared simultaneously. To declare both <span class="math-inline">\(R_{abcd} = -R_{abdc}\)</span> and <span class="math-inline">\(R_{abcd} = -R_{bacd}\)</span>, enclose both <code>_a_b</code> and <code>_c_d</code> in curly braces <code>{}</code>.</p>
+<pre class="listing"><code class="language-egison">def R{_a_b}{_c_d} : Tensor MathValue := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)</code></pre>
+<p>With this declaration, referencing <span class="math-inline">\(R_{2121}\)</span> will return the computed result of <span class="math-inline">\(R_{1212}\)</span>.</p>
+<p>More complex symmetries such as <span class="math-inline">\(R_{abcd} = R_{cdab}\)</span> can also be described. To express this symmetry, enclose <code>_a_b</code> and <code>_c_d</code> each in parentheses <code>()</code> to treat them as groups. Then enclose them in square brackets <code>[]</code>. While curly braces <code>{}</code> are used to declare antisymmetry, square brackets <code>[]</code> are used to declare symmetry.</p>
+<pre class="listing"><code class="language-egison">def R[(_a_b)(_c_d)] : Tensor MathValue := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)</code></pre>
+<p>All three symmetries <span class="math-inline">\(R_{abcd} = -R_{abdc}\)</span>, <span class="math-inline">\(R_{abcd} = -R_{bacd}\)</span>, and <span class="math-inline">\(R_{abcd} = R_{cdab}\)</span> can also be declared simultaneously.</p>
+<pre class="listing"><code class="language-egison">def R[{_a_b}{_c_d}] : Tensor MathValue := withSymbols [i, j]
+  g_a_i . (`$\partial$`/`$\partial$` `$\Gamma$`~i_b_d x~c - `$\partial$`/`$\partial$` `$\Gamma$`~i_b_c x~d +
+           `$\Gamma$`~j_b_d . `$\Gamma$`~i_j_c - `$\Gamma$`~j_b_c . `$\Gamma$`~i_j_d)</code></pre>
+<p>In summary, Egison uses three types of brackets to declare symmetry. Square brackets <code>[]</code> are used to declare symmetry. Curly braces <code>{}</code> are used to declare antisymmetry. Parentheses <code>()</code> are used to group multiple indices together.</p>
+<p>Since the indices of symmetric tensors are usually adjacent, the symmetries of tensors encountered in mathematics and physics can almost always be declared using this notation. A nice aspect of this notation is that symmetry can be declared without changing the program on the right-hand side of <code>:=</code> at all.</p>
+<h3><span class="heading-number">12.15.2</span>Example Where Symmetry Declaration Shortens Tensor Definitions</h3>
+<p>Earlier, we mentioned that an advantage of this approach is that no changes to the program on the right-hand side of <code>:=</code> are needed, but there are also cases where the program on the right-hand side can be simplified. For example, this occurs for tensors whose values are defined using different expressions for each block, as shown below.</p>
+<pre class="listing"><code class="language-egison">def R&#x27;_i_j_k_l : Tensor MathValue :=
+  generateTensor
+    (\match as list integer with
+       | [#1, #1, _, _] -&gt; 0
+       | [_, _, #1, #1] -&gt; 0
+       | [#1, $b, #1, $d] -&gt; -1 * p^2 * `$\delta$`~(b - 1)_(d - 1)
+       | [$a, #1, #1, $d] -&gt;      p^2 * `$\delta$`~(a - 1)_(d - 1)
+       | [#1, $b, $c, #1] -&gt;      p^2 * g_(b - 1)_(c - 1)
+       | [$a, #1, $c, #1] -&gt; -1 * p^2 * g_(a - 1)_(c - 1)
+       | [#1, $b, $c, $d] -&gt; -1 * p * `$\nabla$`J_(b - 1)_(c - 1)~(d - 1)
+       | [$a, #1, $c, $d] -&gt;      p * `$\nabla$`J_(a - 1)_(c - 1)~(d - 1)
+       | [$a, $b, #1, $d] -&gt; -1 * p * `$\nabla$`J~(d - 1)_(a - 1)_(b - 1)
+       | [$a, $b, $c, #1] -&gt;      p * `$\nabla$`J_(c - 1)_(a - 1)_(b - 1)
+       | [$a, $b, $c, $d] -&gt; R_(a - 1)_(b - 1)_(c - 1)~(d - 1)
+                             + -1 * p^2 * J_(b - 1)_(c - 1) * J_(a - 1)~(d - 1)
+                             +      p^2 * J_(a - 1)_(c - 1) * J_(b - 1)~(d - 1)
+                             +  2 * p^2 * J_(a - 1)_(b - 1) * J_(c - 1)~(d - 1))
+    [5, 5, 5, 5]</code></pre>
+<p>Symmetry can greatly reduce the number of conditional branches.</p>
+<pre class="listing"><code class="language-egison">def R&#x27;[{_i_j}{_k_l}] : Tensor MathValue :=
+  generateTensor
+    (\match as list integer with
+       | [#1, #1, _, _] -&gt; 0
+       | [#1, $b, #1, $d] -&gt; -1 * p^2 * `$\delta$`~(b - 1)_(d - 1)
+       | [#1, $b, $c, $d] -&gt; -1 * p * `$\nabla$`J_(b - 1)_(c - 1)~(d - 1)
+       | [$a, $b, $c, $d] -&gt; R_(a - 1)_(b - 1)_(c - 1)~(d - 1)
+                             + -1 * p^2 * J_(b - 1)_(c - 1) * J_(a - 1)~(d - 1)
+                             +      p^2 * J_(a - 1)_(c - 1) * J_(b - 1)~(d - 1)
+                             +  2 * p^2 * J_(a - 1)_(b - 1) * J_(c - 1)~(d - 1))
+    [5, 5, 5, 5]</code></pre>
+<h3><span class="heading-number">12.15.3</span>Implementation</h3>
+<p>This section explains the implementation of the notation for declaring tensor symmetry. This notation is implemented as syntactic sugar using <code>generateTensor</code> expressions. We explain the transformation through several concrete examples.</p>
+<p>First, let us explain how square brackets <code>[]</code> for declaring symmetry are expanded. The <code>...</code> in the following program is where some program that returns a tensor is placed.</p>
+<pre class="listing"><code class="language-egison">def X[_i_j] := ...</code></pre>
+<p>A program of the above form is expanded into the following program.</p>
+<pre class="listing"><code class="language-egison">def X_i_j : Tensor a :=
+ let tmpX_i_j := ...
+   generateTensor
+     (\i j -&gt; if i &gt; j then tmpX_j_i
+              else          tmpX_i_j)
+     (tensorShape tmpX_#_#)</code></pre>
+<p>A new variable <code>tmpX</code> is introduced and assigned the tensor to be defined. <code>X</code> itself is defined using a <code>generateTensor</code> expression. This <code>generateTensor</code> expression is defined so that the lower-half components reference the upper-half components. Since Egison lazily evaluates tensor components, the lower-half components of <code>tmpX</code> are never computed. Therefore, the computation cost of tensor components is halved.</p>
+<p>Curly braces <code>{}</code> for declaring antisymmetry are expanded in the same way.</p>
+<pre class="listing"><code class="language-egison">def X{_i_j} := ...</code></pre>
+<p>The interior of the <code>generateTensor</code> expression is modified so that the lower-half components have their signs reversed relative to the upper-half components, and the diagonal components are <span class="math-inline">\(0\)</span>.</p>
+<pre class="listing"><code class="language-egison">def X_i_j : Tensor a :=
+  let tmpX_i_j := ...
+    generateTensor
+      (\i j -&gt; if i &gt; j      then -tmpX_j_i
+               else if i = j then 0
+               else               tmpX_i_j)
+      (tensorShape tmpX_#_#)</code></pre>
+<h2><span class="heading-number">12.16</span>Detailed Mechanism of tensorMap Insertion</h2>
+<p>In Egison, the compiler automatically inserts <code>tensorMap</code> and <code>tensorMap2</code> so that polymorphic functions work correctly with tensor arguments. This section provides a detailed explanation of this automatic insertion mechanism.</p>
+<h3><span class="heading-number">12.16.1</span>Processing Flow and Timing</h3>
+<p>The insertion of <code>tensorMap</code> is executed after type inference (Phase 5-6) and before type class expansion (Phase 8-2), at Phase 8-1. The processing flow is as follows:</p>
+<ol>
+<li>Phase 5-6: Type inference assigns types to all expressions.
+</li>
+<li>Phase 8-1: TensorMap insertion automatically inserts <code>tensorMap</code>/<code>tensorMap2</code> where needed.
+</li>
+<li>Phase 8-2: Type class expansion converts type class methods (e.g., <code>(+)</code>) into dictionary lookup form (<code>dict_AddSemigroup_(&quot;plus&quot;)</code>).
+</li>
+</ol>
+<p>The reason TensorMap insertion is executed before type class expansion is to first determine the argument types (scalar or tensor), so that instance selection can be performed correctly during type class expansion.</p>
+<h3><span class="heading-number">12.16.2</span>Two-Phase Transformation per Application Spine</h3>
+<p>Insertion operates in two phases on each application spine (<code>f a1 ... an</code>). The first phase determines, from the function&#x27;s principal type, which argument positions of the spine are scalar parameters. The second phase wraps the scalar positions that receive tensors with <code>tensorMap</code> or <code>tensorMap2</code>, all at once. Because position determination and wrapping are separated, the insertion result does not depend on the order in which arguments are processed (the confluence of Section&nbsp;<a class="reference" href="tensor.html#ref-tensor-guarantees">12.16.7</a>).</p>
+<h3><span class="heading-number">12.16.3</span>Basic Principles of Insertion</h3>
+<p>TensorMap insertion is based on the following principles:</p>
+<h4>Principle 1: Insertion for Operations on Scalar Types Inside Type Constructors</h4>
+<p>When a scalar type, or a type variable constrained by classes of which <code>Tensor</code> has no instance, exists inside a type constructor (list <code>[a]</code>, tuple <code>(a, b)</code>, etc.), <code>tensorMap</code> or <code>tensorMap2</code> is always inserted for operations on that type.</p>
+<p>For example, when an element <code>x</code> extracted from a variable <code>xs: [a]</code> is subjected to an operation <code>(+)</code> that expects a scalar type, it is transformed to <code>tensorMap2 (+)</code>.</p>
+<h4>Principle 2: Behavior of tensorMap on Scalars</h4>
+<p><code>tensorMap</code> and <code>tensorMap2</code> are implemented so that they can be applied to scalar values directly:</p>
+<ul>
+<li><code>tensorMap f scalar</code> returns <code>f scalar</code> (acts as identity when not a tensor)
+</li>
+<li><code>tensorMap2 f s1 s2</code> returns <code>f s1 s2</code>
+</li>
+</ul>
+<p>This property eliminates the need to insert conditional branches for determining at runtime whether arguments are scalars or tensors, greatly simplifying the implementation.</p>
+<h3><span class="heading-number">12.16.4</span>Handling of Eta-Expanded Type Class Methods</h3>
+<p>Eta-expansion of functions passed to higher-order functions — the conditions and examples — was explained in Section&nbsp;<a class="reference" href="tensor.html#ref-tensor-hof">12.10.5</a>. This section supplements the implementation-level handling when type class methods are involved.</p>
+<p>At the TensorMap insertion stage, type class methods still appear in eta-expanded form. For example, the <code>(+)</code> operator appears in the following form:</p>
+<pre class="listing"><code class="language-egison">\etaVar1 etaVar2 -&gt; dict_AddSemigroup_(&quot;plus&quot;) etaVar1 etaVar2</code></pre>
+<p>When the body of this two-argument lambda is a two-argument function application, the entire body is wrapped with <code>tensorMap2</code>:</p>
+<pre class="listing"><code class="language-egison">\etaVar1 etaVar2 -&gt; tensorMap2 (\x y -&gt; dict_AddSemigroup_(&quot;plus&quot;) x y) etaVar1 etaVar2</code></pre>
+<p>This transformation ensures that tensorMap insertion is correctly applied to type class methods as well.</p>
+<h3><span class="heading-number">12.16.5</span>Concrete Example: The sum Function</h3>
+<p>By tracing the transformation of the polymorphic <code>sum</code> function, we can understand the TensorMap insertion mechanism more concretely.</p>
+<h4>Original Definition</h4>
+<pre class="listing"><code class="language-egison">def sum {AddMonoid a} (xs: [a]) : a := foldl (+) zero xs</code></pre>
+<p>This function has the polymorphic type <code>[a] -&gt; a</code> with the type class constraint <code>{AddMonoid a}</code>.</p>
+<h4>Phase 5-6: After Type Inference</h4>
+<p>Type inference instantiates the type variable <code>a</code> to a concrete type (e.g., <code>t0</code>):</p>
+<pre class="listing"><code class="language-egison">def sum : {AddMonoid t0} [t0] -&gt; t0 :=
+  \xs -&gt;
+    foldl ((+) : {AddSemigroup t0} t0 -&gt; t0 -&gt; t0) (zero : {AddMonoid t0} t0) (xs : [t0])</code></pre>
+<p>Here, the type of <code>xs</code> is <code>[t0]</code>, and the type variable <code>t0</code> with a type class constraint exists inside the type constructor <code>[]</code>. Also, the type of <code>(+)</code> is <code>{AddSemigroup t0} t0 -&gt; t0 -&gt; t0</code>, a binary function taking scalar types as arguments.</p>
+<h4>Phase 8-1: After TensorMap Insertion</h4>
+<p><code>(+)</code> is a binary function with both parameters being scalar types (<code>t0</code>), so it is wrapped with <code>tensorMap2</code>:</p>
+<pre class="listing"><code class="language-egison">def sum : {AddMonoid t0} [t0] -&gt; t0 :=
+  \xs -&gt;
+    foldl (tensorMap2 (+)) zero xs</code></pre>
+<p>At this point, even if the elements of <code>xs</code> are tensors, <code>tensorMap2</code> correctly performs component-wise addition.</p>
+<h4>Phase 8-2: After Type Class Expansion</h4>
+<p>The type class method <code>(+)</code> is expanded into dictionary lookup form:</p>
+<pre class="listing"><code class="language-egison">def sum : {AddMonoid t0} [t0] -&gt; t0 :=
+  \dict_AddMonoid xs -&gt;
+    foldl (tensorMap2 (dict_AddMonoid_(&quot;plus&quot;))) (dict_AddMonoid_(&quot;zero&quot;)) xs</code></pre>
+<p>Here, <code>dict_AddMonoid</code> is the method dictionary for the <code>AddMonoid t0</code> instance. Note that the <code>AddMonoid</code> dictionary contains both its own method (<code>zero</code>) and the inherited <code>AddSemigroup</code> method (<code>+</code>) through the superclass relationship.</p>
+<h4>Runtime Behavior</h4>
+<p>This transformation makes the <code>sum</code> function work correctly for both scalars and tensors:</p>
+<h5>Scalar case (<code>t0 = Integer</code>):</h5>
+<pre class="listing"><code class="language-egison">sum [1, 2, 3]
+-- foldl1 (tensorMap2 (+)) [1, 2, 3]
+-- tensorMap2 (+) 1 2  --&gt;  (+) 1 2  --&gt;  3
+-- tensorMap2 (+) 3 3  --&gt;  (+) 3 3  --&gt;  6
+-- Result: 6</code></pre>
+<p>For scalars, <code>tensorMap2</code> acts as identity, so ordinary addition is performed.</p>
+<h5>Tensor case (<code>t0 = Tensor Integer</code>):</h5>
+<pre class="listing"><code class="language-egison">sum [[| 1, 2 |], [| 3, 4 |]]
+-- foldl1 (tensorMap2 (+)) [[| 1, 2 |], [| 3, 4 |]]
+-- tensorMap2 (+) [| 1, 2 |] [| 3, 4 |]  --&gt;  [| 1+3, 2+4 |]  --&gt;  [| 4, 6 |]
+-- Result: [| 4, 6 |]</code></pre>
+<p>For tensors, <code>tensorMap2</code> applies addition component-wise.</p>
+<h5>Mixed case:</h5>
+<pre class="listing"><code class="language-egison">sum [[| 1, 2 |], 3]
+-- tensorMap2 (+) [| 1, 2 |] 3  --&gt;  tensorMap (\x -&gt; x + 3) [| 1, 2 |]
+--                                --&gt;  [| 1+3, 2+3 |]  --&gt;  [| 4, 5 |]
+-- Result: [| 4, 5 |]</code></pre>
+<p>Even when one argument is a tensor and the other is a scalar, <code>tensorMap2</code> handles it appropriately.</p>
+<h3><span class="heading-number">12.16.6</span>Summary</h3>
+<p>Through the TensorMap insertion mechanism, Egison achieves the following:</p>
+<ul>
+<li>Users only need to define polymorphic functions with type class constraints, and tensor operations are automatically supported.
+</li>
+<li>The compiler automatically inserts <code>tensorMap</code>/<code>tensorMap2</code> based on type information, so users do not need to write them explicitly.
+</li>
+<li>Depending on the runtime type, scalar and tensor operations are automatically switched.
+</li>
+<li>Functions passed as arguments to higher-order functions (<code>foldl</code>, <code>map</code>, etc.) also have appropriate transformations applied automatically.
+</li>
+</ul>
+<p>This design allows Egison&#x27;s computer algebra system to handle scalars and tensors uniformly, while providing an intuitive and user-friendly interface.</p>
+<h3><span class="heading-number">12.16.7</span>Properties of the Insertion (Guarantees)</h3>
+<p><span id="ref-tensor-guarantees" class="anchor"></span></p>
+<p>Type-directed <code>tensorMap</code> insertion is designed to satisfy the following properties.</p>
+<ul>
+<li><strong>Conservativity</strong>: programs that use no tensors are entirely unaffected by insertion.
+<p>The meaning of scalar-only programs is exactly what it was before the insertion mechanism existed.</p>
+</li>
+<li><strong>Determinism</strong>: where <code>tensorMap</code> is inserted is determined uniquely by the functions&#x27; principal types alone.
+<p>Type annotations are not needed to control insertion; the same inferred types yield the same insertion.</p>
+</li>
+<li><strong>Confluence</strong>: multi-argument lifting via <code>tensorMap2</code> or nested <code>tensorMap</code> yields the same result no matter which argument is processed first (the nesting order carries no semantic difference).
+</li>
+<li><strong>Idempotence of the <code>Tensor</code> type</strong>: at the type level, <code>Tensor (Tensor a)</code> is identified with <code>Tensor a</code>.
+<p>This corresponds to the fact that an Egison tensor is a flat multi-dimensional array with an index list; no nested tensor-of-tensor structure exists at the value level.</p>
+</li>
+</ul>
+<p>Together with type preservation and type safety, these properties are established as theorems in the theory of Egison&#x27;s typed tensor calculus.</p>
+  </main>
+  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+</body>
+</html>

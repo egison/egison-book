@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>Sweet Egison -- A Haskell Library for Egison Pattern Matching — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="prev" href="etc.html">← Previous</a><a rel="next" href="cas.html">Next →</a><a class="language" href="../ja/sweet.html">日本語</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">8</span>Sweet Egison -- A Haskell Library for Egison Pattern Matching</h1>
+<p><span id="ref-sweet" class="anchor"></span></p>
+<p>In addition to the Egison language implementation introduced so far in this book, Egison pattern matching has also been implemented as a library in the form of a Domain Specific Language (DSL) on top of existing languages. Library implementations on existing languages come in two types: the miniEgison family, which uses deep embedding (a technique that realizes a DSL by embedding an interpreter), and the Sweet Egison family, which uses shallow embedding (a technique that realizes a DSL by embedding a compiler). This chapter introduces how to use the Haskell implementation of Sweet Egison, the fastest among these implementations. Unlike Egison, Haskell has a static type system. Therefore, pattern matching using Sweet Egison is type-checked at compile time.</p>
+<h2><span class="heading-number">8.1</span>Using Sweet Egison</h2>
+<p><span id="ref-sweet-match" class="anchor"></span></p>
+<p>Sweet Egison is published as a Haskell library through Hackage. This section explains how to use Sweet Egison, assuming it is already installed.</p>
+<p>Sweet Egison has a <code>matchAll</code> expression just like Egison. <code>matchAll</code> takes a search strategy, a target matcher, and a list of match clauses as arguments. In Sweet Egison, <code>matchAll</code> is implemented as a Haskell function, so keywords such as <code>as</code> and <code>with</code> are not used.</p>
+<pre class="listing"><code class="language-haskell">matchAll dfs [1, 2, 3] (List Something)
+  [[mc| $x : $xs -&gt; (x, xs) |]]
+-- [(1, [2, 3])]</code></pre>
+<p>The above <code>matchAll</code> expression specifies depth-first search <code>dfs</code> as its search strategy. In Sweet Egison, users can define new search strategies. This is a feature of Sweet Egison that Egison does not have. How to define search strategies is explained in Section&nbsp;<a class="reference" href="sweet.html#ref-sweet-strategy">8.6</a>. The matcher of the above <code>matchAll</code> expression is <code>(List Something)</code>. As will be explained again in Section&nbsp;<a class="reference" href="sweet.html#ref-sweet-matcher">8.5</a>, matchers in Sweet Egison are represented as Haskell data. Match clauses are expressed using the <code>mc</code> quasi-quoter. A quasi-quoter is a feature provided by Template Haskell, where the part enclosed by <code>[mc|</code> and <code>|]</code> is received as a string, and by defining a function that returns a Haskell program, users can perform Haskell metaprogramming. What kind of Haskell program match clauses are expanded into is introduced in Section&nbsp;<a class="reference" href="sweet.html#ref-sweet-mechanism">8.2</a>. The cons pattern is represented by a single colon, just as in Haskell.</p>
+<p>The search strategies defined in the library from the start are depth-first search <code>dfs</code> and breadth-first search <code>bfs</code>. Depth-first search <code>dfs</code> may not be able to enumerate all infinitely many pattern-matching results, but it is fast.</p>
+<pre class="listing"><code class="language-haskell">take 10 (matchAll dfs [1..] (Set Something)
+  [[mc| $x : $y : _ -&gt; (x, y) |]])
+-- [(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7), (1, 8), (1, 9), (1, 10)]</code></pre>
+<p>Breadth-first search <code>bfs</code> can enumerate all infinitely many pattern-matching results, but it is less efficient than depth-first search <code>dfs</code>.</p>
+<pre class="listing"><code class="language-haskell">take 10 (matchAll bfs [1..] (Set Something)
+  [[mc| $x : $y : _ -&gt; (x, y) |]])
+-- [(1, 1), (1, 2), (2, 1), (1, 3), (2, 2), (3, 1), (1, 4), (2, 3), (3, 2), (4, 1)]</code></pre>
+<p>The reason <code>matchAll</code> takes a list of match clauses as its argument is to handle multiple match clauses. Just as in Egison, “<code>matchAll</code> <span class="math-inline">\(t\)</span> <span class="math-inline">\(m\)</span> [<span class="math-inline">\(c_1\)</span>,<span class="math-inline">\(c_2\)</span>,<span class="math-inline">\(...\)</span>]” is equivalent to “<code>matchAll</code> <span class="math-inline">\(t\)</span> <span class="math-inline">\(m\)</span> [<span class="math-inline">\(c_1\)</span>] <code>++</code> <code>matchAll</code> <span class="math-inline">\(t\)</span> <span class="math-inline">\(m\)</span> [<span class="math-inline">\(c_2\)</span>] <code>++</code> <span class="math-inline">\(...\)</span>”.</p>
+<pre class="listing"><code class="language-haskell">matchAll [1, 2, 3] (List Something)
+  [[mc| $x : $xs -&gt; (x, xs) |]
+  ,[mc| _ : $x : $xs -&gt; (x, xs) |]]
+-- [(1, [2, 3]), (2, [3])]</code></pre>
+<p>In Sweet Egison, value patterns are expressed using <code>#</code>, just as in Egison. Non-linear patterns can be expressed using value patterns.</p>
+<pre class="listing"><code class="language-haskell">matchAll [1, 5, 2, 4] (Multiset Eql)
+  [[mc| $x : #(x + 1) : _ -&gt; (x, x + 1) |]]
+-- [(1, 2), (4, 5)]</code></pre>
+<p>Sweet Egison also implements <code>match</code>, which returns only the first pattern-matching result. <code>match</code> is defined using <code>matchAll</code> as follows.</p>
+<pre class="listing"><code class="language-haskell">match s tgt m cs = head (matchAll s tgt m cs)</code></pre>
+<p>Using <code>match</code>, a poker hand evaluator can be written as shown in Figure&nbsp;<a class="reference" href="sweet.html#ref-fig-pokerProgram">8.1</a>. In Sweet Egison, since data constructors are used for both the target data type and the matcher, name collisions of data constructors tend to occur. Therefore, it is common to append <code>M</code> (for matcher) to the end, such as <code>CardM</code>, to avoid name collisions.</p>
+<figure>
+<pre class="listing"><code class="language-haskell">data Suit = Spade | Heart | Club | Diamond deriving (Eq)
+data Card = Card Suit Integer
+
+poker :: [Card] -&gt; String
+poker cs =
+  matchDFS cs (Multiset CardM)
+    [[mc| [card $s $n, card #s #(n-1), card #s #(n-2), card #s #(n-3), card #s #(n-4)] -&gt; &quot;Straight flush&quot; |],
+     [mc| [card _ $n, card _ #n, card _ #n, card _ #n, _] -&gt; &quot;Four of a kind&quot; |],
+     [mc| [card _ $m, card _ #m, card _ #m, card _ $n, card _ #n] -&gt; &quot;Full house&quot; |],
+     [mc| [card $s _, card #s _, card #s _, card #s _, card #s _] -&gt; &quot;Flush&quot; |],
+     [mc| [card _ $n, card _ #(n-1), card _ #(n-2), card _ #(n-3), card _ #(n-4)] -&gt; &quot;Straight&quot; |],
+     [mc| [card _ $n, card _ #n, card _ #n, _, _] -&gt; &quot;Three of a kind&quot; |],
+     [mc| [card _ $m, card _ #m, card _ $n, card _ #n, _] -&gt; &quot;Two pair&quot; |],
+     [mc| [card _ $n, card _ #n, _, _, _] -&gt; &quot;One pair&quot; |],
+     [mc| _ -&gt; &quot;Nothing&quot; |]]</code></pre>
+<figcaption>A Haskell program for poker hand evaluation</figcaption>
+<p><span id="ref-fig-pokerProgram" class="anchor"></span></p>
+</figure>
+<h2><span class="heading-number">8.2</span>How Sweet Egison Works</h2>
+<p><span id="ref-sweet-mechanism" class="anchor"></span></p>
+<p>To explain the idea behind the implementation of Sweet Egison, let us first see what kind of Haskell program the following <code>matchAll</code> expression is transformed into. <code>cons $x _</code> is a pattern equivalent to <code>$x : _</code>. In Sweet Egison, only <code>:</code> and <code>++</code> are implemented as built-in infix operators. For clarity, this section uses prefix notation for cons patterns.</p>
+<pre class="listing"><code class="language-haskell">matchAll dfs [1, 2, 3] (Multiset Something) [[mc| cons $x _ -&gt; x |]]</code></pre>
+<p>The above program is expanded into the following <code>do</code> expression for the list monad.</p>
+<pre class="listing"><code class="language-haskell">(\ (matcher, target) -&gt; do
+   (x, _) &lt;- cons matcher target
+   let (_, _) = consM matcher target
+   return x)
+ (Multiset Something, [1, 2, 3]) -- [1, 2, 3]</code></pre>
+<p><code>cons</code> and <code>consM</code> appearing in the expanded program are functions for computing next targets and next matchers, respectively. <code>cons</code> and <code>consM</code> are functions defined in Haskell. <code>cons</code> and <code>consM</code> take a matcher and a target as arguments. The reason they take a matcher as an argument is to realize polymorphism of patterns.</p>
+<pre class="listing"><code class="language-haskell">cons (Multiset Something) [1, 2, 3] -- [(1, [2, 3]), (2, [1, 3]), (3, [1, 2])]
+consM (Multiset Something) [1, 2, 3] -- (Something, Multiset Something)</code></pre>
+<pre class="listing"><code class="language-haskell">matchAll dfs [1, 2, 3] (Multiset Something) [[mc| cons $x (cons $y _) -&gt; (x, y) |]]
+-- [(1, 2), (1, 3), (2, 1), (2, 3), (3, 1), (3,2)]</code></pre>
+<pre class="listing"><code class="language-haskell">(\ (matcher, target) -&gt; do
+   (x, target&#x27;) &lt;- cons matcher target
+   let (_, matcher&#x27;) = consM matcher target
+   (y, _) &lt;- cons matcher&#x27; target&#x27;
+   let (_, _) = consM matcher&#x27; target&#x27;
+   return (x, y))
+ (Multiset Something, [1, 2, 3])</code></pre>
+<p>Let us also look at the expansion of a pattern containing a value pattern.</p>
+<pre class="listing"><code class="language-haskell">matchAll dfs [1, 2, 3] (Multiset Eql)
+  [[mc| cons $x (cons #(x * 2) _) -&gt; (x, y) |]]
+-- [(1, 2), (1, 3), (2, 1), (2, 3), (3, 1), (3,2)]</code></pre>
+<p><code>valuePat</code> is a function defined in Haskell, just like the <code>cons</code> function introduced earlier.</p>
+<pre class="listing"><code class="language-haskell">(\ (matcher, target) -&gt; do
+   (x, target&#x27;) &lt;- cons matcher target
+   let (_, matcher&#x27;) = consM matcher target
+   (target&#x27;&#x27;, _) &lt;- cons matcher&#x27; target&#x27;
+   let (matcher&#x27;&#x27;, _) = consM matcher&#x27; target&#x27;
+   valuePat (x * 2) matcher&#x27;&#x27; target&#x27;&#x27;
+   return (x, y))
+  (Multiset Something, [1, 2, 3])</code></pre>
+<h2><span class="heading-number">8.3</span>Optimizations in Sweet Egison</h2>
+<p><span id="ref-sweet-optimize" class="anchor"></span></p>
+<p>The actual Sweet Egison performs slightly more complex expansions than those explained in Section&nbsp;<a class="reference" href="sweet.html#ref-sweet-mechanism">8.2</a>, for optimization purposes. In particular, there are special techniques for wildcard optimization. This section introduces these techniques.</p>
+<h3><span class="heading-number">8.3.1</span>Optimization of Wildcard Pattern Matching</h3>
+<p>The wildcard optimization described in Section&nbsp;<a class="reference" href="matcher.html#ref-matcher-wildcard">6.6</a> can also be performed in Sweet Egison. Wildcard optimization speeds up pattern matching by omitting the computation of targets that match wildcards in patterns containing wildcards. This section explains how to use this optimization in Sweet Egison, using the same example as Section&nbsp;<a class="reference" href="matcher.html#ref-matcher-wildcard">6.6</a>—the case where the second argument of the cons pattern for multisets is a wildcard.</p>
+<pre class="listing"><code class="language-haskell">matchAll dfs [1, 2, 3] (Multiset Something) [[mc| $x : _ -&gt; x |]]
+-- [1, 2, 3]</code></pre>
+<p>The above <code>matchAll</code> expression is expanded as follows for wildcard optimization.</p>
+<pre class="listing"><code class="language-haskell">(\ (matcher, target) -&gt; do
+   (x, _) &lt;- cons (GP, WC) matcher target
+   let (_, _) = consM matcher target
+   return x)
+ (Multiset Something, [1, 2, 3])</code></pre>
+<p>The <code>cons</code> function on line 2 takes a pattern-on-patterns as an additional first argument. The pattern-on-patterns distinguishes between wildcards and other patterns. Below, <code>PP</code> stands for Patterns for Patterns, <code>WC</code> for Wildcard, and <code>GP</code> for General Patterns.</p>
+<pre class="listing"><code class="language-haskell">data PP a = WC | GP</code></pre>
+<p>The <code>cons</code> function takes this pattern-on-patterns as an additional first argument. When the second argument of the <code>cons</code> pattern is a wildcard, it returns <code>undefined</code> as the next target for that second argument.</p>
+<pre class="listing"><code class="language-haskell">cons (GP, WC) (Multiset Something) [1, 2, 3]
+-- [(1, undefined), (2, undefined), (3, undefined)]</code></pre>
+<p>When the second argument of the <code>cons</code> pattern is not a wildcard, it computes and returns the collection as the next target.</p>
+<pre class="listing"><code class="language-haskell">cons (GP, GP) (Multiset Something) [1, 2, 3]
+-- [(1, [2, 3]), (2, [1, 3]), (3, [1, 2])]</code></pre>
+<h3><span class="heading-number">8.3.2</span>Pattern Fusion</h3>
+<p>Pattern fusion, the optimization explained in Section&nbsp;<a class="reference" href="matcher.html#ref-matcher-sorted">6.5</a>, cannot be added by users in Sweet Egison because Sweet Egison cannot perform pattern matching on patterns. Pattern fusion is defined as a built-in only for join-cons patterns, which frequently appear in pattern matching on lists. Sweet Egison transforms the join-cons pattern <span class="math-inline">\(p_{1}\)</span> <code>++</code> <span class="math-inline">\(p_{2}\)</span> <code>:</code> <span class="math-inline">\(p_{3}\)</span> into <code>joinCons</code> <span class="math-inline">\(p_{1}\)</span> <span class="math-inline">\(p_{2}\)</span> <span class="math-inline">\(p_{3}\)</span>.</p>
+<pre class="listing"><code class="language-haskell">matchAll dfs [1, 2, 3] (List Something) [[mc| _ ++ $x : _ -&gt; x |]]
+-- [1, 2, 3]</code></pre>
+<p>For example, the above <code>matchAll</code> expression is expanded as follows.</p>
+<pre class="listing"><code class="language-haskell">(\ (matcher, target) -&gt; do
+  (_, x, _) &lt;- joinCons (WC, GP, WC) matcher target
+  let (_, _, _) = joinConsM matcher target
+  (List Something, [1, 2, 3])</code></pre>
+<h2><span class="heading-number">8.4</span>Types of Matchers and Patterns</h2>
+<p><span id="ref-sweet-type" class="anchor"></span></p>
+<p>The type of matchers is represented using a type class without class methods.</p>
+<pre class="listing"><code class="language-haskell">class Matcher m tgt</code></pre>
+<p>Using this type class, for example, the <code>Something</code> matcher is defined as follows. A type <code>Something</code> with data <code>Something</code> is defined, and an instance declaration expresses the relationship that data of type <code>Something</code> is a matcher for type <code>a</code>. Ideally, the data <code>Something</code> should be given a type like <code>Matcher a</code> directly, but this is not possible due to limitations of Haskell&#x27;s type system.</p>
+<pre class="listing"><code class="language-haskell">data Something = Something
+
+instance Matcher Something a</code></pre>
+<p>As described in Section&nbsp;<a class="reference" href="sweet.html#ref-sweet-optimize">8.3</a>, patterns are defined as functions that take a pattern-on-patterns, a matcher, and a target as arguments and return next targets.</p>
+<pre class="listing"><code class="language-haskell">type Pattern ps im it ot = ps -&gt; im -&gt; it -&gt; [ot]</code></pre>
+<p>To realize polymorphism of patterns, patterns are defined as functions belonging to a type class. For example, patterns for collections are defined using the following type class.</p>
+<pre class="listing"><code class="language-haskell">class CollectionPattern m t where
+  type ElemM m
+  type ElemT t
+  nil :: Pattern () m t ()
+  nilM :: m -&gt; t -&gt; ()
+  cons :: Pattern (PP (ElemT t), PP t) m t (ElemT t, t)
+  consM :: m -&gt; t -&gt; (ElemM m, m)
+  join :: Pattern (PP t, PP t) m t (t, t)
+  joinM :: m -&gt; t -&gt; (m, m)
+  joinCons :: Pattern (PP t, PP (ElemT t), PP t) m t (t, ElemT t, t)
+  joinConsM :: m -&gt; t -&gt; (m, ElemM m, m)</code></pre>
+<h2><span class="heading-number">8.5</span>Matcher Definitions in Sweet Egison</h2>
+<p><span id="ref-sweet-matcher" class="anchor"></span></p>
+<p>The multiset matcher is defined as follows.</p>
+<pre class="listing"><code class="language-haskell">newtype Multiset m = Multiset m
+
+instance Matcher m t =&gt; Matcher (Multiset m) [t]
+
+instance Matcher m t =&gt; CollectionPattern (Multiset m) [t] where
+  type ElemM (Multiset m) = m
+  type ElemT [t] = t
+  cons (_, WC) (Multiset _) xs = map (\x -&gt; (x, undefined)) xs
+  cons _       (Multiset _) xs = matchAll dfs xs (List Something)
+    [[mc| $hs ++ $x : $ts -&gt; (x, hs ++ ts) |]]
+  consM (Multiset m) _ = (m, Multiset m)</code></pre>
+<h2><span class="heading-number">8.6</span>User-Defined Search Strategies</h2>
+<p><span id="ref-sweet-strategy" class="anchor"></span></p>
+<p>A monad that can be used to describe search algorithms with backtracking is called a backtracking monad. The list monad is known as a representative backtracking monad. The list monad can be used to describe backtracking as follows. Here, the list monad is used to enumerate all pairs of integers from <span class="math-inline">\(1\)</span> to <span class="math-inline">\(3\)</span>.</p>
+<pre class="listing"><code class="language-haskell">do ns &lt;- [1..3]
+   x &lt;- ns
+   y &lt;- ns
+   return (x, y)
+-- [(1,1),(1,2),(1,3),(2,1),(2,2),(2,3),(3,1),(3,2),(3,3)]</code></pre>
+<p>The list monad searches the search tree in depth-first order. Therefore, when the search tree is infinitely large, it may not be able to enumerate all results.</p>
+<pre class="listing"><code class="language-haskell">do ns &lt;- [1..]
+   x &lt;- ns
+   y &lt;- ns
+   return (x, y)
+-- [(1,1),(1,2),(1,3),(1,4),(1,5),...]</code></pre>
+<p>This raises the question of whether there exist corresponding monads for search strategies other than depth-first search, just as the list monad corresponds to depth-first search. Spivey discovered that for breadth-first search, a monad based on lists of lists as the underlying data structure corresponds&nbsp;[<a href="bibliography.html#cite-spivey2009algebras">4</a>]. This monad holds the nodes at depth <span class="math-inline">\(n\)</span> in the search tree in the <span class="math-inline">\(n\)</span>-th element list.</p>
+<p>A backtracking monad has functions <code>fromList</code> and <code>toList</code>. These are conversion functions between the underlying data structure of the monad and lists. In the case of the depth-first search monad, since the underlying data structure is a list, both can be implemented as the <code>id</code> function. In the case of the breadth-first search monad, since the underlying data structure is a list of lists, the <code>toList</code> function becomes <code>concat</code>, and so on. For details on the implementation of backtracking monads, please refer to the Haskell library published on Hackage under the name <code>backtracking</code>&nbsp;[<a href="bibliography.html#cite-backtrackingGitHub">5</a>].</p>
+<p>Using backtracking monads, search strategies can be switched polymorphically. Below, <code>dfs</code> and <code>bfs</code> are functions for initializing the underlying data structures of the depth-first search and breadth-first search monads, respectively. By simply replacing <code>dfs</code> and <code>bfs</code>, the search strategy can be controlled.</p>
+<pre class="listing"><code class="language-haskell">toList (do
+  ns &lt;- dfs [1..]
+  x &lt;- fromList ns
+  y &lt;- fromList ns
+  return (x, y))
+-- [(1,1),(1,2),(1,3),(1,4),...]</code></pre>
+<pre class="listing"><code class="language-haskell">toList (do
+  ns &lt;- bfs [1..]
+  x &lt;- fromList ns
+  y &lt;- fromList ns
+  return (x, y))
+-- [(1,1),(1,2),(2,1),(1,3),...]</code></pre>
+<p>What is passed as the first argument to <code>matchAll</code> is this initialization function for the monad of each search strategy.</p>
+<pre class="listing"><code class="language-haskell">matchAll strategy [1..] (Set Something) [[mc| $x : $y : _ -&gt; (x, y) |]]</code></pre>
+<p>By appropriately inserting this initialization function, <code>fromList</code>, and <code>toList</code> into the transformation result of <code>matchAll</code>, the search strategy can be controlled.</p>
+<pre class="listing"><code class="language-haskell">toList
+  ((\ (matcher, target) -&gt; do
+     (x, target&#x27;) &lt;- fromList (cons matcher target)
+     let (_, matcher&#x27;) = consM matcher target
+     (y, _) &lt;- fromList (cons matcher&#x27; target&#x27;)
+     let (_, _) = consM matcher&#x27; target&#x27;
+     return (x, y))
+   (strategy (Set Something, [1..])))</code></pre>
+<p>The monads for depth-first search and breadth-first search are defined in Haskell. Users can also add monads for new search strategies. This feature is unique to Sweet Egison and is not present in Egison itself.</p>
+  </main>
+  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+</body>
+</html>

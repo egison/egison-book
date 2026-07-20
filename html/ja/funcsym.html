@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>関数シンボル — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="tensor.html">← 前へ</a><a rel="next" href="diffgeo.html">次へ →</a><a class="language" href="../en/funcsym.html">English</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">13</span>関数シンボル</h1>
+<p><span id="ref-funcsym" class="anchor"></span></p>
+<p>名前が<span class="math-inline">\(f\)</span>，引数が<span class="math-inline">\(x,y\)</span>と決まっているが，中身は未定義の関数<span class="math-inline">\(f(x,y)\)</span>は，紙の上では<span class="math-inline">\(f\)</span>と引数を省略して表記されることが多い． このシンボリックな関数の引数を省略する表記をプログラミングにも導入するための機能が<em>関数シンボル</em>（<em>function symbol</em>）である． 関数シンボル自体の動機はシンプルであるが，関数シンボルはEgison特有の言語機能であるため，一つの独立した章を使ってその実装方法も含め紹介する．</p>
+<h2><span class="heading-number">13.1</span>関数シンボルの基本的な使い方</h2>
+<p><span id="ref-funcsym-intro" class="anchor"></span></p>
+<p>関数シンボルが特に力を発揮するのは，微分を扱う計算のときである． 以下では<code>x</code>，<code>y</code>を引数にとる関数シンボル<code>f</code>を定義している． 関数シンボルは<code>MathValue</code>型をもつ数式として扱われる．</p>
+<pre class="listing"><code class="language-egison">declare symbol x, y, z
+
+def f : MathValue := function (x, y)</code></pre>
+<p>関数シンボルを<code>show</code>で表示すると，引数の値が常に表示される．</p>
+<pre class="listing"><code class="language-egison">show f  -- &quot;f x y&quot;</code></pre>
+<p>以下のように，関数シンボル<code>f</code>を<code>x</code>や<code>y</code>について微分できる． 偏微分の結果の関数は，引数の番号を<code>|</code>記号で付加した表示になる． <code>f|1</code>は「<span class="math-inline">\(f\)</span>の第1引数に関する偏微分」，<code>f|1|2</code>は「第1引数で偏微分した後さらに第2引数で偏微分した結果」を表す． “<code>|</code>”は，“<code>_</code>”や“<code>~</code>”と同様Egison組み込みの記号である． 以下に関数シンボルの微分を標準的なEgison出力とLaTeX形式の出力の両方の表示例を示す． “<span class="inline-code"><span class="math-inline">\(\partial\)</span>/<span class="math-inline">\(\partial\)</span></span>”はEgisonで定義されているライブラリ関数である．</p>
+<pre class="listing"><code class="language-egison">show (`$\partial$`/`$\partial$` f x)          -- &quot;f|1 x y&quot;
+show (`$\partial$`/`$\partial$` (`$\partial$`/`$\partial$` f x) y) -- &quot;f|1|2 x y&quot;</code></pre>
+<p><code>f</code>は<code>x</code>と<code>y</code>についての関数であるので，以下のように<code>z</code>で微分すると<code>0</code>になる．</p>
+<pre class="listing"><code class="language-egison">show (`$\partial$`/`$\partial$` f z) -- &quot;0&quot;</code></pre>
+<p>物理の計算では，<span class="math-inline">\(t,x,y,z\)</span>の4つの引数をとる関数がよく登場する． もし関数シンボルのような仕組みがないと，式が長くなり，読み難くなるため，関数シンボルの仕組みはプログラムの読み書きしやすくする．</p>
+<h2><span class="heading-number">13.2</span>引数への値の代入</h2>
+<p><span id="ref-funcsym-apply" class="anchor"></span></p>
+<p>関数シンボルには，通常の関数適用と同じ構文で引数を代入できる． <code>f 0 1</code>と書くと，<code>f</code>の第1引数に<code>0</code>，第2引数に<code>1</code>を代入した数式が得られる． 引数の個数が合わない場合はエラーになる．</p>
+<pre class="listing"><code class="language-egison">show (f 0 1)   -- &quot;f 0 1&quot;
+show (f x 0)   -- &quot;f x 0&quot;</code></pre>
+<p>引数を代入した結果も<code>MathValue</code>型の数式であるため，さらに微分できる． 引数に具体的な数値が入った場合，その引数に対する微分は<code>0</code>になる．</p>
+<pre class="listing"><code class="language-egison">`$\partial$`/`$\partial$` (f 0 1) x -- 0</code></pre>
+<p><code>V.substitute</code>関数を使っても引数を置き換えられる．</p>
+<pre class="listing"><code class="language-egison">V.substitute [|x, y|] [|0, 0|] f
+-- f 0 0</code></pre>
+<h2><span class="heading-number">13.3</span>合成関数の微分（連鎖律）</h2>
+<p><span id="ref-funcsym-chain" class="anchor"></span></p>
+<p>合成関数の微分にも対応していることが，Egisonの関数シンボルの重要な特徴である． <code>function</code>式の仮引数が変数名ではなく式をとるのは，合成関数の微分に対応するためである． さきほどと同様に<span class="math-inline">\(g\)</span>を，<span class="math-inline">\(g(x,y)\)</span>の省略であるとする． また，<span class="math-inline">\(x=r \cos \theta, y= r \sin \theta\)</span>という関係式もあるとする． このとき，<span class="math-inline">\(g\)</span>を<span class="math-inline">\(r\)</span>で微分すると，連鎖律により<span class="math-inline">\(\frac{\partial g}{\partial x_1} \cos \theta + \frac{\partial g}{\partial x_2} \sin \theta\)</span>という結果を返している．</p>
+<pre class="listing"><code class="language-egison">declare symbol r, `$\theta$`
+
+def x : MathValue := r * cos `$\theta$`
+def y : MathValue := r * sin `$\theta$`
+def g : MathValue := function (x, y)
+
+show g
+-- &quot;g ((&#x27;cos θ) * r) ((&#x27;sin θ) * r)&quot;
+
+show (`$\partial$`/`$\partial$` g r)
+-- &quot;(&#x27;sin θ) * (g|2 ((&#x27;cos θ) * r) ((&#x27;sin θ) * r))
+--    + (&#x27;cos θ) * (g|1 ((&#x27;cos θ) * r) ((&#x27;sin θ) * r))&quot;</code></pre>
+<p>偏微分の結果に含まれる<code>g|1</code>，<code>g|2</code>は，それぞれ<span class="math-inline">\(\frac{\partial g}{\partial x_1}\)</span>，<span class="math-inline">\(\frac{\partial g}{\partial x_2}\)</span>を表す記号である（引数の番号を<code>|</code>記号で付加する）． この表示には引数の値が常に含まれるため，どの点での偏微分係数であるかが明示される．</p>
+<h2><span class="heading-number">13.4</span>関数シンボルを成分にもつテンソル</h2>
+<p><span id="ref-funcsym-tensor" class="anchor"></span></p>
+<p>数学や物理では，テンソルの成分として関数がでてくることがある． たとえば，ベクトル場やテンソル場を表現するときにそのような場面がある． このような場面に対応するため，テンソルの成分として関数シンボルを使うことをEgisonは許している． 以下の例のようにテンソルの成分が関数シンボルであった場合，テンソルを束縛している変数名に成分の位置の添字を付加した名前をもつ関数シンボルが生成される．</p>
+<pre class="listing"><code class="language-egison">declare symbol x, y, z
+
+def g_i_j : Tensor MathValue := generateTensor
+      (\match as list integer with
+         | [$n, #n] -&gt; function (x, y, z)
+         | _ -&gt; 0)
+      [3, 3]
+
+show (withSymbols [i, j] g_i_j)
+-- &quot;[| [| g_1_1 x y z, 0, 0 |], [| 0, g_2_2 x y z, 0 |], [| 0, 0, g_3_3 x y z |] |]&quot;
+
+show (withSymbols [i, j] (`$\partial$`/`$\partial$` g_i_j x))
+-- &quot;[| [| g_1_1|1 x y z, 0, 0 |], [| 0, g_2_2|1 x y z, 0 |], [| 0, 0, g_3_3|1 x y z |] |]&quot;</code></pre>
+<h2><span class="heading-number">13.5</span>関数シンボルの内部表現とパターンマッチ</h2>
+<p><span id="ref-funcsym-data" class="anchor"></span></p>
+<p>関数シンボルは，名前と引数の値のリストをもつ因子としてEgison内部では表現されている（<a class="reference" href="mexpr.html#ref-mexpr-expr">10.1</a>節で紹介した数式データの因子の一種である）．</p>
+<p><code>func</code>パターンコンストラクタを使って関数シンボルにパターンマッチできる． このパターンの第一引数は関数名に，第二引数は引数の値のリストにパターンマッチする．</p>
+<pre class="listing"><code class="language-egison">declare symbol x, y
+def f : MathValue := function (x, y)
+
+match f as mathValue with
+  | func $name $args -&gt; (name, args)
+-- (f, [x, y])</code></pre>
+<p>ライブラリの微分の実装では，引数の数を利用して各引数に対する偏微分係数を整数インデックスで取り出している． 以下は，ライブラリ（<code>lib/math/analysis/derivative.egi</code>）の関数シンボルを微分する部分の抜粋である．</p>
+<pre class="listing"><code class="language-egison">def chainPartialDiffBuiltin (v : MathValue) (dx : MathValue)
+  : MathValue :=
+  match v as mathValue with
+    | func _ $args -&gt;
+       sum (map2 (\s r -&gt; (userRefs v [s]) * partialDiff r dx)
+                 (between 1 (length args))
+                 args)
+    ...</code></pre>
+<p>ここで<code>between 1 (length args)</code>は<code>[1, 2, ..., n]</code>という整数のリストを生成する． <code>userRefs f [1]</code>は<code>f</code>の名前シンボルに整数インデックス<code>1</code>を付加した数式<code>f|1 x y</code>を返す．</p>
+<h2><span class="heading-number">13.6</span>関数シンボルの実装方法</h2>
+<p>関数シンボルの実装で注意すべきことは，関数シンボルは自身の名前を保持することである． そのためにEgisonインタプリタは現在定義しようとしている変数の名前を管理している． また，<a class="reference" href="funcsym.html#ref-funcsym-tensor">13.4</a>節で解説したテンソルの成分に現れる関数シンボルをサポートするためには，現在テンソルのどの位置の成分を定義しているのか管理する必要がある． そのためにEgisonインタプリタは現在定義しようとしているテンソルの成分の位置も管理している． これらはEgisonインタプリタの実装では，評価器が引き回す環境の追加要素として管理されている．</p>
+  </main>
+  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+</body>
+</html>

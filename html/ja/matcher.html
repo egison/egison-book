@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>マッチャーを定義しよう — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="mechanism.html">← 前へ</a><a rel="next" href="etc.html">次へ →</a><a class="language" href="../en/matcher.html">English</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">6</span>マッチャーを定義しよう</h1>
+<p><span id="ref-matcher" class="anchor"></span></p>
+<p>本章は，ユーザーが自身でマッチャーを定義する方法を解説する．</p>
+<h2><span class="heading-number">6.1</span><code>inductive pattern</code>宣言</h2>
+<p><span id="ref-matcher-inductive" class="anchor"></span></p>
+<p>マッチャーを定義する際には，そのマッチャーが処理するパターンコンストラクタをあらかじめ<em>inductive pattern宣言</em>（<em>inductive pattern declaration</em>）で宣言しておく必要がある．</p>
+<p>inductive pattern宣言は，パターンコンストラクタの型を，データコンストラクタやマッチャーの定義から独立して宣言するための構文である． たとえば，リスト型<code>[a]</code>に対するパターンコンストラクタは以下のように宣言される．</p>
+<pre class="listing"><code class="language-egison">inductive pattern [a] :=
+  | []
+  | (::) a [a]
+  | (++) [a] [a]</code></pre>
+<p>この宣言は，パターンコンストラクタ<code>[]</code>，<code>::</code>，<code>++</code>がいずれもリスト型<code>[a]</code>を対象とするパターンコンストラクタであることを宣言している． 各パターンコンストラクタの後に並ぶ型は，そのパターンコンストラクタの引数の型，すなわちパターンマッチの成功時にネクスト・ターゲットとして渡される値の型を表す．</p>
+<p>inductive pattern宣言の重要な特徴は，<code>::</code>というパターンコンストラクタが<code>list</code>マッチャー，<code>multiset</code>マッチャー，<code>set</code>マッチャーなど，複数のマッチャーにわたって共有される点にある．それぞれのマッチャーは<code>::</code>に対して異なる分解方法を実装するが，そのパターンコンストラクタの型はinductive pattern宣言によって一元的に管理される．</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2, 3] as list integer with
+  | $x :: $xs -&gt; (x, xs)
+-- [(1,[2,3])]
+
+matchAll [1, 2, 3] as multiset integer with
+  | $x :: $xs -&gt; (x, xs)
+-- [(1,[2,3]),(2,[1,3]),(3,[1,2])]</code></pre>
+<p>同じパターン<code>$x :: $xs</code>でも，使うマッチャーによって意味（分解方法）が変わる．</p>
+<p>このinductive pattern宣言とマッチャー定義の関係は，型クラスとインスタンス定義の関係に類似している． 型クラス宣言がメソッドの型を宣言し，インスタンス定義がその具体的な実装を提供するのと同様に，inductive pattern宣言がパターンコンストラクタの型を宣言し，マッチャー定義がそのパターンコンストラクタに対する具体的な分解方法を定義する．</p>
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td><strong>型クラス</strong></td><td><strong>パターンマッチング</strong></td></tr><tr><td>型クラス宣言</td><td>inductive pattern宣言</td></tr><tr><td>インスタンス定義</td><td>マッチャー定義</td></tr><tr><td>メソッド名</td><td>パターンコンストラクタ名</td></tr><tr><td>メソッドの型</td><td>パターンコンストラクタの型</td></tr><tr><td>インスタンスディスパッチ（静的）</td><td>マッチャーディスパッチ（動的）</td></tr></tbody></table></div>
+</div>
+<p>ただし，型クラスのインスタンス選択がコンパイル時に静的に決定されるのとは異なり，マッチャーの選択は<code>match</code>式や<code>matchAll</code>式においてユーザーが実行時に明示的に指定する（動的選択）．</p>
+<h2><span class="heading-number">6.2</span>マッチャーの定義の基礎</h2>
+<p><span id="ref-matcher-basic" class="anchor"></span></p>
+<p>本節は，非自由データ型のなかでもっとも単純なunordered pair（要素の順番を無視するペア）のマッチャー定義をみていくことにより，マッチャー定義の方法の概略を解説する．</p>
+<p>まずは，整数のunordred pairに対するマッチャー<code>unorderedIntegerPair</code>マッチャーの挙動を確認しよう． <code>unorderedIntegerPair</code>に対して，<code>pair</code>パターンを使うと以下のように2通りの要素の順番を両方パターンマッチする．</p>
+<pre class="listing"><code class="language-egison">matchAll (1, 2) as unorderedIntegerPair with
+| pair $x $y -&gt; (x, y)
+-- [(1,2),(2,1)]</code></pre>
+<p>そのおかげで，<code>pair</code>の第一引数がターゲットの2番目の要素である場合にも，パターンマッチに成功する．</p>
+<pre class="listing"><code class="language-egison">matchAll (1, 2) as unorderedIntegerPair with
+| pair #2 $y -&gt; y
+-- [1]</code></pre>
+<p>パターンがパターン変数であった場合には，ターゲットをそのまま束縛する．</p>
+<pre class="listing"><code class="language-egison">matchAll (1, 2) as unorderedIntegerPair with
+| $p -&gt; p
+-- [(1,2)]</code></pre>
+<p>上記のような動作をする<code>unorderedIntegerPair</code>マッチャーは以下のように定義できる． まず，<code>pair</code>パターンコンストラクタをinductive pattern宣言で宣言しておく必要がある．</p>
+<pre class="listing"><code class="language-egison">inductive pattern (Integer, Integer) :=
+  | pair Integer Integer</code></pre>
+<p>この宣言は，<code>pair</code>が整数のペア型<code>(Integer, Integer)</code>を対象とするパターンコンストラクタで，<code>Integer</code>型の引数を2つ取ることを宣言している． 次に，型注釈により整数のペアに対するマッチャーであることを示しながら，<code>unorderedIntegerPair</code>マッチャーを以下のように定義する．</p>
+<pre class="listing"><code class="language-egison">def unorderedIntegerPair : Matcher (Integer, Integer) := matcher
+  | pair $ $ as (integer, integer) with
+    | ($x, $y) -&gt; [(x, y), (y, x)]
+  | $ as something with
+    | $tgt -&gt; [tgt]</code></pre>
+<p><code>matcher</code>は，マッチャーを生成するための組み込み構文である．</p>
+<pre class="listing"><code class="language-egison">matcher
+| `primitive pattern-pattern` as `next matcher expression` with
+  | `primitive data pattern` -&gt; `body`
+  ...
+...</code></pre>
+<p><code>matcher</code>式は，複数のマッチャー節（<em>matcher clause</em>）をとる． マッチャー節は，<em>原始パターンパターン</em>（<em>primitive pattern-pattern</em>），ネクスト・マッチャー式（<em>next matcher expression</em>），複数の原始マッチ節（<em>primitive match clause</em>）からなる． 原始マッチ節は，<em>原始データパターン</em>（<em>primitive data pattern</em>）とボディからなる．</p>
+<p><code>unorderedIntegerPair</code>の1つ目のマッチャー節（2-3行目）をみていく． まず，このマッチャー節の原始パターンパターンは<code>pair $ $</code>である． 原始パターンパターンはパターンに対するパターンである． この原始パターンパターンは<code>pair</code>パターンにマッチし，このマッチャー節は<code>pair</code>パターンに対するパターンマッチの方法を定義している． <code>pair</code>のように，原始パターンパターン中にあらわれるパターンコンストラクタは，原始パターンパターンコンストラクタ（<em>primitive pattern-pattern constructor</em>）と呼ばれる． <code>pair</code>パターンの引数としてあらわれている<code>$</code>はパターン・ホール（<em>pattern hole</em>）と呼ばれる原始パターンパターンの構成要素で，任意のパターンがマッチする． パターン・ホールにマッチしたパターンは，ネクスト・パターン（<em>next pattern</em>）と呼ばれる． 原始パターンパターンのパターンマッチは，一般の関数型プログラミング言語の代数的データ型に対するパターンマッチとほぼ同じようにおこなわれる． 次に，このマッチャー節のネクスト・マッチャー式は，<code>(integer, integer)</code>である． これは，上記のパターン・ホールに束縛された2つのパターン（<code>pair</code>パターンの引数）がそれぞれ<code>integer</code>マッチャーを使って再帰的にパターンマッチされることを表現している． このマッチャー節は，1つの原始マッチ節（3行目）をとる． 原始データパターンは，ターゲットとパターンマッチされる． 原始データパターンのパターンマッチも，一般の関数型プログラミング言語の代数的データ型に対するパターンマッチとほぼ同じようにおこなわれる． 原始マッチ節のボディは，ターゲットの分解結果を返す． <code>(x, y)</code>と<code>(y, x)</code>はネクスト・ターゲット（<em>next target</em>）と呼ばれ，ネクスト・パターンとネクスト・マッチャーを使って再帰的にパターンマッチされる．</p>
+<p>2つ目のマッチャー節（4-5行目）の原始パターンパターンは，パターン・ホールである． パターン・ホールは任意のパターンにマッチするため，1つ目のマッチャー節でマッチしなかったパターンはすべて2つ目のマッチ節で処理される． 1つ目のマッチャー節でマッチしない<code>unorderedIntegerPair</code>に対するパターンは，ワイルドカードかパターン変数のみであるので，このマッチャー節はこれらのパターンを処理する． このマッチャー節は，パターンとターゲットを変えず，ただマッチャーを<code>something</code>に変換するだけである． パターンとターゲットは<code>something</code>を使ってパターンマッチされる． <code>something</code>は唯一の組み込みマッチャーであり，以下の3種類のパターンを処理する．</p>
+<ul>
+<li><strong>ワイルドカード</strong>：つねにパターンマッチに成功し，束縛は生じない．
+</li>
+<li><strong>パターン変数</strong> <code>$x</code>：パターンマッチに成功し，ターゲットの値を<code>x</code>に束縛する．
+</li>
+<li><strong>値パターン</strong> <code>#e</code>：式<code>e</code>を評価した値とターゲットの値を<em>組み込み構造的同値判定</em>（データコンストラクタの構造による等価比較）で比較し，等しければパターンマッチに成功する．
+</li>
+</ul>
+<p>値パターンを<code>something</code>が直接処理するようになったのは，静的型付けの導入にともなう設計変更である（詳しくは後述の<a class="reference" href="matcher.html#ref-matcher-eq">6.3</a>節を参照）．</p>
+<p>以下の<code>unorderedPair</code>のように，ペアの要素のデータ型に対するマッチャーを受け取るunordered pairに対するマッチャーを定義することができる．</p>
+<pre class="listing"><code class="language-egison">matchAll (1, 2) as unorderedPair integer with
+| pair $x $y -&gt; (x, y)
+-- [(1,2),(2,1)]</code></pre>
+<p>そのためには，まずinductive pattern宣言を型パラメータを使った汎用的な形に変更する．</p>
+<pre class="listing"><code class="language-egison">inductive pattern {a} (a, a) :=
+  | pair a a</code></pre>
+<p>そして，<code>unorderedPair</code>をマッチャーを引数にとってマッチャーを返す関数として定義すればよい． <code>pair</code>パターンに対するマッチャー節のネクスト・マッチャー式で<code>unorderedPair</code>の引数である<code>m</code>を指定している． 型注釈により、型パラメータ<code>{a}</code>と引数のマッチャー<code>(m: Matcher a)</code>を受け取り、ペア型<code>(a, a)</code>に対するマッチャーを返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def unorderedPair {a} (m: Matcher a) : Matcher (a, a) := matcher
+  | pair $ $ as (m, m) with
+    | ($x, $y) -&gt; [(x, y), (y, x)]
+  | $ as something with
+    | $tgt -&gt; [tgt]</code></pre>
+<h2><span class="heading-number">6.3</span><code>eq</code>マッチャーの定義</h2>
+<p><span id="ref-matcher-eq" class="anchor"></span></p>
+<p><code>eq</code>マッチャーも<code>matcher</code>式でユーザーが定義することができる． <code>eq</code>マッチャーは値パターンとワイルドカード・パターン変数のみを処理するため，特別なパターンコンストラクタを持たない． したがって，<code>eq</code>マッチャー自体にはinductive pattern宣言は不要である． 型注釈により，型制約<code>{Eq a}</code>を持つ型パラメータ<code>a</code>に対するマッチャーであることを示している．</p>
+<pre class="listing"><code class="language-egison">def eq {Eq a} : Matcher a := matcher
+  | #$val as () with
+    | $tgt -&gt; if val == tgt then [()] else []
+  | $ as something with
+    | $tgt -&gt; [tgt]</code></pre>
+<p><code>eq</code>マッチャーの1つ目のマッチャー節（2-3行目）は値パターンに対するマッチャー節である． <code>#$val</code>は値パターンにマッチする原始パターンパターンである． このような原始パターンパターンは原始値パターン（<em>primitive value pattern</em>）と呼ばれる． 変数<code>val</code>には値パターンの中身が束縛される． このマッチャー節の原始パターンパターンは，パターン・ホールを含んでいないため，ネクスト・マッチャー式は空タプルである． 原始マッチ節で，値パターンの中身とターゲットの値が等しいかどうかチェックしている．</p>
+<h5><code>something</code>と<code>eq</code>の違い．</h5>
+<p><code>something</code>は値パターンを組み込みの構造的同値判定で処理するのに対し，<code>eq</code>は<code>Eq</code>型クラスのメソッドであるユーザ定義の<code>==</code>演算子を使って比較する． この2つの使い分けは，マッチャーを引数にとるマッチャー（マッチャーパラメータ化マッチャー）の設計と深く関わっている．</p>
+<p>たとえば，<code>multiset</code>のような引数マッチャー<code>m</code>を受け取るマッチャーで値パターンを処理するとき，再帰的な比較の基底ケースをどのマッチャーに委ねるかが問題になる． もし<code>something</code>が値パターンを処理できないとすると，<code>eq</code>マッチャーに委ねるしかなく，<code>eq</code>は<code>Eq</code>型クラス制約を必要とするため，<code>multiset</code>の型が</p>
+<code>multiset : {Eq a} =&gt; Matcher a -&gt; Matcher [a]</code>
+<p>のように<code>Eq</code>制約を必要とするものになってしまう． しかし<code>multiset</code>の多くの用途は値パターンを使わないため，この制約は過度に制限的である．</p>
+<p>この問題を解決するために，<code>something</code>に組み込みの構造的同値判定による値パターン処理を組み込んだ． これにより，マッチャーパラメータ化マッチャーは，型クラス制約を課すことなく<code>something</code>を基底ケースとして使え，</p>
+<code>multiset : Matcher a -&gt; Matcher [a]</code>
+<p>という制約のない型を持つことができる． 一方，ユーザ定義の等値比較（<code>==</code>）を使いたい場合には，明示的に<code>eq</code>マッチャーを指定することで対応できる．</p>
+<p>原始パターンパターンは，ここまでにでてきた3つの構成要素であるパターン・ホール，原始パターンパターンコンストラクタの適用，原始値パターンと，原始ワイルドカードからなる．</p>
+<pre class="listing"><code class="language-egison">`primitive pattern-pattern` ::= $ | c `primitive pattern-pattern`* | #$`ID` | _</code></pre>
+<p>原始ワイルドカードについては，<a class="reference" href="matcher.html#ref-matcher-wildcard">6.6</a>節で用例を紹介する．</p>
+<p>原始データパターンは，ワイルドカード，パターン変数，原始データパターンコンストラクタの適用からなる．</p>
+<pre class="listing"><code class="language-egison">`primitive data pattern` ::= _ | $`ID` | C `primitive data pattern`*</code></pre>
+<h2><span class="heading-number">6.4</span><code>multiset</code>マッチャーの定義</h2>
+<p><span id="ref-matcher-multiset" class="anchor"></span></p>
+<p>本節は，<code>multiset</code>マッチャーの定義を解説する． <code>multiset</code>マッチャーは，<a class="reference" href="matcher.html#ref-matcher-inductive">6.1</a>節で示したリスト型<code>[a]</code>のinductive pattern宣言で宣言されたパターンコンストラクタ（<code>[]</code>，<code>::</code>，<code>++</code>）を処理するマッチャーである． 型注釈により、型パラメータ<code>{a}</code>と引数のマッチャー<code>(m: Matcher a)</code>を受け取り、リスト型<code>[a]</code>に対するマッチャーを返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def multiset {a} (m: Matcher a) : Matcher [a] := matcher
+  | [] as () with
+    | $tgt -&gt; match tgt as (mutiset m) with
+                | [] -&gt; [()]
+                | _ -&gt; []
+  | $ :: $ as (m, multiset m) with
+    | $tgt -&gt; matchAll tgt as list m with
+                | $hs ++ $x :: $ts -&gt; (x, hs ++ ts)
+  | #$val as () with
+    | $tgt -&gt; match (val, tgt) as (list m, multiset m) with
+                | ([], []) -&gt; [()]
+                | ($x :: $xs, #x :: #xs) -&gt; [()]
+                | (_, _) -&gt; []
+  | $ as something with
+    | $tgt -&gt; [tgt]</code></pre>
+<p>1つ目と4つ目のマッチャー節はほぼ自明であるので，2つ目と3つ目のマッチャー節をみていく．</p>
+<p>2つ目のマッチャー節（6-8行目）をみていこう． 原始プリミティブパターンは<code>$ :: $</code>で，ネクスト・マッチャー式は<code>(a, multiset a)</code>である． <code>a</code>は<code>multiset</code>の引数のマッチャーである． ネクスト・ターゲットは，<code>matchAll</code>式を使って定義されている． この<code>matchAll</code>式は，ターゲットが<code>[1,2,3]</code>である場合，<code>[(1,[2,3]),(2,[1,3]),(3,[1,2])]</code>を返す． このリストに含まれるそれぞれのネクスト・ターゲットは，ネクスト・パターンとネクスト・マッチャーを使って再帰的にパターンマッチされる． たとえば，ネクスト・ターゲット<code>1</code>と<code>[2,3]</code>は，ネクスト・マッチャー<code>a</code>と<code>multiset a</code>を使って，コンス・パターンの第1引数と第2引数のパターンとパターンマッチされる．</p>
+<p>3つ目のマッチ節をみていこう． このマッチャー節の原始パターンパターンは，原始値パターン<code>#$val</code>である． このマッチャー節は，値パターンを処理する． このマッチャー節は，値パターンの中身（<code>val</code>）とターゲット（<code>tgt</code>）が等しいかどうかくらべる． この<code>match</code>式の1つ目と3つ目のマッチ節は自明であるので説明を省略する． 2つ目のマッチ節のパターンは，<code>val</code>の先頭の要素を<code>tgt</code>から取り出す． そして，<code>val</code>と<code>tgt</code>から同じ要素を1つ抜いたコレクションを<code>$xs</code>と<code>#xs</code>というパターンを使って再帰的にパターンマッチしている． <code>#xs</code>のパターンマッチに，このマッチャー節自身が再帰的に呼び出されるが，コレクションの長さが1つずつ短くなっていくため，最終的に1つ目か3つ目のマッチ節どちらかにいきつく．</p>
+<h2><span class="heading-number">6.5</span><code>soretedList</code>マッチャーの定義</h2>
+<p><span id="ref-matcher-sorted" class="anchor"></span></p>
+<p>二重にネストしたジョイン・コンス・パターンを使って<span class="math-inline">\((p,p+6)\)</span>という形の素数のペアを列挙するプログラムは，後方の素数のペアになるほど列挙に時間がかかるようになる． その理由は，二重にネストしたジョイン・コンス・パターンは，すべての素数の組み合わせを検査するためである． たとえば，このパターンは，<span class="math-inline">\((3,5)\)</span>，<span class="math-inline">\((3,7)\)</span>，<span class="math-inline">\((3,11)\)</span>，<span class="math-inline">\((3,13)\)</span>，<span class="math-inline">\((3, 17)\)</span>，<span class="math-inline">\((3,19)\)</span>のような素数のペアすべてを検査する． しかし，<span class="math-inline">\((3,11)\)</span>以降の素数のペア，差が<span class="math-inline">\(6\)</span>より大きくなる最初の素数のペア，以降のペアについては，<span class="math-inline">\((p,p+6)\)</span>であるか検査する必要はない．</p>
+<pre class="listing"><code class="language-egison">take 10 (matchAll primes as sortedList integer with
+         | _ ++ $p :: (_ ++  #(p + 6) :: _) -&gt; (p, p + 6))
+-- [(5,11),(7,13),(11,17),(13,19),(17,23),(23,29),(31,37),(37,43),(41,47),(47,53)]</code></pre>
+<p>ソート済みリストに特化したマッチャーを使うことにより，この不必要な探索は避けることができる． 通常の<code>list</code>マッチャーに，<code>$ ++ #$px : $</code>を原始パターンパターンにもつマッチャー節を追加すれば，ソート済みリストに特化したマッチャーをつくることができる． このマッチャー節が，<span class="math-inline">\((p,p+6)\)</span>という形の素数のペアにマッチする二重にネストしたジョイン・コンス・パターンの計算量を<span class="math-inline">\(O(n^2)\)</span>から<span class="math-inline">\(O(n)\)</span>に減らす． 型注釈により、型制約<code>{Ord a}</code>を持つ型パラメータ<code>a</code>とマッチャー引数<code>(m: Matcher a)</code>を受け取り、ソート済みリスト型<code>[a]</code>に対するマッチャーを返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def sortedList {Ord a} (m: Matcher a) : Matcher [a] := matcher
+  | $ ++ #$px :: $ as (sortedList m, sortedList m) with
+    | \$tgt -&gt; matchAll tgt as list m with
+               | loop $i (1, $n)
+                   ((?(\x -&gt; x &lt; px) &amp; $h_i) :: ...)
+                   (#px :: $ts)
+                 -&gt; (map (\i -&gt; h_i) [1..n], ts)
+  ...</code></pre>
+<p>このようにネストしたパターンに対して直接パターンマッチのアルゴリズムを定義することによる最適化のことを，<em>パターン・フュージョン</em>（<em>pattern fusion</em>）と呼ぶ．</p>
+<h2><span class="heading-number">6.6</span>原始ワイルドカードによる最適化</h2>
+<p><span id="ref-matcher-wildcard" class="anchor"></span></p>
+<p>パターンがワイルドカードを含む場合，ワイルドカードにマッチするターゲットの計算を省くことにより，パターンマッチの処理を高速化できる． 原始パターンパターン中で，原始ワイルドカードを使うことにより，Egisonではこの最適化をおこなえる． 本節は，<a class="reference" href="matcher.html#ref-matcher-multiset">6.4</a>節で紹介した<code>multiset</code>マッチャーについて，そのような最適化を紹介する． このような最適化のことを，<em>ワイルドカード最適化</em>（<em>wildcard optimization</em>）と呼ぶ．</p>
+<p>本節で紹介する最適化の対象は，以下のようなコンス・パターンの第二引数がワイルドカードである場合である． この場合，対象のコレクションから要素を1つ除いた残りのコレクションを計算する必要はない． 原始ワイルドカードを使うことにより，この計算を省くように<code>multiset</code>マッチャーに記述することができる．</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2, 3, 4, 5] as multiset eq with
+| $x :: _ -&gt; x
+-- [1, 2, 3, 4, 5]</code></pre>
+<p>このような最適化は，以下の2-3行目のマッチャー節を<a class="reference" href="matcher.html#ref-matcher-multiset">6.4</a>節の<code>multiset</code>マッチャーの定義に追加すればできる． このマッチャー節の原始パターンパターンで原始ワイルドカードが使われている． パターン・ホールはコンス・パターンの第一引数だけであるので，ネクスト・マッチャーは<code>m</code>だけになり，ネクスト・ターゲットは<code>tgt</code>のそれぞれの要素であるために，<code>tgt</code>をそのまま返すようになっている．</p>
+<pre class="listing"><code class="language-egison">def multiset {a} (m: Matcher a) : Matcher [a] := matcher
+  | $ :: _ as m with
+    | $tgt -&gt; tgt
+  | $ :: $ as (m, multiset m) with
+    | $tgt -&gt; matchAll tgt as list m with
+              | $hs ++ $x :: $ts -&gt; (x, hs ++ ts)
+  ...</code></pre>
+<p><a class="reference" href="matcher.html#ref-matcher-sorted">6.5</a>節の<code>sortedList</code>マッチャーも同様の最適化ができる． 下記の2-7行目のマッチャー節は，ジョイン・パターンの第一引数を計算することを省略する役割を果たす．</p>
+<pre class="listing"><code class="language-egison">def sortedList {Ord a} (m: Matcher a) : Matcher [a] := matcher
+  | _ ++ #$px :: $ as sortedList m
+    | \tgt -&gt; matchAll tgt as list m with
+              | loop $i (1, _)
+                  (?(\x -&gt; x &lt; px) :: ...)
+                  (#px :: $ts)
+                -&gt; ts
+  | $ ++ #$px :: $ as (sortedList m, sortedList m)
+    | \tgt -&gt; matchAll tgt as list m with
+              | loop $i (1, $n)
+                  ((?(\x -&gt; x &lt; px) &amp; $h_i) :: ...)
+                  (#px :: $ts)
+                -&gt; (map (\i -&gt; h_i) [1..n], ts)
+  ...</code></pre>
+<h2><span class="heading-number">6.7</span><code>assocMultiset</code>マッチャー</h2>
+<p><span id="ref-matcher-assoc" class="anchor"></span></p>
+<p>Egisonには，多重集合に対するマッチャーとして，<code>assocMultiset</code>が用意されている． 本節はその使い方と定義を紹介する．</p>
+<p>多重集合は，要素のその個数の連想リストとして表現できる． <code>assocMultiset</code>マッチャーは，このように連想リストとして表現された多重集合に対するマッチャーである． たとえば，以下のプログラムは<span class="math-inline">\(1\)</span>を<span class="math-inline">\(4\)</span>個，<span class="math-inline">\(2\)</span>を<span class="math-inline">\(3\)</span>個，<span class="math-inline">\(3\)</span>を<span class="math-inline">\(1\)</span>個もつ多重集合に対してパターンマッチをしている． ターゲットの多重集合に<span class="math-inline">\(3\)</span>個以上現れる要素を取り出すパターンが表現されている．</p>
+<pre class="listing"><code class="language-egison">matchAll [(1, 4), (2, 3), (3, 1)] as assocMultiset eq with
+  | $x ^ #3 :: $rs -&gt; (x, rs)
+-- [(1, [(1, 1), (2, 3), (3, 2)]), (2, [(1, 4), (3, 2)])]</code></pre>
+<h2><span class="heading-number">6.8</span>マッチャーとパターンの型</h2>
+<p><span id="ref-matcher-types" class="anchor"></span></p>
+<p>ここまでのマッチャー定義には，<code>Matcher (Integer, Integer)</code>のような型注釈が現れていた． 本節からは，パターンマッチが型システムでどのように検査されるかを解説する．</p>
+<p>Egisonの型システムでは，マッチャーとパターンにそれぞれ型が付く． <code>Matcher a</code>は<code>a</code>型の値を対象とするマッチャーの型であり，<code>Pattern a</code>は<code>a</code>型の値にマッチするパターンの型である． マッチャーは第一級の値なので，<code>multiset</code>のようにマッチャーを引数にとってマッチャーを返す関数も型をもつ． たとえば，コレクションの基本マッチャーは以下の型をもつ．</p>
+<pre class="listing"><code class="language-egison">something : Matcher a
+eq        : {Eq a} =&gt; Matcher a
+list      : MatcherSlot a a -&gt; Matcher [a]
+multiset  : MatcherSlot a a -&gt; Matcher [a]
+set       : MatcherSlot a a -&gt; Matcher [a]</code></pre>
+<p>引数マッチャーの位置には，<code>Matcher</code>ではなく<em>スロット型</em><code>MatcherSlot a b</code>が使われる． スロット型は2つの型をとる． 第一成分<code>a</code>はその位置で使われるパターンが要求する分解（構造）の型， 第二成分<code>b</code>はその位置のターゲット（分解される値）の型である． <code>list</code>や<code>multiset</code>の要素位置のように両者が一致する場合は，「おおよそ<code>Matcher a</code>を受け取る」と読んでよい． スロット型が分解の型とターゲットの型を別々にもつのは，<strong>そこに渡されるマッチャーがその位置のパターンを実際に分解できるか</strong>を， 渡された場所ごとに検査するためである．この検査については<a class="reference" href="matcher.html#ref-matcher-match-typing">6.10</a>節で改めて扱う．</p>
+<p>この型の一覧には設計上の要点がひとつ隠れている． <code>list</code>や<code>multiset</code>の型に<code>Eq</code>制約が<em>付いていない</em>ことである． 値パターン（<code>#5</code>など）の照合は<code>something</code>のレベルで構造的な等価性により処理されるため， コレクションのマッチャー自体は要素の等価性を要求しない． そのおかげで，等価性が定義されていない型（たとえばシンボリックな数式や抽象構文木）に対しても <code>multiset</code>などのマッチャーをそのまま使うことができる． 第<a class="reference" href="quick.html#ref-quick">2</a>章<a class="reference" href="quick.html#ref-quick-matcher-composition">2.10</a>節の<code>intersect</code>のように<code>eq</code>マッチャーを明示的に使うのは， <code>Eq</code>型クラスのインスタンスによるカスタムの等価性で照合したい場合である．</p>
+<h2><span class="heading-number">6.9</span>パターンの型検査</h2>
+<p><span id="ref-matcher-pattern-typing" class="anchor"></span></p>
+<p>パターンには，どのマッチャーで使われるかと独立に型が付く（<em>マッチャー多相</em>）． たとえば<code>$x :: $xs</code>は<code>Pattern [a]</code>という型をもち， だからこそ同じパターンを<code>list integer</code>でも<code>multiset integer</code>でも使うことができる．</p>
+<p>値パターンの型検査には束縛の順序が関わる． パターンは左から右へ向かって束縛を増やしながら検査され， 値パターン<code>#e</code>の式<code>e</code>は，それまでに束縛されたパターン変数を参照できる．</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2, 3, 1] as multiset integer with
+  | $x :: #x :: _ -&gt; x
+-- [1, 1]</code></pre>
+<p>このパターンは「ある要素<code>x</code>と，それと同じ値の要素がもうひとつある」ことを表す非線形パターンであり， <code>#x</code>は直前の<code>$x</code>の束縛（<code>Integer</code>型）の下で型検査される．</p>
+<p>型検査は，動的な処理系では黙って失敗するだけだった誤りを静的に検出する． まず，値パターンの中の式の型の誤りは，そのまま型エラーとして報告される．</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2, 3] as multiset integer with
+  | $x :: #(x ++ [1]) :: _ -&gt; x
+-- Type error: (++) expects [Integer] but x is Integer</code></pre>
+<p>つぎに，値パターンを置く位置の誤りも検出される．</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2, 3] as multiset integer with
+  | $x :: #x -&gt; x
+-- Type error: the second argument of :: requires
+--   Pattern [Integer], but #x has type Pattern Integer</code></pre>
+<p>プログラマの意図は「<code>x</code>が残りにも現れる」だったはずだが，<code>::</code>の第二引数はリスト全体にマッチする位置である． 正しくは<code>$x :: #x :: _</code>と書く． 動的な処理系では，このパターンは何も報告せずにマッチに失敗するだけであった． 最後に，束縛より左で変数を参照する誤りは，未束縛変数の警告として検出される （strictモードでは型エラーになる）．</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2, 3] as multiset integer with
+  | #x :: $x :: _ -&gt; x
+-- Warning: unbound variable x
+--   (#x refers to x left of its binding $x)</code></pre>
+<h2><span class="heading-number">6.10</span><code>match</code>式の型検査</h2>
+<p><span id="ref-matcher-match-typing" class="anchor"></span></p>
+<p><code>match</code>式・<code>matchAll</code>式では，ターゲット・マッチャー・パターン・ボディの型がすべて整合しなければならない． ターゲットの型が<code>a</code>なら，マッチャーは<code>Matcher a</code>，各マッチ節のパターンは<code>Pattern a</code>であり， すべてのマッチ節のボディの型は一致する必要がある．</p>
+<p>たとえば，コレクション用のパターンコンストラクタを整数のマッチャーと組み合わせると型エラーになる．</p>
+<pre class="listing"><code class="language-egison">matchAll 5 as integer with
+  | $x :: _ -&gt; x
+-- Type error: :: targets collections [a], but the
+--   target and the matcher are for Integer</code></pre>
+<p>ボディの型の不一致も検出される． たとえば第<a class="reference" href="quick.html#ref-quick">2</a>章<a class="reference" href="quick.html#ref-quick-pat-fun">2.9</a>節の<code>twin</code>の例で ボディを<code>[n, ns]</code>と書くと，<code>Integer</code>と<code>[Integer]</code>が混在するリストになるため型エラーになる （タプル<code>(n, ns)</code>を使う）．</p>
+<p>さらに，パターンが要求する<em>分解</em>をマッチャーが提供できるかも検査される（適合性検査）． 変数パターンと値パターンしか使わないパターンは分解を要求しないので，任意の型で<code>something</code>と組み合わせられる． 一方，<code>::</code>のようなパターンコンストラクタを使うパターンには，それを分解できるマッチャーが必要である． <code>something</code>は任意の値に単一のマッチをするだけで分解の手段をもたないため， コンスパターンと組み合わせると型エラーになる．</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2, 3] as something with
+  | $x :: $xs -&gt; (x, xs)
+-- Type error: something (Matcher a) does not fit
+--   MatcherSlot [_] [Integer]
+--   (something offers no way to decompose a list)</code></pre>
+<p>これが，マッチャーを受け取る位置を<code>Matcher</code>ではなくスロット型で型付けする理由である． ここでは，コンスパターンがスロットの分解成分に<code>[_]</code>（リストの分解）を要求するのに対し， <code>something</code>はそれを提供できない． 素朴に<code>something</code>を<code>Matcher [Integer]</code>とみなす型システムでは，この式は型検査を通ってしまい， 実行時に<code>something</code>がコンスを分解できずに行き詰まる． Egisonの型システムは，マッチャーが渡された場所ごとに分解の適合を検査するので，この誤りを静的に弾く． この検査はパターンの構造だけから計算されるため，マッチャーを実行しなくても誤った組み合わせが静的に弾かれる．</p>
+<h2><span class="heading-number">6.11</span>マッチャー定義の整合性検査</h2>
+<p><span id="ref-matcher-consistency" class="anchor"></span></p>
+<p>マッチャー定義そのものも型検査の対象である． 各マッチャー節について，原始パターンパターン・ネクスト・マッチャー式・原始データパターンの型の整合が検査されるのに加えて， <em>原始データパターンのアームの網羅性</em>が要求される． あるマッチャー節の原始パターンパターンがパターンにマッチすると， ターゲットの照合はその節のアームだけで行われ，どのアームにもマッチしなければ実行時エラーになる． そのため，アームの集合が網羅的でないマッチャー定義は型エラーとして拒否される．</p>
+<pre class="listing"><code class="language-egison">def bad {a} (m : MatcherSlot a a) : Matcher [a] :=
+  matcher
+    | $ :: $ as (m, bad m) with
+      | $x :: $xs -&gt; [(x, xs)]    -- missing final | _ -&gt; []
+    | $ as something with
+      | $tgt -&gt; [tgt]
+-- Type error: the data-pattern arms of matcher
+--   clause :: $ $ are non-exhaustive</code></pre>
+<p>コンス・パターンの節のアームが<code>$x :: $xs</code>だけだと，空リストがターゲットに来たときにどのアームにもマッチせず， 実行時に失敗してしまう． 末尾に<code>| _ -&gt; []</code>を追加すれば「分解できないときはマッチ失敗（候補なし）」という意味になり，網羅的になる． 網羅的と認められるアームの形は，（1）末尾のワイルドカード・アーム，（2）<code>[]</code>と<code>::</code>のペア（コレクションに対して完全）， （3）反駁不能な単一アーム（<code>$tgt</code>など）である．</p>
+<h2><span class="heading-number">6.12</span>パターン関数の型</h2>
+<p><span id="ref-matcher-patfun-types" class="anchor"></span></p>
+<p>第<a class="reference" href="quick.html#ref-quick">2</a>章<a class="reference" href="quick.html#ref-quick-pat-fun">2.9</a>節で導入したパターン関数にも型が付く．</p>
+<pre class="listing"><code class="language-egison">def pattern twin {a} (pat1: a) (pat2: [a]) : [a] :=
+  (~pat1 &amp; $x) :: #x :: ~pat2</code></pre>
+<p>この定義において，仮引数の型注釈<code>(pat1: a)</code>は「<code>pat1</code>は<code>a</code>型の値にマッチするパターン」を表し， 返り値位置の<code>: [a]</code>は「適用結果は<code>[a]</code>型の値にマッチするパターン」を表す． つまり<code>twin</code>の型はおおよそ<code>Pattern a -&gt; Pattern [a] -&gt; Pattern [a]</code>と読める． 適用時には引数パターンの型が検査される．</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2] as multiset integer with
+  | twin ($y :: _) _ -&gt; y
+-- Type error: the first argument requires
+--   Pattern Integer, but $y :: _ is Pattern [Integer]</code></pre>
+<p>パターン関数の適用は，適合性検査（<a class="reference" href="matcher.html#ref-matcher-match-typing">6.10</a>節）では<em>本体のパターンの骨格</em>として扱われる． <code>twin</code>の本体はコンス・パターンの入れ子なので，<code>twin</code>を使うマッチ式にはコンスを分解できるマッチャー （<code>list</code>や<code>multiset</code>）が必要である． 逆に，本体が仮引数そのものであるようなパターン関数は構造を課さないため，引数パターンの要求だけが伝播する． このように，パターン関数を経由しても「そのパターンにどんなマッチャーが必要か」が静的に追跡される．</p>
+  </main>
+  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+</body>
+</html>

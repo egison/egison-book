@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>Several Features as a Functional Programming Language — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="prev" href="matcher.html">← Previous</a><a rel="next" href="sweet.html">Next →</a><a class="language" href="../ja/etc.html">日本語</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">7</span>Several Features as a Functional Programming Language</h1>
+<p><span id="ref-etc" class="anchor"></span></p>
+<p>This chapter introduces several Egison features that facilitate functional programming.</p>
+<h2><span class="heading-number">7.1</span>Anonymous Parameter Functions</h2>
+<p>Anonymous parameter functions allow you to define functions without naming the arguments. Lambda expressions let you omit the naming of the function itself. Anonymous parameter functions, which also let you omit the naming of arguments, can be thought of as taking this idea one step further. For example, an anonymous parameter function that multiplies the first argument by 10 and adds the second argument can be defined as follows.</p>
+<pre class="listing"><code class="language-egison">2#($1 * 10 + $2) 1 2
+-- 12</code></pre>
+<p>The <code>2</code> before <code>#</code> indicates that this defines a 2-argument function. The <code>$1</code> and <code>$2</code> appearing in the function body represent the first and second arguments, respectively.</p>
+<p>Anonymous parameter functions have two variants: one that takes a tuple as its argument and one that takes a list. These two variants are defined by enclosing the number before <code>#</code> in parentheses or brackets. Enclosing the number before <code>#</code> in <code>()</code> defines an anonymous parameter function that takes a tuple as its argument.</p>
+<pre class="listing"><code class="language-egison">(2)#($1, $2) (10, 20)
+-- (10, 20)</code></pre>
+<p>Enclosing the number before <code>#</code> in <code>[]</code> defines an anonymous parameter function that takes a list as its argument.</p>
+<pre class="listing"><code class="language-egison">[2]#($2, $1) [10, 20]
+-- (20, 10)</code></pre>
+<h2><span class="heading-number">7.2</span>Anonymous <code>matchAll</code> Functions and Anonymous <code>match</code> Functions</h2>
+<p>When defining functions, it is common to immediately pattern-match on a formal parameter. In such cases, the formal parameter name serves no purpose other than as the target of that pattern match. To address this issue, anonymous <code>matchAll</code> functions and anonymous <code>match</code> functions are provided.</p>
+<p>First, let us introduce anonymous <code>matchAll</code> functions. An anonymous <code>matchAll</code> function is defined by writing <code>matchAll</code> immediately after <code>\</code> without a space. In this case, the pattern-matching target is omitted. This is because the argument of the anonymous <code>matchAll</code> function becomes the target.</p>
+<pre class="listing"><code class="language-egison">\matchAll as list something with
+  | $hs ++ $ts -&gt; (hs, ts)</code></pre>
+<p>An anonymous <code>match</code> function can be defined simply by replacing <code>matchAll</code> with <code>match</code> in an anonymous <code>matchAll</code> function.</p>
+<pre class="listing"><code class="language-egison">\match as list something with
+  | nil -&gt; True
+  | _ -&gt; False</code></pre>
+<h2><span class="heading-number">7.3</span>Defining Infix Operators</h2>
+<p>Egison provides the ability for users to define new infix operators. To declare an infix operator, use <code>infix</code>, <code>infixl</code>, or <code>infixr</code>. <code>infix</code>, <code>infixl</code>, and <code>infixr</code> are used to define non-associative, left-associative, and right-associative operators, respectively. <code>infix</code>, <code>infixl</code>, and <code>infixr</code> all take three arguments. The first argument takes the keyword <code>expression</code> or <code>pattern</code> to specify whether the infix operator being defined is a function or a pattern constructor. The second argument takes an integer value specifying the precedence of the infix operator being defined. The third argument takes the name of the infix operator being defined.</p>
+<p>As an example of defining a function used as an infix operator, the logical conjunction <code>&amp;&amp;</code> is defined as follows. The type annotation indicates that it takes two boolean values as arguments and returns a boolean value.</p>
+<pre class="listing"><code class="language-egison">infixr expression 5 &amp;&amp;
+
+def (&amp;&amp;) (a: Bool) (b: Bool) : Bool := match (a, b) as (eq, eq) with
+  | (#True, #True) -&gt; True
+  | _              -&gt; False</code></pre>
+<p>As an example of defining a pattern constructor used as an infix operator, the join pattern <code>++</code> is defined as follows. The type annotation indicates that it takes a type parameter <code>{a}</code> and a matcher argument <code>(m: Matcher a)</code>, and returns a matcher for the list type <code>[a]</code>.</p>
+<pre class="listing"><code class="language-egison">infixl pattern 7 ++
+
+def list {a} (m: Matcher a) : Matcher [a] := matcher
+  | $ ++ $ as (list m, list m) with
+    ...</code></pre>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>Operator</td><td>Description</td><td>Precedence</td></tr><tr><td><code>^</code></td><td>Exponentiation</td><td>8</td></tr><tr><td><code>*</code></td><td>Multiplication</td><td>7</td></tr><tr><td><code>/</code></td><td>Division</td><td>7</td></tr><tr><td><code>%</code></td><td>Remainder</td><td>7</td></tr><tr><td><code>.</code></td><td>Tensor product</td><td>7</td></tr><tr><td><code>+</code></td><td>Addition</td><td>6</td></tr><tr><td><code>-</code></td><td>Subtraction</td><td>6</td></tr><tr><td><code>::</code></td><td>Cons</td><td>5</td></tr><tr><td><code>++</code></td><td>Append</td><td>5</td></tr><tr><td><code>=</code>, <code>&lt;=</code> <code>&gt;=</code>, <code>&lt;</code>, <code>&gt;</code></td><td>Comparison</td><td>4</td></tr><tr><td><code>&amp;&amp;</code></td><td>Logical conjunction</td><td>3</td></tr><tr><td><code>||</code></td><td>Logical disjunction</td><td>2</td></tr><tr><td><code>$</code></td><td>Function application</td><td>0</td></tr></tbody></table></div>
+</div>
+<figcaption>List of infix operators (functions)</figcaption>
+<p><span id="ref-tab-infixFunctions" class="anchor"></span></p>
+</figure>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>Operator</td><td>Description</td><td>Precedence</td></tr><tr><td><code>^</code></td><td>Exponentiation</td><td>8</td></tr><tr><td><code>*</code></td><td>Multiplication</td><td>7</td></tr><tr><td><code>/</code></td><td>Division</td><td>7</td></tr><tr><td><code>+</code></td><td>Addition</td><td>6</td></tr><tr><td><code>::</code></td><td>Cons</td><td>5</td></tr><tr><td><code>++</code></td><td>Append</td><td>5</td></tr><tr><td><code>&amp;</code></td><td>And-pattern</td><td>3</td></tr><tr><td><code>|</code></td><td>Or-pattern</td><td>2</td></tr></tbody></table></div>
+</div>
+<figcaption>List of infix operators (patterns)</figcaption>
+<p><span id="ref-tab-infixPatterns" class="anchor"></span></p>
+</figure>
+<h2><span class="heading-number">7.4</span>Type Classes</h2>
+<p>Egison supports type classes. Type classes are a mechanism for abstracting common behavior across multiple types. Egison&#x27;s type classes have syntax and semantics similar to Haskell&#x27;s type classes.</p>
+<h3><span class="heading-number">7.4.1</span>Defining Type Classes</h3>
+<p>Type classes are defined using the <code>class</code> keyword. A type class definition includes a type variable and the signatures of functions required for that type variable. For example, the <code>Eq</code> type class representing types that can be compared for equality is defined as follows.</p>
+<pre class="listing"><code class="language-egison">class Eq a where
+  (==) (x: a) (y: a) : Bool
+  (/=) (x: a) (y: a) : Bool</code></pre>
+<p>This definition means that “for a type <code>a</code> to be an instance of <code>Eq</code>, it must provide operations <code>==</code> and <code>/=</code> that take two values of type <code>a</code> and return a <code>Bool</code>.”</p>
+<p>Egison also supports <em>superclass declarations</em> using the <code>extends</code> keyword. A type class can declare one or more superclasses, meaning that any type that is an instance of the subclass must also be an instance of the superclass(es).</p>
+<p>Using these features, Egison defines the following algebraic type class hierarchy for numeric types. First, the additive hierarchy is defined as follows.</p>
+<pre class="listing"><code class="language-egison">class AddSemigroup a where
+  (+) (x: a) (y: a) : a
+
+class AddMonoid a extends AddSemigroup a where
+  zero : a
+
+class AddGroup a extends AddMonoid a where
+  neg (x: a) : a</code></pre>
+<p><code>AddSemigroup</code> provides addition, <code>AddMonoid</code> extends it with a zero element, and <code>AddGroup</code> further extends it with negation.</p>
+<p>Similarly, the multiplicative hierarchy is defined as follows.</p>
+<pre class="listing"><code class="language-egison">class MulSemigroup a where
+  (*) (x: a) (y: a) : a
+
+class MulMonoid a extends MulSemigroup a where
+  one : a
+
+class MulGroup a extends MulMonoid a where
+  inv (x: a) : a</code></pre>
+<p>These hierarchies are combined into composite algebraic structures. A type class can extend <em>multiple</em> superclasses, separated by commas. A type class with no methods of its own serves as a <em>marker class</em> that simply combines its superclasses.</p>
+<pre class="listing"><code class="language-egison">class Ring a extends AddGroup a, MulMonoid a
+class Field a extends Ring a, MulGroup a</code></pre>
+<p><code>Ring</code> requires both additive group and multiplicative monoid structure, while <code>Field</code> additionally requires multiplicative inverses.</p>
+<p>Further extensions for computer algebra are also defined.</p>
+<pre class="listing"><code class="language-egison">class GCDDomain a extends Ring a where
+  gcd (x: a) (y: a) : a
+
+class EuclideanDomain a extends GCDDomain a where
+  divMod (x: a) (y: a) : (a, a)</code></pre>
+<h3><span class="heading-number">7.4.2</span>Type Class Instances</h3>
+<p>To make a concrete type an instance of a type class, use the <code>instance</code> keyword. For example, to make the <code>Integer</code> type an instance of <code>Eq</code>, write the following.</p>
+<pre class="listing"><code class="language-egison">instance Eq Integer where
+  (==) x y := x = y
+  (/=) x y := not (x == y)</code></pre>
+<p>An example of making the <code>MathValue</code> type an instance of the algebraic type class hierarchy is as follows. Each level of the hierarchy requires its own instance definition.</p>
+<pre class="listing"><code class="language-egison">instance AddSemigroup MathValue where
+  (+) x y := plusForMathValue x y
+
+instance AddMonoid MathValue where
+  zero := 0
+
+instance AddGroup MathValue where
+  neg x := minusForMathValue 0 x
+
+instance MulSemigroup MathValue where
+  (*) x y := multForMathValue x y
+
+instance MulMonoid MathValue where
+  one := 1
+
+instance MulGroup MathValue where
+  inv x := divForMathValue 1 x</code></pre>
+<p>Marker class instances (classes with no methods) can be declared without a <code>where</code> clause.</p>
+<pre class="listing"><code class="language-egison">instance Ring MathValue
+instance Field MathValue</code></pre>
+<p>Type class instance definitions can also include type class constraints. For example, when making the <code>Tensor a</code> type an instance of <code>Eq</code>, if the element type <code>a</code> also needs to be an instance of <code>Eq</code>, write the following.</p>
+<pre class="listing"><code class="language-egison">instance {Eq a} Eq (Tensor a) where
+  (==) t1 t2 := t1 = t2
+  (/=) t1 t2 := not (t1 == t2)</code></pre>
+<h3><span class="heading-number">7.4.3</span>Using Type Class Constraints</h3>
+<p>By using type classes, you can impose constraints on polymorphic functions. Type class constraints are written in curly braces <code>{}</code> in the function&#x27;s type signature. For example, a function that compares two values for equality can be defined as follows.</p>
+<pre class="listing"><code class="language-egison">def eqAs {Eq a} (m: Matcher a) (x: a) (y: a) : Bool := ...</code></pre>
+<p>This type signature means “when type <code>a</code> is an instance of <code>Eq</code>, <code>eqAs</code> takes a <code>Matcher a</code>, an <code>a</code>, and an <code>a</code>, and returns a <code>Bool</code>.”</p>
+<p>Multiple type class constraints can also be imposed. For example, a function that requires both ordering and equality can be written as follows.</p>
+<pre class="listing"><code class="language-egison">def compare {Eq a, Ord a} (x: a) (y: a) : Ordering := ...</code></pre>
+<p>Using the algebraic type class hierarchy, subtraction and division can be defined as derived operations using the minimum necessary type class constraints.</p>
+<pre class="listing"><code class="language-egison">def (-) {AddGroup a} (x: a) (y: a) : a := x + neg y
+def (/) {Field a} (x: a) (y: a) : a := x * inv y</code></pre>
+<p>Similarly, <code>sum</code> and <code>product</code> are defined with precise constraints.</p>
+<pre class="listing"><code class="language-egison">def sum {AddMonoid a} (xs: [a]) : a := foldl (+) zero xs
+def product {MulMonoid a} (xs: [a]) : a := foldl (*) one xs</code></pre>
+<p>Type class constraints can be used not only in function definitions but also in matcher definitions. For example, the <code>sortedList</code> matcher requires that the element type be orderable (an instance of <code>Ord</code>).</p>
+<pre class="listing"><code class="language-egison">def sortedList {Ord a} (m: Matcher a) : Matcher [a] := matcher
+  ...</code></pre>
+<h3><span class="heading-number">7.4.4</span>Type Class Implementation: Dictionary-Passing Style</h3>
+<p>Egison&#x27;s type classes are implemented using <em>dictionary-passing style</em>. This means that a function with type class constraints is transformed into a function that actually takes a dictionary containing the type class methods as an argument.</p>
+<p>For example, the following function with a type class constraint</p>
+<pre class="listing"><code class="language-egison">def double {AddSemigroup a} (x: a) : a := x + x</code></pre>
+<p>is internally transformed into a function that takes a dictionary parameter.</p>
+<pre class="listing"><code class="language-egison">def double (dict_AddSemigroup_a) (x: a) : a :=
+  (dict_AddSemigroup_a_&quot;plus&quot;) x x</code></pre>
+<p>Here, <code>dict_AddSemigroup_a</code> is a hash (dictionary) containing the methods of the <code>AddSemigroup a</code> instance (in this case, <code>+</code>).</p>
+<p>When calling a function on a concrete type, the appropriate instance dictionary is automatically passed. For example, <code>double 1</code> is transformed into the following.</p>
+<pre class="listing"><code class="language-egison">double addSemigroupInteger 1</code></pre>
+<p>Here, <code>addSemigroupInteger</code> is the dictionary for the <code>AddSemigroup Integer</code> instance.</p>
+<p>This dictionary-passing style achieves dynamic dispatch of type classes (selection of methods based on the type at runtime). It also correctly handles calls between functions with type class constraints. For example, in the following functions</p>
+<pre class="listing"><code class="language-egison">def myPlus {AddSemigroup a} (x: a) (y: a) : a := x + y
+def myPlus2 {AddSemigroup a} (x: a) (y: a) : a := myPlus x y</code></pre>
+<p>the dictionary received by <code>myPlus2</code> is correctly passed to <code>myPlus</code>.</p>
+<h2><span class="heading-number">7.5</span><code>IO</code> Input/Output</h2>
+<p>Egison, whose default evaluation strategy is lazy evaluation, has special syntax for writing programs with side effects. Egison is a language with a static type system, and it uses the same approach as Haskell for writing programs with side effects.</p>
+<h3><span class="heading-number">7.5.1</span>The <code>main</code> Function</h3>
+<p>For example, a program that outputs the string “Hello world!” can be written as follows. The type annotation indicates that it takes a list of strings as command-line arguments and performs IO processing.</p>
+<pre class="listing"><code class="language-egison">def main (args: [String]) : IO () := write &quot;Hello world!\n&quot;</code></pre>
+<p>When the command-line option <code>-t</code> is not specified, Egison executes the <code>main</code> function. The above program can be executed as follows.</p>
+<pre class="listing"><code class="language-egison">$ cat hello.egi
+def main (args: [String]) : IO () := write &quot;Hello world!\n&quot;
+$ egison hello.egi
+Hello world!</code></pre>
+<p><code>write</code> is a built-in IO function in Egison. <code>write</code> takes a string as its first argument and prints that string to standard output. There are several other IO functions besides <code>write</code>. Figure&nbsp;<a class="reference" href="etc.html#ref-tab-ioFunctions">7.5.1</a> summarizes the complete list.</p>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>Function name</td><td>Description</td></tr><tr><td><code>return</code> <span class="math-inline">\(x\)</span></td><td>Returns <span class="math-inline">\(x\)</span> as the result of an IO function.</td></tr><tr><td><code>openInputFile</code> <span class="math-inline">\(path\)</span></td><td>Opens the file at path <span class="math-inline">\(path\)</span> in read mode and returns an input port to that file.</td></tr><tr><td><code>openOutputFile</code> <span class="math-inline">\(path\)</span></td><td>Opens the file at path <span class="math-inline">\(path\)</span> in write mode and returns an output port to that file.</td></tr><tr><td><code>closeInputPort</code> <span class="math-inline">\(port\)</span></td><td>Closes the input port <span class="math-inline">\(port\)</span>.</td></tr><tr><td><code>closeOutputPort</code> <span class="math-inline">\(port\)</span></td><td>Closes the output port <span class="math-inline">\(port\)</span>.</td></tr><tr><td><code>readChar</code></td><td>Reads one character from standard input and returns that character.</td></tr><tr><td><code>readLine</code></td><td>Reads one line from standard input and returns that string.</td></tr><tr><td><code>writeChar</code> <span class="math-inline">\(c\)</span></td><td>Writes the character <span class="math-inline">\(c\)</span> to standard output.</td></tr><tr><td><code>write</code> <span class="math-inline">\(s\)</span></td><td>Writes the string <span class="math-inline">\(s\)</span> to standard output.</td></tr><tr><td><code>readCharFromPort</code> <span class="math-inline">\(port\)</span></td><td>Reads one character from the input port <span class="math-inline">\(port\)</span> and returns that character.</td></tr><tr><td><code>readLineFromPort</code> <span class="math-inline">\(port\)</span></td><td>Reads one line from the input port <span class="math-inline">\(port\)</span> and returns that string.</td></tr><tr><td><code>writeCharToPort</code> <span class="math-inline">\(c\)</span> <span class="math-inline">\(port\)</span></td><td>Writes the character <span class="math-inline">\(c\)</span> to the output port <span class="math-inline">\(port\)</span>.</td></tr><tr><td><code>writeToPort</code> <span class="math-inline">\(s\)</span> <span class="math-inline">\(port\)</span></td><td>Writes the string <span class="math-inline">\(s\)</span> to the output port <span class="math-inline">\(port\)</span>.</td></tr><tr><td><code>isEof</code></td><td>Checks whether standard input has reached EOF (end of file), returning <code>True</code> if so and <code>False</code> otherwise.</td></tr><tr><td><code>isEofPort</code> <span class="math-inline">\(port\)</span></td><td>Checks whether the input port <span class="math-inline">\(port\)</span> has reached EOF, returning <code>True</code> if so and <code>False</code> otherwise.</td></tr><tr><td><code>flush</code></td><td>Immediately outputs the contents buffered in standard output.</td></tr><tr><td><code>flushPort</code> <span class="math-inline">\(port\)</span></td><td>Immediately outputs the contents buffered in the output port <span class="math-inline">\(port\)</span>.</td></tr><tr><td><code>readFile</code> <span class="math-inline">\(path\)</span></td><td>Reads the entire contents of the file at path <span class="math-inline">\(path\)</span> and returns it as a string.</td></tr><tr><td><code>rand</code> <span class="math-inline">\(n_1\)</span> <span class="math-inline">\(n_2\)</span></td><td>Returns a random integer in the range from <span class="math-inline">\(n_1\)</span> to <span class="math-inline">\(n_2\)</span> (inclusive).</td></tr><tr><td><code>f.rand</code> <span class="math-inline">\(f_1\)</span> <span class="math-inline">\(f_2\)</span></td><td>Returns a random floating-point number in the range from <span class="math-inline">\(f_1\)</span> to <span class="math-inline">\(f_2\)</span>.</td></tr><tr><td><code>newIORef</code></td><td>Creates a mutable variable (reference) and returns that reference. The initial value is undefined.</td></tr><tr><td><code>writeIORef</code> <span class="math-inline">\(ref\)</span> <span class="math-inline">\(x\)</span></td><td>Updates the value of the mutable variable referenced by <span class="math-inline">\(ref\)</span> to <span class="math-inline">\(x\)</span>.</td></tr><tr><td><code>readIORef</code> <span class="math-inline">\(ref\)</span></td><td>Returns the current value of the mutable variable referenced by <span class="math-inline">\(ref\)</span>.</td></tr><tr><td><code>readProcess</code> <span class="math-inline">\(cmd\)</span> <span class="math-inline">\(args\)</span> <span class="math-inline">\(input\)</span></td><td>Executes the command <span class="math-inline">\(cmd\)</span> with argument list <span class="math-inline">\(args\)</span>, provides the string <span class="math-inline">\(input\)</span> as standard input, and returns the standard output as a string.</td></tr><tr><td><code>io</code> <span class="math-inline">\(ioAction\)</span></td><td>Executes the IO function <span class="math-inline">\(ioAction\)</span> within a pure function and returns its result (equivalent to <code>unsafePerformIO</code>).</td></tr></tbody></table></div>
+</div>
+<figcaption>List of IO functions</figcaption>
+<p><span id="ref-tab-ioFunctions" class="anchor"></span></p>
+</figure>
+<p>The first argument of <code>main</code> contains the command-line arguments. Command-line arguments are passed as strings to the first argument of <code>main</code>.</p>
+<pre class="listing"><code class="language-egison">$ cat args.egi
+def main (args: [String]) : IO () := write (show args)
+$ egison args.egi hello world 1
+[&quot;hello&quot;, &quot;world&quot;, &quot;1&quot;]</code></pre>
+<p>If you want to make a script created in Egison into a command, you can use a shebang.</p>
+<pre class="listing"><code class="language-egison">$ cat args
+#!/usr/local/egison
+
+def main (args: [String]) : IO () := write (show args)
+$ args hello world 1
+[&quot;hello&quot;, &quot;world&quot;, &quot;1&quot;]</code></pre>
+<h3><span class="heading-number">7.5.2</span>The <code>do</code> Expression</h3>
+<p>The <code>do</code> expression allows you to combine multiple IO functions and execute them in sequence. The <code>do</code> expression corresponds to Haskell&#x27;s <code>do</code> notation. For example, the following program reads one line of user input and outputs it.</p>
+<pre class="listing"><code class="language-egison">def main (arg: [String]) : IO () := do
+  let line := readLine ()
+  write line</code></pre>
+<p>The <code>do</code> expression can be combined with recursive functions. The following is a program that implements a REPL (Read-Eval-Print Loop) without the Eval part.</p>
+<pre class="listing"><code class="language-egison">def main (arg: [String]) : IO () := repl
+
+def repl : IO () := do
+  write &quot;&gt; &quot;
+  flush ()
+  let line := readLine ()
+  write line
+  flush ()
+  repl</code></pre>
+<p>As in Haskell, a syntax for <code>do</code> notation without the offside rule is also supported.</p>
+<pre class="listing"><code class="language-egison">do { print &quot;foo&quot; ; print &quot;bar&quot; ; print &quot;baz&quot; }</code></pre>
+<p>Note that Egison&#x27;s <code>do</code> expression can only be used with the IO monad and cannot be used with the list monad or other monads as in Haskell.</p>
+<h3><span class="heading-number">7.5.3</span>The <code>io</code> Function</h3>
+<p>The <code>io</code> function is a built-in function corresponding to Haskell&#x27;s <code>unsafePerformIO</code> function. Using the <code>io</code> function, you can call IO functions from within ordinary functions that are not IO functions. This is convenient for tasks such as printf debugging.</p>
+<p>The following program rolls two dice and returns the sum of their values.</p>
+<pre class="listing"><code class="language-egison">def dice : Integer := io (rand 1 6)
+
+dice + dice</code></pre>
+<h2><span class="heading-number">7.6</span>Built-in Functions</h2>
+<p>Egison provides a large number of built-in functions (primitive functions). These functions are built into the language implementation and can be used directly by the user. This section introduces the major built-in functions organized by category.</p>
+<h3><span class="heading-number">7.6.1</span>Arithmetic Functions</h3>
+<p>Built-in functions for integer and floating-point arithmetic are provided. Table&nbsp;<a class="reference" href="etc.html#ref-tab-arithFunctions">7.6.1</a> shows the major arithmetic functions.</p>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>Function name</td><td>Description</td></tr><tr><td><code>i.+</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns the sum of integers <span class="math-inline">\(x\)</span> and <span class="math-inline">\(y\)</span>.</td></tr><tr><td><code>i.-</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns the difference of integers <span class="math-inline">\(x\)</span> and <span class="math-inline">\(y\)</span>.</td></tr><tr><td><code>i.*</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns the product of integers <span class="math-inline">\(x\)</span> and <span class="math-inline">\(y\)</span>.</td></tr><tr><td><code>i./</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns the quotient of integer <span class="math-inline">\(x\)</span> divided by <span class="math-inline">\(y\)</span> as a rational number.</td></tr><tr><td><code>i.modulo</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns the remainder of integer <span class="math-inline">\(x\)</span> divided by <span class="math-inline">\(y\)</span> (<code>mod</code>).</td></tr><tr><td><code>i.quotient</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns the quotient of integer <span class="math-inline">\(x\)</span> divided by <span class="math-inline">\(y\)</span> (<code>quot</code>).</td></tr><tr><td><code>i.%</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns the remainder of integer <span class="math-inline">\(x\)</span> divided by <span class="math-inline">\(y\)</span> (<code>rem</code>).</td></tr><tr><td><code>i.power</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns integer <span class="math-inline">\(x\)</span> raised to the power of <span class="math-inline">\(y\)</span>.</td></tr><tr><td><code>i.abs</code> <span class="math-inline">\(x\)</span></td><td>Returns the absolute value of integer <span class="math-inline">\(x\)</span>.</td></tr><tr><td><code>i.neg</code> <span class="math-inline">\(x\)</span></td><td>Returns integer <span class="math-inline">\(x\)</span> with its sign negated.</td></tr><tr><td><code>i.&lt;</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns <code>True</code> if integer <span class="math-inline">\(x\)</span> is less than <span class="math-inline">\(y\)</span>, <code>False</code> otherwise.</td></tr><tr><td><code>i.&lt;=</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns <code>True</code> if integer <span class="math-inline">\(x\)</span> is less than or equal to <span class="math-inline">\(y\)</span>, <code>False</code> otherwise.</td></tr><tr><td><code>i.&gt;</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns <code>True</code> if integer <span class="math-inline">\(x\)</span> is greater than <span class="math-inline">\(y\)</span>, <code>False</code> otherwise.</td></tr><tr><td><code>i.&gt;=</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns <code>True</code> if integer <span class="math-inline">\(x\)</span> is greater than or equal to <span class="math-inline">\(y\)</span>, <code>False</code> otherwise.</td></tr><tr><td><code>f.+</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns the sum of floating-point numbers <span class="math-inline">\(x\)</span> and <span class="math-inline">\(y\)</span>.</td></tr><tr><td><code>f.-</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns the difference of floating-point numbers <span class="math-inline">\(x\)</span> and <span class="math-inline">\(y\)</span>.</td></tr><tr><td><code>f.*</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns the product of floating-point numbers <span class="math-inline">\(x\)</span> and <span class="math-inline">\(y\)</span>.</td></tr><tr><td><code>f./</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns the quotient of floating-point number <span class="math-inline">\(x\)</span> divided by <span class="math-inline">\(y\)</span>.</td></tr><tr><td><code>f.abs</code> <span class="math-inline">\(x\)</span></td><td>Returns the absolute value of floating-point number <span class="math-inline">\(x\)</span>.</td></tr><tr><td><code>f.neg</code> <span class="math-inline">\(x\)</span></td><td>Returns floating-point number <span class="math-inline">\(x\)</span> with its sign negated.</td></tr><tr><td><code>f.&lt;</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns <code>True</code> if floating-point number <span class="math-inline">\(x\)</span> is less than <span class="math-inline">\(y\)</span>, <code>False</code> otherwise.</td></tr><tr><td><code>f.&lt;=</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns <code>True</code> if floating-point number <span class="math-inline">\(x\)</span> is less than or equal to <span class="math-inline">\(y\)</span>, <code>False</code> otherwise.</td></tr><tr><td><code>f.&gt;</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns <code>True</code> if floating-point number <span class="math-inline">\(x\)</span> is greater than <span class="math-inline">\(y\)</span>, <code>False</code> otherwise.</td></tr><tr><td><code>f.&gt;=</code> <span class="math-inline">\(x\)</span> <span class="math-inline">\(y\)</span></td><td>Returns <code>True</code> if floating-point number <span class="math-inline">\(x\)</span> is greater than or equal to <span class="math-inline">\(y\)</span>, <code>False</code> otherwise.</td></tr><tr><td><code>round</code> <span class="math-inline">\(x\)</span></td><td>Rounds floating-point number <span class="math-inline">\(x\)</span> to the nearest integer.</td></tr><tr><td><code>floor</code> <span class="math-inline">\(x\)</span></td><td>Returns the largest integer less than or equal to floating-point number <span class="math-inline">\(x\)</span> (floor function).</td></tr><tr><td><code>ceiling</code> <span class="math-inline">\(x\)</span></td><td>Returns the smallest integer greater than or equal to floating-point number <span class="math-inline">\(x\)</span> (ceiling function).</td></tr><tr><td><code>truncate</code> <span class="math-inline">\(x\)</span></td><td>Returns the integer obtained by truncating the fractional part of floating-point number <span class="math-inline">\(x\)</span>.</td></tr></tbody></table></div>
+</div>
+<figcaption>List of arithmetic functions</figcaption>
+<p><span id="ref-tab-arithFunctions" class="anchor"></span></p>
+</figure>
+<p>Mathematical functions for floating-point numbers are also provided (Table&nbsp;<a class="reference" href="etc.html#ref-tab-mathFunctions">7.6.1</a>).</p>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>Function name</td><td>Description</td></tr><tr><td><code>f.sqrt</code> <span class="math-inline">\(x\)</span></td><td>Returns the square root of floating-point number <span class="math-inline">\(x\)</span>.</td></tr><tr><td><code>f.exp</code> <span class="math-inline">\(x\)</span></td><td>Returns <span class="math-inline">\(e\)</span> (the base of natural logarithms) raised to the power of <span class="math-inline">\(x\)</span>.</td></tr><tr><td><code>f.log</code> <span class="math-inline">\(x\)</span></td><td>Returns the natural logarithm of floating-point number <span class="math-inline">\(x\)</span>.</td></tr><tr><td><code>f.sin</code> <span class="math-inline">\(x\)</span></td><td>Returns the sine of <span class="math-inline">\(x\)</span>.</td></tr><tr><td><code>f.cos</code> <span class="math-inline">\(x\)</span></td><td>Returns the cosine of <span class="math-inline">\(x\)</span>.</td></tr><tr><td><code>f.tan</code> <span class="math-inline">\(x\)</span></td><td>Returns the tangent of <span class="math-inline">\(x\)</span>.</td></tr><tr><td><code>f.asin</code> <span class="math-inline">\(x\)</span></td><td>Returns the arcsine of <span class="math-inline">\(x\)</span>.</td></tr><tr><td><code>f.acos</code> <span class="math-inline">\(x\)</span></td><td>Returns the arccosine of <span class="math-inline">\(x\)</span>.</td></tr><tr><td><code>f.atan</code> <span class="math-inline">\(x\)</span></td><td>Returns the arctangent of <span class="math-inline">\(x\)</span>.</td></tr><tr><td><code>f.sinh</code> <span class="math-inline">\(x\)</span></td><td>Returns the hyperbolic sine of <span class="math-inline">\(x\)</span>.</td></tr><tr><td><code>f.cosh</code> <span class="math-inline">\(x\)</span></td><td>Returns the hyperbolic cosine of <span class="math-inline">\(x\)</span>.</td></tr><tr><td><code>f.tanh</code> <span class="math-inline">\(x\)</span></td><td>Returns the hyperbolic tangent of <span class="math-inline">\(x\)</span>.</td></tr><tr><td><code>f.asinh</code> <span class="math-inline">\(x\)</span></td><td>Returns the inverse hyperbolic sine of <span class="math-inline">\(x\)</span>.</td></tr><tr><td><code>f.acosh</code> <span class="math-inline">\(x\)</span></td><td>Returns the inverse hyperbolic cosine of <span class="math-inline">\(x\)</span>.</td></tr><tr><td><code>f.atanh</code> <span class="math-inline">\(x\)</span></td><td>Returns the inverse hyperbolic tangent of <span class="math-inline">\(x\)</span>.</td></tr></tbody></table></div>
+</div>
+<figcaption>List of mathematical functions</figcaption>
+<p><span id="ref-tab-mathFunctions" class="anchor"></span></p>
+</figure>
+<p>The mathematical constants pi <code>f.pi</code> (<span class="math-inline">\(\pi \approx 3.14159\)</span>) and Euler&#x27;s number <code>f.e</code> (<span class="math-inline">\(e \approx 2.71828\)</span>) are defined.</p>
+<h3><span class="heading-number">7.6.2</span>String Manipulation Functions</h3>
+<p>Built-in functions for manipulating strings are provided (Table&nbsp;<a class="reference" href="etc.html#ref-tab-stringFunctions">7.6.2</a>).</p>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>Function name</td><td>Description</td></tr><tr><td><code>pack</code> <span class="math-inline">\(cs\)</span></td><td>Converts a list of characters <span class="math-inline">\(cs\)</span> to a string.</td></tr><tr><td><code>unpack</code> <span class="math-inline">\(s\)</span></td><td>Converts a string <span class="math-inline">\(s\)</span> to a list of characters.</td></tr><tr><td><code>unconsString</code> <span class="math-inline">\(s\)</span></td><td>Returns a tuple of the first character and the remaining string of string <span class="math-inline">\(s\)</span>.</td></tr><tr><td><code>lengthString</code> <span class="math-inline">\(s\)</span></td><td>Returns the length (number of characters) of string <span class="math-inline">\(s\)</span>.</td></tr><tr><td><code>appendString</code> <span class="math-inline">\(s_1\)</span> <span class="math-inline">\(s_2\)</span></td><td>Returns the string obtained by concatenating strings <span class="math-inline">\(s_1\)</span> and <span class="math-inline">\(s_2\)</span>.</td></tr><tr><td><code>splitString</code> <span class="math-inline">\(pat\)</span> <span class="math-inline">\(s\)</span></td><td>Splits string <span class="math-inline">\(s\)</span> by the pattern <span class="math-inline">\(pat\)</span> and returns a list of substrings.</td></tr><tr><td><code>regex</code> <span class="math-inline">\(pat\)</span> <span class="math-inline">\(s\)</span></td><td>Matches string <span class="math-inline">\(s\)</span> against the regular expression <span class="math-inline">\(pat\)</span> and returns a triple of the pre-match, match, and post-match parts.</td></tr><tr><td><code>regexCg</code> <span class="math-inline">\(pat\)</span> <span class="math-inline">\(s\)</span></td><td>Matches string <span class="math-inline">\(s\)</span> against the regular expression <span class="math-inline">\(pat\)</span> and returns the result including capture groups.</td></tr><tr><td><code>read</code> <span class="math-inline">\(s\)</span></td><td>Parses string <span class="math-inline">\(s\)</span> as an Egison expression, evaluates it, and returns the result.</td></tr><tr><td><code>readTsv</code> <span class="math-inline">\(s\)</span></td><td>Parses tab-separated string <span class="math-inline">\(s\)</span>, evaluates it, and returns the result.</td></tr><tr><td><code>show</code> <span class="math-inline">\(x\)</span></td><td>Converts value <span class="math-inline">\(x\)</span> to its string representation.</td></tr><tr><td><code>showTsv</code> <span class="math-inline">\(x\)</span></td><td>Converts value <span class="math-inline">\(x\)</span> to a tab-separated format string.</td></tr></tbody></table></div>
+</div>
+<figcaption>List of string manipulation functions</figcaption>
+<p><span id="ref-tab-stringFunctions" class="anchor"></span></p>
+</figure>
+<h3><span class="heading-number">7.6.3</span>Type Conversion and Type Checking Functions</h3>
+<p>Built-in functions for type conversion and type checking are provided (Table&nbsp;<a class="reference" href="etc.html#ref-tab-typeFunctions">7.6.3</a>).</p>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>Function name</td><td>Description</td></tr><tr><td><code>itof</code> <span class="math-inline">\(n\)</span></td><td>Converts integer <span class="math-inline">\(n\)</span> to a floating-point number.</td></tr><tr><td><code>rtof</code> <span class="math-inline">\(r\)</span></td><td>Converts rational number <span class="math-inline">\(r\)</span> to a floating-point number.</td></tr><tr><td><code>ctoi</code> <span class="math-inline">\(c\)</span></td><td>Converts character <span class="math-inline">\(c\)</span> to its Unicode code point (integer).</td></tr><tr><td><code>itoc</code> <span class="math-inline">\(n\)</span></td><td>Converts integer <span class="math-inline">\(n\)</span> to the corresponding Unicode character.</td></tr><tr><td><code>isInteger</code> <span class="math-inline">\(x\)</span></td><td>Returns <code>True</code> if value <span class="math-inline">\(x\)</span> is an integer, <code>False</code> otherwise.</td></tr><tr><td><code>isRational</code> <span class="math-inline">\(x\)</span></td><td>Returns <code>True</code> if value <span class="math-inline">\(x\)</span> is a rational number, <code>False</code> otherwise.</td></tr></tbody></table></div>
+</div>
+<figcaption>List of type conversion and type checking functions</figcaption>
+<p><span id="ref-tab-typeFunctions" class="anchor"></span></p>
+</figure>
+<p>Note: In Egison, <code>MathValue</code>, <code>Integer</code>, and <code>Rational</code> are identified with each other, so <code>isInteger</code> and <code>isRational</code> are used to determine properties of numerical values in the computer algebra system.</p>
+<h3><span class="heading-number">7.6.4</span>Tensor-Related Functions</h3>
+<p>Built-in functions for obtaining tensor information are provided (Table&nbsp;<a class="reference" href="etc.html#ref-tab-tensorFunctions">7.6.4</a>).</p>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>Function name</td><td>Description</td></tr><tr><td><code>tensorShape</code> <span class="math-inline">\(t\)</span></td><td>Returns the shape (size of each dimension) of tensor <span class="math-inline">\(t\)</span> as a list.</td></tr><tr><td><code>tensorToList</code> <span class="math-inline">\(t\)</span></td><td>Converts the elements of tensor <span class="math-inline">\(t\)</span> to a list.</td></tr><tr><td><code>dfOrder</code> <span class="math-inline">\(t\)</span></td><td>Returns the order of the differential form <span class="math-inline">\(t\)</span>.</td></tr><tr><td><code>addSubscript</code> <span class="math-inline">\(sym\)</span> <span class="math-inline">\(sub\)</span></td><td>Adds the subscript <span class="math-inline">\(sub\)</span> to the symbol <span class="math-inline">\(sym\)</span>.</td></tr><tr><td><code>addSuperscript</code> <span class="math-inline">\(sym\)</span> <span class="math-inline">\(sup\)</span></td><td>Adds the superscript <span class="math-inline">\(sup\)</span> to the symbol <span class="math-inline">\(sym\)</span>.</td></tr></tbody></table></div>
+</div>
+<figcaption>List of tensor-related functions</figcaption>
+<p><span id="ref-tab-tensorFunctions" class="anchor"></span></p>
+</figure>
+<h3><span class="heading-number">7.6.5</span>Debugging and Testing Functions</h3>
+<p>Built-in functions for program debugging and testing are provided (Table&nbsp;<a class="reference" href="etc.html#ref-tab-debugFunctions">7.6.5</a>).</p>
+<figure class="table-figure">
+<div class="center">
+<div class="table-scroll"><table><tbody><tr><td>Function name</td><td>Description</td></tr><tr><td><code>assert</code> <span class="math-inline">\(label\)</span> <span class="math-inline">\(test\)</span></td><td>Raises an assertion error containing the label <span class="math-inline">\(label\)</span> if the test <span class="math-inline">\(test\)</span> is not <code>True</code>.</td></tr><tr><td><code>assertEqual</code> <span class="math-inline">\(label\)</span> <span class="math-inline">\(actual\)</span> <span class="math-inline">\(expected\)</span></td><td>Raises an assertion error containing the label <span class="math-inline">\(label\)</span> if values <span class="math-inline">\(actual\)</span> and <span class="math-inline">\(expected\)</span> are not equal.</td></tr></tbody></table></div>
+</div>
+<figcaption>List of debugging and testing functions</figcaption>
+<p><span id="ref-tab-debugFunctions" class="anchor"></span></p>
+</figure>
+<h2><span class="heading-number">7.7</span>The <code>seq</code> Expression</h2>
+<p>The <code>seq</code> expression is used when you want to partially evaluate a program strictly rather than lazily. While lazy evaluation is convenient, it can sometimes waste memory and be inefficient. Partially evaluating a program strictly can improve efficiency. The <code>seq</code> expression strictly evaluates its first argument and then evaluates its second argument. For example, it is known that <code>foldl</code> can be made more efficient by using the <code>seq</code> expression as follows. The type annotation indicates that it takes a folding function, an initial value, and a list, and returns the accumulated result.</p>
+<pre class="listing"><code class="language-egison">def foldl {a, b} (fn: b -&gt; a -&gt; b) (init: b) (ls: [a]) : b :=
+  match ls as list something with
+    | [] -&gt; init
+    | $x :: $xs -&gt;
+      let z := fn init x
+        in seq z (foldl fn z xs)</code></pre>
+  </main>
+  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+</body>
+</html>

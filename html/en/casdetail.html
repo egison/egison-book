@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>The Simplification System in Detail — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="prev" href="mexpr.html">← Previous</a><a rel="next" href="tensor.html">Next →</a><a class="language" href="../ja/casdetail.html">日本語</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">11</span>The Simplification System in Detail</h1>
+<p><span id="ref-casdetail" class="anchor"></span></p>
+<p>This chapter explains in detail how simplification in Egison&#x27;s computer algebra system cooperates with the type system. Chapter&nbsp;<a class="reference" href="cas.html#ref-cas">9</a> introduced simplification as a built-in facility, but the simplification system is in fact assembled from several orthogonal, user-extensible mechanisms. This chapter walks through (1) declaring simplification rules, (2) generating rule sets mechanically by declaring ideals, (3) declaring mathematical functions, (4) selecting canonical forms with type annotations, (5) the promotion tower of types and its extension, and (6) quotient types, which live outside the tower.</p>
+<h2><span class="heading-number">11.1</span>Declaring Simplification Rules</h2>
+<p><span id="ref-cas-rule" class="anchor"></span></p>
+<p>As we saw in Section&nbsp;<a class="reference" href="cas.html#ref-cas-simplify">9.3</a> of Chapter&nbsp;<a class="reference" href="cas.html#ref-cas">9</a>, built-in simplification rules such as <span class="math-inline">\(i^2 = -1\)</span> are not embedded in the Haskell code of the interpreter; they are declared in the standard library with the <code>declare rule</code> statement. Users can declare new simplification rules with exactly the same <code>declare rule</code> statement. In other words, built-in rules and user rules rest on the same mechanism.</p>
+<p>A <code>declare rule</code> statement is written in the following form.</p>
+<pre class="listing"><code class="language-egison">declare rule (auto | name) (term | poly | frac) lhs = rhs</code></pre>
+<p>The first specifier determines how the rule is applied. A rule declared with <code>auto</code> (an automatic rule) is incorporated into the normalization procedure: it is applied automatically, repeatedly until it no longer applies, on every arithmetic operation (<code>+</code>, <code>*</code>, <code>/</code>, and so on) on mathematical expressions. Rules declared with a rule name (named rules) are described at the end of this section. The second specifier determines against which structure of an expression the left-hand side is matched. A <code>term</code> rule is applied to each term (monomial), a <code>poly</code> rule to each (sub-)polynomial, and a <code>frac</code> rule to each (sub-)fraction. In every case, the rule is also applied to subexpressions such as the arguments of function applications. The left-hand side can be a literal expression, or a pattern for mathematical expressions (Section&nbsp;<a class="reference" href="mexpr.html#ref-mexpr-pattern">10.6</a>) containing pattern variables <code>$x</code> and value patterns <code>#x</code>.</p>
+<p>For example, the simplification of <code>sqrt</code> we saw in Section&nbsp;<a class="reference" href="cas.html#ref-cas-simplify">9.3</a> of Chapter&nbsp;<a class="reference" href="cas.html#ref-cas">9</a> (such as <span class="math-inline">\(\sqrt{x} \cdot \sqrt{x} = x\)</span>) is declared in the standard library as a rule that uses a pattern variable <code>$x</code> for the argument of <code>sqrt</code>. Conceptually, it is the following rule.</p>
+<pre class="listing"><code class="language-egison">declare rule auto term (sqrt $x)^2 = x</code></pre>
+<p>Because the left-hand side&#x27;s <code>$x</code> is a pattern variable, it matches whatever the argument of <code>sqrt</code> is, whether a concrete number or a symbol. So this single rule makes, for example, all of the following hold.</p>
+<pre class="listing"><code class="language-egison">declare symbol a
+
+(sqrt a)^2 -- a
+(1 + sqrt 2)^2 -- 2 * &#x27;sqrt 2 + 3</code></pre>
+<p>The actual library rule is a little more involved so that it handles not only <span class="math-inline">\((\sqrt{x})^2\)</span> but general powers <span class="math-inline">\((\sqrt{x})^n\)</span>; its essence, however, is the single pattern-variable rule above.</p>
+<p>The built-in simplification rules are declared with the same <code>declare rule</code> statement in the standard library file <code>lib/math/normalize.egi</code>. For example, the following is a part of the declarations realizing the simplifications introduced in Section&nbsp;<a class="reference" href="cas.html#ref-cas-simplify">9.3</a> of Chapter&nbsp;<a class="reference" href="cas.html#ref-cas">9</a>.</p>
+<pre class="listing"><code class="language-egison">declare rule auto term i^2 = -1
+declare rule auto term log (exp $n) = n
+declare rule auto term (exp $x)^$n = exp (n * x)</code></pre>
+<p>The first rule, <code>i^2 = -1</code>, is a rule about the imaginary unit <span class="math-inline">\(i\)</span>. Mathematically, it introduces the algebraic extension <span class="math-inline">\(\mathbb{Z}[i]\)</span>, i.e., the quotient <span class="math-inline">\(\mathbb{Z}[X]/(X^2+1)\)</span> of a polynomial ring, on the symbol <span class="math-inline">\(i\)</span>. Simplification rules in Egison are global, but since symbols are globally unique, a rule can only act on expressions in which its symbol occurs. In other words, the uniqueness of symbols plays the role of scoping. The dual numbers (with <span class="math-inline">\(\varepsilon^2 = 0\)</span>) and roots of unity are algebraic extensions introduced on a symbol by the same pattern. The implementation also indexes simplification rules by the symbols occurring in their left-hand sides, and a rule is not even tried on expressions that do not contain those symbols. Therefore, declaring a rule hardly slows down computations unrelated to it. As in the second and third rules, rules whose left-hand sides contain pattern variables can also be declared.</p>
+<p>A named rule, declared with a rule name, is not applied automatically; it is applied to an expression <code>e</code> only where one writes <code>simplify e using name</code>. For example, the addition formula for sine is a directional equation: applied from left to right it expands an expression, and applied from right to left it contracts one. Making such an equation an automatic rule would trigger the expansion in unintended places. Declaring it as a named rule instead lets us apply it explicitly, exactly where we want the expansion.</p>
+<pre class="listing"><code class="language-egison">declare symbol a, b
+declare rule sinAdd term sin ($x + $y) = sin x * cos y + cos x * sin y
+
+sin (a + b) -- &#x27;sin (b + a)
+simplify (sin (a + b)) using sinAdd
+-- (&#x27;cos b) * (&#x27;sin a) + (&#x27;cos a) * (&#x27;sin b)</code></pre>
+<h2><span class="heading-number">11.2</span>Declaring Ideals</h2>
+<p><span id="ref-casdetail-ideal" class="anchor"></span></p>
+<p>As we saw in the previous section, declaring a simplification rule such as <span class="math-inline">\(i^2 = -1\)</span> amounts to introducing an algebraic extension — a quotient of a polynomial ring by an ideal — on top of a symbol. Pushing this view further, the rule set itself can be generated mechanically from the generators of the ideal. This section introduces the <code>declare ideal</code> statement and the Gröbner-basis library functions underneath it.</p>
+<p>Hand-written rules have a completeness problem. Introduce symbols <code>s2</code>, <code>s3</code>, <code>s6</code> standing for <span class="math-inline">\(\sqrt{2}\)</span>, <span class="math-inline">\(\sqrt{3}\)</span>, <span class="math-inline">\(\sqrt{6}\)</span>; the relations evident from the definitions are the three <span class="math-inline">\(s_2^2 = 2\)</span>, <span class="math-inline">\(s_3^2 = 3\)</span>, and <span class="math-inline">\(s_6 = s_2 s_3\)</span>. Declaring just these three as rules, however, leaves <span class="math-inline">\(s_2 s_6\)</span> (which is <span class="math-inline">\(\sqrt{2}\cdot\sqrt{6} = 2\sqrt{3}\)</span>) unreduced. Writing every needed rule by hand is hard, and even when it succeeds, termination and confluence — reaching the same normal form regardless of application order — can only be checked by inspection.</p>
+<p>Gröbner basis theory gives the mathematical answer to this problem. From a set of generators one can compute a complete rule set (the reduced Gröbner basis) for which normal forms modulo the ideal are unique, and the termination and confluence of the resulting rules hold as theorems. In Egison, Buchberger&#x27;s algorithm is implemented as the library function <code>groebnerBasis</code>, written in Egison itself with pattern matching (<code>lib/math/algebra/groebner.egi</code>).</p>
+<pre class="listing"><code class="language-egison">declare symbol s2, s3, s6
+
+groebnerBasis [s2^2 - 2, s3^2 - 3, s6 - s2 * s3]
+-- [s2^2 - 2, s2 s3 - s6, s2 s6 - 2 * s3,
+--  s3^2 - 3, s3 s6 - 3 * s2, s6^2 - 6]</code></pre>
+<p>The user supplied the three obvious relations; completion yields the six rules that form the multiplication table of <span class="math-inline">\(\{1, \sqrt{2}, \sqrt{3}, \sqrt{6}\}\)</span>. Each element reads as a rewrite rule from its leading monomial to the (negated) remaining terms, such as <span class="math-inline">\(s_2 s_6 \to 2 s_3\)</span>.</p>
+<p>A computed basis can be applied to an expression explicitly with the function <code>polyNF</code>. <code>polyNF gb e</code> returns the normal form of <code>e</code> modulo the ideal. In particular, a result of <code>0</code> means that <code>e</code> equals zero as a consequence of the relations — membership in the ideal.</p>
+<pre class="listing"><code class="language-egison">def gb := groebnerBasis [s2^2 - 2, s3^2 - 3, s6 - s2 * s3]
+
+polyNF gb ((s2 + s3)^2) -- 2 * s6 + 5
+polyNF gb (s2 * s3 - s6) -- 0</code></pre>
+<p>Note that <code>polyNF</code> uses the polynomials it is given as the basis as-is (it does not complete them); to get unique normal forms, pass a basis that went through <code>groebnerBasis</code>, as above.</p>
+<p>To apply the rule set all the time, use the <code>declare ideal</code> statement. The Gröbner basis is computed from the generators once, at declaration time, and each element is registered as a term-level auto rule. From then on the rules apply automatically on every arithmetic operation, like ordinary simplification rules.</p>
+<pre class="listing"><code class="language-egison">declare symbol s2, s3, s6
+
+declare ideal [s2^2 - 2, s3^2 - 3, s6 - s2 * s3]
+
+s2 * s6 -- 2 * s3
+(s2 + s3)^2 -- 2 * s6 + 5
+(s2 + s3) * (s2 - s3) -- -1</code></pre>
+<p>In fact, the standard library&#x27;s rules for the primitive cube root of unity <span class="math-inline">\(w\)</span> have been replaced: instead of the two hand-written rules (<span class="math-inline">\(w^3 = 1\)</span> and <span class="math-inline">\(w^2 = -1-w\)</span>), the library now contains the single declaration <code>declare ideal [w^2 + w + 1]</code>. The generated rule <span class="math-inline">\(w^2 \to -1-w\)</span> also derives the reduction of <span class="math-inline">\(w^3\)</span> in two steps, so the completeness of the rule set becomes a theorem instead of a convention.</p>
+<p>Compound atoms work as-is. Since <code>sin θ</code> and <code>cos θ</code> are factors (atoms) of the mathematical expression data (Section&nbsp;<a class="reference" href="mexpr.html#ref-mexpr-expr">10.1</a>), the Pythagorean relation can be declared without any change of variables.</p>
+<pre class="listing"><code class="language-egison">declare symbol `$\theta$`
+
+declare ideal [(sin `$\theta$`)^2 + (cos `$\theta$`)^2 - 1]
+
+(sin `$\theta$`)^4 - (cos `$\theta$`)^4 -- 2 * &#x27;sin `$\theta$`^2 - 1
+(sin `$\theta$`)^2 + 2 * (cos `$\theta$`)^2 -- - &#x27;sin `$\theta$`^2 + 2</code></pre>
+<p>Which atoms survive in normal forms is determined by an ordering: symbols follow their <code>declare symbol</code> declaration order, and compound atoms follow their order of appearance in the generators, with earlier atoms surviving. In the example above, <code>sin θ</code> was written first in the generator, so the rules are generated in the direction that keeps <span class="math-inline">\(\sin\)</span> and eliminates even powers of <span class="math-inline">\(\cos\)</span>.</p>
+<p><code>declare ideal</code> and <code>polyNF</code> divide the labor between applying always and applying once. An oriented normal form is not always what one wants, and applying heavy relations on every operation can slow the whole computation down. For a relation used only as a final check — such as the defining polynomial of a coordinate — applying it once at the point of comparison with <code>polyNF</code> is the better fit.</p>
+<h2><span class="heading-number">11.3</span>Declaring Mathematical Functions</h2>
+<p><span id="ref-casdetail-mathfunc" class="anchor"></span></p>
+<p>Mathematical functions such as <code>sqrt</code> and <code>exp</code>, introduced in Section&nbsp;<a class="reference" href="cas.html#ref-cas-symbol2">9.2</a>, are also defined with dedicated declaration statements. The <code>declare mathfunc</code> statement declares a mathematical function whose applications remain as symbolic values. An application of a function that has only been declared is not simplified; it simply becomes a symbolic value. Combining it with the <code>declare apply</code> statement defines a simplification that is executed once, at application time. For example, the logarithm function <code>log</code> is declared in the standard library as follows.</p>
+<pre class="listing"><code class="language-egison">declare mathfunc log
+declare apply log x :=
+  match x as mathValue with
+    | #1 -&gt; 0
+    | #e -&gt; 1
+    | _ -&gt; &#x27;log x</code></pre>
+<p>The body of a <code>declare apply</code> can be an arbitrary Egison expression; for inputs that cannot be simplified, it returns a symbolic value such as <code>&#x27;log x</code> using the single quote (Section&nbsp;<a class="reference" href="mexpr.html#ref-mexpr-squote">10.3</a>). The simplification <span class="math-inline">\(\sqrt{8} \rightarrow 2\sqrt{2}\)</span> we saw in Section&nbsp;<a class="reference" href="cas.html#ref-cas-symbol2">9.2</a> is also defined by the <code>declare apply</code> of <code>sqrt</code>.</p>
+<p>While the simplification of a <code>declare apply</code> runs only once at function application time, the simplification rules of <code>declare rule</code> are applied repeatedly, until convergence, on every normalization. The division of labor is as follows: algorithmic simplifications that inspect the argument&#x27;s value and compute, such as <span class="math-inline">\(\sqrt{8} \rightarrow 2\sqrt{2}\)</span>, are defined with <code>declare apply</code>, while rewrites on the shape of expressions, such as <span class="math-inline">\(i^2 = -1\)</span>, are defined with <code>declare rule</code>.</p>
+<p>Furthermore, the <code>declare derivative</code> statement extends the differentiation operator <code>d/d</code> (Section&nbsp;<a class="reference" href="cas.html#ref-cas-derivative">9.5</a>) to new mathematical functions. The built-in differentiation formulas of the standard library are also declared with this statement.</p>
+<pre class="listing"><code class="language-egison">declare derivative sin = cos
+declare derivative cos = \z -&gt; - sin z
+declare derivative exp = exp
+declare derivative log = \z -&gt; 1 / z
+declare derivative sqrt = \z -&gt; 1 / (2 * sqrt z)</code></pre>
+<p>Combining these declarations, a new mathematical function can be added to the computer algebra system in a few lines. For example, the hyperbolic secant function <span class="math-inline">\(\mathrm{sech}\)</span> can be introduced as follows. The derivative of composite functions (the chain rule) is handled by <code>d/d</code> itself, so only the shape of the derivative needs to be declared.</p>
+<pre class="listing"><code class="language-egison">declare symbol x
+
+declare mathfunc sech
+declare apply sech x :=
+  match x as mathValue with
+    | #0 -&gt; 1
+    | _ -&gt; &#x27;sech x
+declare derivative sech = \z -&gt; - sech z * tanh z
+
+sech 0 -- 1
+sech x -- &#x27;sech x
+d/d (sech (x^2)) x -- -2 * (&#x27;sech (x^2)) * (&#x27;tanh (x^2)) * x</code></pre>
+<h2><span class="heading-number">11.4</span>Selecting Canonical Forms with Types</h2>
+<p><span id="ref-cas-tower" class="anchor"></span></p>
+<p>The same mathematical expression can be represented by several different data structures. For example,</p>
+<div class="math-display">\[(2+3i) + (1-i)x + 4x^2\]</div>
+<p>can be held as a flat polynomial over the atoms <span class="math-inline">\(\{i, x\}\)</span>, or as a polynomial in <span class="math-inline">\(x\)</span> whose coefficients are Gaussian integers in <span class="math-inline">\(\mathbb{Z}[i]\)</span>. Which canonical form is appropriate depends on what one intends to do next (differentiate with respect to <span class="math-inline">\(x\)</span>, or exploit properties of <span class="math-inline">\(\mathbb{Z}[i]\)</span>), so it cannot be determined from the value alone. In Egison, <strong>type annotations select the canonical form</strong>.</p>
+<pre class="listing"><code class="language-egison">declare symbol i, x
+
+def v := (2 + 3 * i) + (1 - i) * x + 4 * x^2
+
+def flat : Poly Integer [i, x] := v
+inspect flat
+-- &quot;4 * x^2 - i x + x + 3 * i + 2 : Poly Integer [i, x]&quot;
+
+def byX : Poly (Poly Integer [i]) [x] := v
+inspect byX
+-- &quot;4 * x^2 + (- i + 1) * x + 3 * i + 2 : Poly (Poly Integer [i]) [x]&quot;</code></pre>
+<p>The type <code>Poly Integer [i, x]</code> denotes integer-coefficient polynomials over the atom set <span class="math-inline">\(\{i, x\}\)</span>. Nesting a polynomial type in the coefficient position, as in <code>Poly (Poly Integer [i]) [x]</code>, denotes the canonical form “polynomials in <span class="math-inline">\(x\)</span> with coefficients in <span class="math-inline">\(\mathbb{Z}[i]\)</span>”.</p>
+<p>An atom set can be written by naming its symbols explicitly, as in <code>[i, x]</code> or <code>[x]</code> (a closed atom set), or left open by writing <code>[..]</code>. An open atom set <code>[..]</code> means “read the atoms off the value”: the type does not fix which symbols become the polynomial&#x27;s variables. The outer atom set of a nested polynomial type can likewise be <code>[..]</code> (fixing the inner coefficients to <span class="math-inline">\(\mathbb{Z}[i]\)</span> while leaving the outer variables to the value).</p>
+<pre class="listing"><code class="language-egison">def byX3 : Poly (Poly Integer [i]) [..] := v
+inspect byX3
+-- &quot;4 * x^2 + (- i + 1) * x + 3 * i + 2 : Poly (Poly Integer [i]) [x]&quot;</code></pre>
+<p>Here the outer atom set is filled with the <code>x</code> occurring in the value <code>v</code>, so the observed type is <code>Poly (Poly Integer [i]) [x]</code> (it would become <code>[x, y]</code> for a value containing <span class="math-inline">\(x\)</span> and <span class="math-inline">\(y\)</span>). The promotion tower of the next section is likewise written with open atom sets such as <code>Poly Integer [..]</code>, to denote general polynomials not tied to specific symbols.</p>
+<p>Conversely, the inner atom set can also be left open. Fixing only the outer set means “keep exactly the named symbols as the polynomial&#x27;s variables, and fold every other atom into the coefficients”.</p>
+<pre class="listing"><code class="language-egison">def byI : Poly (Poly Integer [..]) [i] := v
+inspect byI
+-- &quot;(- x + 3) * i + 4 * x^2 + x + 2 : Poly (Poly Integer [x]) [i]&quot;</code></pre>
+<p>Here only <span class="math-inline">\(i\)</span> remains as the outer variable, and the same value is now regrouped as the polynomial <span class="math-inline">\((3 - x)i + (4x^2 + x + 2)\)</span> in <span class="math-inline">\(i\)</span> with coefficients in <span class="math-inline">\(\mathbb{Z}[x]\)</span>. However, <code>[..]</code> may appear <strong>at most once</strong> within one nested polynomial type (a tower). With a single open atom set, every atom&#x27;s destination is determined uniquely (atoms listed in a closed set go to that level; all remaining atoms go to the open level), whereas opening two positions (as in <code>Poly (Poly Integer [..]) [..]</code>) would make the destination of the remaining atoms ambiguous, so such a type is rejected as a type error.</p>
+<p>A type annotation does more than classify the value: it reorganizes the value&#x27;s internal structure into the shape of the type (reshape). Reshaping never changes the value. Indeed, the difference of the two canonical forms computes to <span class="math-inline">\(0\)</span>.</p>
+<pre class="listing"><code class="language-egison">flat - byX -- 0</code></pre>
+<p>Arithmetic between differently shaped representations simplifies correctly because of the convention that <strong>operations always return results in the default flat form</strong>. Nested canonical forms appear exactly where annotations request them and never propagate silently across operations.</p>
+<p>The <code>inspect</code> used above displays a value together with the type read off the value (its observed type). Frequently used types can be given names with the <code>declare cas-type</code> statement. Aliases are transparent: displayed types use the expanded original form.</p>
+<pre class="listing"><code class="language-egison">declare cas-type GaussianPolyX := Poly (Poly Integer [i]) [x]
+
+def byX2 : GaussianPolyX := v
+inspect byX2
+-- &quot;4 * x^2 + (- i + 1) * x + 3 * i + 2 : Poly (Poly Integer [i]) [x]&quot;</code></pre>
+<h2><span class="heading-number">11.5</span>The Promotion Tower and Its Extension</h2>
+<p><span id="ref-cas-subtype" class="anchor"></span></p>
+<p>The CAS types are ordered by value-preserving embeddings. The backbone of this order is the <em>promotion tower</em>, which turns the algebraic inclusions <span class="math-inline">\(\mathbb{Z} \subset \mathbb{Q} \subset \mathbb{Z}[x] \subset \mathbb{Q}[x] \subset \mathbb{Q}(x)\)</span> directly into a staircase of types.</p>
+<pre class="listing"><code class="language-egison">Integer                        -- integers
+  &lt;: Frac Integer              -- rationals
+  &lt;: Poly Integer [..]         -- integer-coefficient polynomials
+  &lt;: Poly (Frac Integer) [..]  -- rational-coefficient polynomials
+  &lt;: Frac (Poly Integer [..])  -- rational functions
+  &lt;: MathValue                 -- all mathematical expressions</code></pre>
+<p>Each step of the tower is an embedding as a genuine subset; no value ever changes. In addition, atom-set inclusion (<code>Poly Integer [x] &lt;: Poly Integer [x, y]</code>) and embeddings through the coefficient position belong to the order as well. When values of different types are mixed in one operation, they climb the tower and are automatically promoted to the least type containing both (their join).</p>
+<pre class="listing"><code class="language-egison">def p : Poly Integer [x] := x + 1
+def q : Frac Integer := 1 / 2
+
+def r := p + q
+inspect r -- &quot;x + 3 / 2 : Poly (Frac Integer) [x]&quot;</code></pre>
+<p>When the atom sets differ, values are promoted to the type over the union of the atom sets.</p>
+<pre class="listing"><code class="language-egison">declare cas-type GaussianInt := Poly Integer [i]
+declare cas-type Zsqrt2 := Poly Integer [sqrt2]
+
+def a : GaussianInt := 1 + i
+def b : Zsqrt2 := 1 + sqrt2
+
+def c := a + b
+inspect c -- &quot;sqrt2 + i + 2 : Poly Integer [i, sqrt2]&quot;</code></pre>
+<p>The sum of a <span class="math-inline">\(\mathbb{Z}[i]\)</span> value and a <span class="math-inline">\(\mathbb{Z}[\sqrt{2}]\)</span> value lands in <span class="math-inline">\(\mathbb{Z}[i, \sqrt{2}]\)</span> without any annotation.</p>
+<p>The tower shown so far is built in, but it is not fixed: <strong>users can extend the tower</strong>. The <code>declare cas-type</code> statement of the previous section names canonical forms, and <code>declare cas-subtype</code> adds new edges (embeddings) to the tower. For example, the built-in order deliberately does not relate the flat form (<code>Poly Integer [i, x]</code>) and the nested form (<code>Poly (Poly Integer [i]) [x]</code>) of the previous section. They are different canonical forms of the same set of values, and which one to promote to is the user&#x27;s choice—and precisely this choice is the information a user writes into the tower.</p>
+<pre class="listing"><code class="language-egison">declare cas-subtype Poly Integer [i, x] &lt;: Poly (Poly Integer [i]) [x]</code></pre>
+<p>After this declaration, operations mixing the flat and the nested form promote to the nested form.</p>
+<p>So that arbitrary edges cannot break the tower, every declared edge is checked to keep the join of every pair of types unique over the whole order (the join-semilattice property). A declaration that would break uniqueness is rejected together with a suggested <em>completing edge</em> to declare first.</p>
+<pre class="listing"><code class="language-egison">declare cas-subtype Poly Integer [x] &lt;: Poly Integer [i, x]
+-- Warning: this edge is already derivable (redundant edge);
+--   its endpoints are still registered as nodes for the check
+
+declare cas-subtype Poly Integer [i] &lt;: Poly (Poly Integer [i]) [x]
+-- Error: join would become ambiguous (D1 semilattice check).
+--   pair (Poly Integer [i], Poly Integer [x]) would get
+--   minimal upper bounds
+--   {Poly Integer [i, x], Poly (Poly Integer [i]) [x]}
+--   hint: declare the completing edge first:
+--     declare cas-subtype Poly Integer [i, x]
+--       &lt;: Poly (Poly Integer [i]) [x]</code></pre>
+<p>Placing <span class="math-inline">\(\mathbb{Z}[i]\)</span> inside the nested form would split the common upper bounds of <span class="math-inline">\(\mathbb{Z}[i]\)</span> and <span class="math-inline">\(\mathbb{Z}[x]\)</span> into two—the flat and the nested form—so the declaration is rejected. The suggested completing edge is always a mathematically valid embedding (the flat form regroups into the nested one), and declaring it first makes the original edge acceptable. In this way joins remain unique over the extended tower, and implicit promotion stays deterministic. Note that the check runs over the types that have appeared in declarations so far (the redundant edge on the first line above is written to register <code>Poly Integer [x]</code> for the check).</p>
+<h2><span class="heading-number">11.6</span>Quotient Types</h2>
+<p><span id="ref-cas-quotient" class="anchor"></span></p>
+<p>Quotients such as <span class="math-inline">\(\mathbb{Z}/7\mathbb{Z}\)</span> (the world of remainders modulo 7) behave differently from the types so far. <span class="math-inline">\(12\)</span> and <span class="math-inline">\(5\)</span> are different values in <span class="math-inline">\(\mathbb{Z}\)</span> but equal in <span class="math-inline">\(\mathbb{Z}/7\mathbb{Z}\)</span>. Since <strong>equality itself depends on the type</strong>, quotients cannot join the order of value-preserving embeddings of the previous section. In Egison, quotient types are declared outside the order with the <code>declare cas-quotient</code> statement.</p>
+<pre class="listing"><code class="language-egison">declare cas-quotient Mod7 := Integer by (\n -&gt; modulo n 7)
+
+def a : Mod7 := projMod7 5
+def b : Mod7 := projMod7 4
+
+a + b -- 2
+projMod7 12 == projMod7 5 -- True</code></pre>
+<p>The declaration automatically derives the projection <code>projMod7</code> from integers into <code>Mod7</code>, the representative extraction <code>reprMod7</code>, the ring operations, and the equality test. Every operation reduces its representative, so values always stay in the range <span class="math-inline">\(0\)</span> to <span class="math-inline">\(6\)</span>. At declaration time, the system also tests, on sample points, that the reduction function is idempotent and compatible with addition and multiplication (a congruence).</p>
+<p>Mixing a <code>Mod7</code> value with a raw integer (as in <code>a + 10</code>) is a type error. This prevents silently confusing equality in <span class="math-inline">\(\mathbb{Z}\)</span> with equality in <span class="math-inline">\(\mathbb{Z}/7\mathbb{Z}\)</span>; crossing between the two worlds is explicit, via <code>projMod7</code> and <code>reprMod7</code>. Functions can also be defined directly on the quotient. For example, the inverse in <span class="math-inline">\(\mathbb{F}_7\)</span> is one line by Fermat&#x27;s little theorem (<span class="math-inline">\(z^{-1} = z^5\)</span>).</p>
+<pre class="listing"><code class="language-egison">def inv7 (z : Mod7) : Mod7 := z * z * z * z * z
+
+reprMod7 (inv7 (projMod7 3)) -- 5</code></pre>
+<p>The base of a quotient need not be the integers; it can be a polynomial ring. This lets us declare, as a single type, the quotient <span class="math-inline">\(\mathbb{Z}[x]/(x^3)\)</span> that treats <span class="math-inline">\(x^3 = 0\)</span> and drops every term of degree <span class="math-inline">\(3\)</span> or higher — power series truncated below degree <span class="math-inline">\(3\)</span>. The reduction function scans the terms and keeps only those whose <span class="math-inline">\(x\)</span>-degree is below <span class="math-inline">\(3\)</span>.</p>
+<pre class="listing"><code class="language-egison">declare symbol x
+
+-- keep a term only when its x-degree is below 3
+def dropHigh (t : MathValue) : MathValue :=
+  match t as mathValue with
+    | term _ ((#x, $k) :: []) -&gt; if k &lt; 3 then t else 0
+    | _ -&gt; t
+
+declare cas-quotient Series3 := Poly Integer [x] by
+  (\p -&gt; match p as mathValue with
+           | poly $ts -&gt; sum (map dropHigh ts)
+           | _ -&gt; p)
+
+def s : Series3 := projSeries3 (1 + x)
+
+reprSeries3 (s * s) -- x^2 + 2 * x + 1
+reprSeries3 (projSeries3 ((1 + x)^4)) -- 6 * x^2 + 4 * x + 1</code></pre>
+<p>The <span class="math-inline">\(x^3\)</span> and <span class="math-inline">\(x^4\)</span> terms of <span class="math-inline">\((1 + x)^4 = 1 + 4x + 6x^2 + 4x^3 + x^4\)</span> vanish, leaving <span class="math-inline">\(6x^2 + 4x + 1\)</span>. Apart from the base being <span class="math-inline">\(\mathbb{Z}[x]\)</span>, the mechanism is exactly the same as for <code>Mod7</code>. This <span class="math-inline">\(x^3 = 0\)</span> could also be expressed by the global simplification rule <code>declare rule auto term x^3 = 0</code>, but then the truncation would happen everywhere <code>x</code> occurs. Declaring it as a quotient confines the truncation to values of type <code>Series3</code>, while ordinary <code>Poly Integer [x]</code> values keep their terms of degree <span class="math-inline">\(3\)</span> and above. This is the benefit of treating a coefficient-domain quotient as an independent type outside the tower.</p>
+<p>Finally, as an example where the machinery of this chapter comes together, let us build the finite field of order four, <span class="math-inline">\(\mathrm{GF}(4) = \mathbb{F}_2[\alpha]/(\alpha^2+\alpha+1)\)</span>. Two disciplines are needed: counting coefficients modulo <span class="math-inline">\(2\)</span> (a coefficient quotient), and reducing powers of <span class="math-inline">\(\alpha\)</span> by the relation <span class="math-inline">\(\alpha^2 + \alpha + 1 = 0\)</span> (an ideal, Section&nbsp;<a class="reference" href="casdetail.html#ref-casdetail-ideal">11.2</a>). The library function <code>finiteFieldReduce</code> builds the reduce that composes the two, from a prime <span class="math-inline">\(p\)</span> and the generators of the minimal polynomial. The Gröbner basis is computed once, at declaration time, and the field divisions use Fermat inverses (<span class="math-inline">\(p\)</span> must be prime).</p>
+<pre class="listing"><code class="language-egison">declare symbol `$\alpha$`
+
+declare cas-quotient GF4 := MathValue by finiteFieldReduce 2 [`$\alpha$`^2 + `$\alpha$` + 1]
+
+def a : GF4 := projGF4 `$\alpha$`
+def u : GF4 := projGF4 1
+
+reprGF4 ((a + u) * (a + u)) -- `$\alpha$`
+reprGF4 (a * (a + u)) -- 1
+reprGF4 (a + a) -- 0</code></pre>
+<p>The field structure is maintained on every operation: <span class="math-inline">\((\alpha+1)^2 = \alpha\)</span>, <span class="math-inline">\(\alpha(\alpha+1) = 1\)</span> (they are inverses of each other), and <span class="math-inline">\(a + a = 0\)</span> (characteristic <span class="math-inline">\(2\)</span>).</p>
+<p>That the base is <code>MathValue</code> matters. The type contains not just the field scalars but polynomials with <span class="math-inline">\(\mathrm{GF}(4)\)</span> coefficients from the start, because the reduce applies the coefficient discipline inside every term.</p>
+<pre class="listing"><code class="language-egison">declare symbol x, y
+
+reprGF4 (projGF4 (x^2 + 3*x + `$\alpha$`^2)) -- x^2 + x + `$\alpha$` + 1
+
+(projGF4 (`$\alpha$`*x + y)) * (projGF4 (`$\alpha$`*x + y))
+  == projGF4 ((`$\alpha$`*x)^2 + y^2) -- True</code></pre>
+<p>In the first, the coefficient <span class="math-inline">\(3\)</span> reduces to <span class="math-inline">\(1\)</span> and <span class="math-inline">\(\alpha^2\)</span> to <span class="math-inline">\(\alpha + 1\)</span>, inside the terms of the polynomial. The second is the identity <span class="math-inline">\((u+v)^2 = u^2 + v^2\)</span>, which holds exactly in fields of characteristic <span class="math-inline">\(2\)</span>. Two orthogonal mechanisms — coefficient quotients (this section) and rule generation from ideals (Section&nbsp;<a class="reference" href="casdetail.html#ref-casdetail-ideal">11.2</a>) — assemble into a finite field by nothing more than composing reduce functions.</p>
+  </main>
+  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+</body>
+</html>

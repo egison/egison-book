@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>Function Symbols — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="prev" href="tensor.html">← Previous</a><a rel="next" href="diffgeo.html">Next →</a><a class="language" href="../ja/funcsym.html">日本語</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">13</span>Function Symbols</h1>
+<p><span id="ref-funcsym" class="anchor"></span></p>
+<p>A function <span class="math-inline">\(f(x,y)\)</span> whose name is <span class="math-inline">\(f\)</span> and whose arguments are <span class="math-inline">\(x,y\)</span>, but whose body is undefined, is often written on paper by abbreviating <span class="math-inline">\(f\)</span> and omitting the arguments. <em>Function symbols</em> (<em>function symbol</em>) are the feature for introducing this notation of abbreviating arguments of symbolic functions into programming. Although the motivation for function symbols is simple, since they are a language feature unique to Egison, we dedicate an entire chapter to introducing them, including their implementation.</p>
+<h2><span class="heading-number">13.1</span>Basic Usage of Function Symbols</h2>
+<p><span id="ref-funcsym-intro" class="anchor"></span></p>
+<p>Function symbols are particularly powerful when dealing with computations involving differentiation. In the following, we define a function symbol <code>f</code> that takes <code>x</code> and <code>y</code> as arguments. Function symbols are treated as mathematical expressions of type <code>MathValue</code>.</p>
+<pre class="listing"><code class="language-egison">declare symbol x, y, z
+
+def f : MathValue := function (x, y)</code></pre>
+<p>When a function symbol is displayed with <code>show</code>, the argument values are always shown.</p>
+<pre class="listing"><code class="language-egison">show f  -- &quot;f x y&quot;</code></pre>
+<p>As shown below, the function symbol <code>f</code> can be differentiated with respect to <code>x</code> or <code>y</code>. The resulting function from partial differentiation is displayed with the argument number appended using the <code>|</code> symbol. <code>f|1</code> represents “the partial derivative of <span class="math-inline">\(f\)</span> with respect to the first argument,” and <code>f|1|2</code> represents “the result of first differentiating with respect to the first argument and then with respect to the second argument.” “<code>|</code>” is a built-in symbol in Egison, similar to “<code>_</code>” and “<code>~</code>”. Below are display examples of differentiation of function symbols in both standard Egison output and LaTeX format output. “<span class="inline-code"><span class="math-inline">\(\partial\)</span>/<span class="math-inline">\(\partial\)</span></span>” is a library function defined in Egison.</p>
+<pre class="listing"><code class="language-egison">show (`$\partial$`/`$\partial$` f x)          -- &quot;f|1 x y&quot;
+show (`$\partial$`/`$\partial$` (`$\partial$`/`$\partial$` f x) y) -- &quot;f|1|2 x y&quot;</code></pre>
+<p>Since <code>f</code> is a function of <code>x</code> and <code>y</code>, differentiating with respect to <code>z</code> returns <code>0</code> as follows.</p>
+<pre class="listing"><code class="language-egison">show (`$\partial$`/`$\partial$` f z) -- &quot;0&quot;</code></pre>
+<p>In physics calculations, functions with four arguments <span class="math-inline">\(t,x,y,z\)</span> frequently appear. Without a mechanism like function symbols, expressions would become long and difficult to read, so the function symbol mechanism improves program readability and writability.</p>
+<h2><span class="heading-number">13.2</span>Substituting Values into Arguments</h2>
+<p><span id="ref-funcsym-apply" class="anchor"></span></p>
+<p>Values can be substituted into function symbol arguments using the same syntax as ordinary function application. Writing <code>f 0 1</code> yields the expression with <code>0</code> substituted for the first argument and <code>1</code> for the second argument of <code>f</code>. An error occurs if the number of arguments does not match.</p>
+<pre class="listing"><code class="language-egison">show (f 0 1)   -- &quot;f 0 1&quot;
+show (f x 0)   -- &quot;f x 0&quot;</code></pre>
+<p>The result of substituting arguments is also a mathematical expression of type <code>MathValue</code>, so it can be further differentiated. When a concrete numerical value is substituted for an argument, differentiation with respect to that argument yields <code>0</code>.</p>
+<pre class="listing"><code class="language-egison">`$\partial$`/`$\partial$` (f 0 1) x -- 0</code></pre>
+<p>The <code>V.substitute</code> function can also be used to replace arguments.</p>
+<pre class="listing"><code class="language-egison">V.substitute [|x, y|] [|0, 0|] f
+-- f 0 0</code></pre>
+<h2><span class="heading-number">13.3</span>Chain Rule for Composite Functions</h2>
+<p><span id="ref-funcsym-chain" class="anchor"></span></p>
+<p>An important feature of Egison&#x27;s function symbols is their support for the chain rule of composite functions. The reason the <code>function</code> expression takes expressions rather than variable names as formal parameters is to support differentiation of composite functions. As before, let <span class="math-inline">\(g\)</span> be an abbreviation for <span class="math-inline">\(g(x,y)\)</span>. Also assume the relations <span class="math-inline">\(x=r \cos \theta, y= r \sin \theta\)</span>. Then, differentiating <span class="math-inline">\(g\)</span> with respect to <span class="math-inline">\(r\)</span> returns the result <span class="math-inline">\(\frac{\partial g}{\partial x_1} \cos \theta + \frac{\partial g}{\partial x_2} \sin \theta\)</span> by the chain rule.</p>
+<pre class="listing"><code class="language-egison">declare symbol r, `$\theta$`
+
+def x : MathValue := r * cos `$\theta$`
+def y : MathValue := r * sin `$\theta$`
+def g : MathValue := function (x, y)
+
+show g
+-- &quot;g ((&#x27;cos θ) * r) ((&#x27;sin θ) * r)&quot;
+
+show (`$\partial$`/`$\partial$` g r)
+-- &quot;(&#x27;sin θ) * (g|2 ((&#x27;cos θ) * r) ((&#x27;sin θ) * r))
+--    + (&#x27;cos θ) * (g|1 ((&#x27;cos θ) * r) ((&#x27;sin θ) * r))&quot;</code></pre>
+<p>The symbols <code>g|1</code> and <code>g|2</code> appearing in the result of partial differentiation represent <span class="math-inline">\(\frac{\partial g}{\partial x_1}\)</span> and <span class="math-inline">\(\frac{\partial g}{\partial x_2}\)</span> respectively (the argument number is appended using the <code>|</code> symbol). Since the argument values are always included in the display, it is clear at which point the partial derivative coefficients are evaluated.</p>
+<h2><span class="heading-number">13.4</span>Tensors with Function Symbol Components</h2>
+<p><span id="ref-funcsym-tensor" class="anchor"></span></p>
+<p>In mathematics and physics, functions sometimes appear as components of tensors. For example, this occurs when representing vector fields or tensor fields. Egison allows function symbols to be used as components of tensors. As shown in the following example, when a tensor&#x27;s components are function symbols, function symbols are generated with names formed by appending the component position indices to the variable name to which the tensor is bound.</p>
+<pre class="listing"><code class="language-egison">declare symbol x, y, z
+
+def g_i_j : Tensor MathValue := generateTensor
+      (\match as list integer with
+         | [$n, #n] -&gt; function (x, y, z)
+         | _ -&gt; 0)
+      [3, 3]
+
+show (withSymbols [i, j] g_i_j)
+-- &quot;[| [| g_1_1 x y z, 0, 0 |], [| 0, g_2_2 x y z, 0 |], [| 0, 0, g_3_3 x y z |] |]&quot;
+
+show (withSymbols [i, j] (`$\partial$`/`$\partial$` g_i_j x))
+-- &quot;[| [| g_1_1|1 x y z, 0, 0 |], [| 0, g_2_2|1 x y z, 0 |], [| 0, 0, g_3_3|1 x y z |] |]&quot;</code></pre>
+<h2><span class="heading-number">13.5</span>Internal Representation and Pattern Matching of Function Symbols</h2>
+<p><span id="ref-funcsym-data" class="anchor"></span></p>
+<p>Function symbols are internally represented in Egison as factors that have a name and a list of argument values (they are one kind of factor of the mathematical expression data introduced in Section&nbsp;<a class="reference" href="mexpr.html#ref-mexpr-expr">10.1</a>).</p>
+<p>The <code>func</code> pattern constructor can be used to pattern match on function symbols. The first argument of this pattern matches the function name, and the second argument matches the list of argument values.</p>
+<pre class="listing"><code class="language-egison">declare symbol x, y
+def f : MathValue := function (x, y)
+
+match f as mathValue with
+  | func $name $args -&gt; (name, args)
+-- (f, [x, y])</code></pre>
+<p>In the differentiation implementation of the library, the number of arguments is used to extract the partial derivative coefficient for each argument using integer indices. The following is an excerpt of the part of the library (<code>lib/math/analysis/derivative.egi</code>) that differentiates function symbols.</p>
+<pre class="listing"><code class="language-egison">def chainPartialDiffBuiltin (v : MathValue) (dx : MathValue)
+  : MathValue :=
+  match v as mathValue with
+    | func _ $args -&gt;
+       sum (map2 (\s r -&gt; (userRefs v [s]) * partialDiff r dx)
+                 (between 1 (length args))
+                 args)
+    ...</code></pre>
+<p>Here, <code>between 1 (length args)</code> generates the list of integers <code>[1, 2, ..., n]</code>. <code>userRefs f [1]</code> returns the expression <code>f|1 x y</code>, which applies the name symbol of <code>f</code> with the integer index <code>1</code> appended.</p>
+<h2><span class="heading-number">13.6</span>Implementation of Function Symbols</h2>
+<p>An important aspect of the function symbol implementation is that function symbols retain their own names. For this purpose, the Egison interpreter keeps track of the name of the variable currently being defined. Additionally, to support function symbols appearing as tensor components as described in Section&nbsp;<a class="reference" href="funcsym.html#ref-funcsym-tensor">13.4</a>, it is necessary to track the position of the tensor component currently being defined. For this purpose, the Egison interpreter also keeps track of the position of the tensor component being defined. In the Egison interpreter implementation, these are managed as additional components of the environment threaded through the evaluator.</p>
+  </main>
+  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+</body>
+</html>

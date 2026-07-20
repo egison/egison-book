@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>Introduction to Computer Algebra Systems — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="prev" href="sweet.html">← Previous</a><a rel="next" href="mexpr.html">Next →</a><a class="language" href="../ja/cas.html">日本語</a></nav></header>
+  <main class="book-page">
+    <span id="ref-part-cas" class="anchor"></span><h1><span class="heading-number">9</span>Introduction to Computer Algebra Systems</h1>
+<p><span id="ref-cas" class="anchor"></span></p>
+<p>A computer algebra system is a programming language that supports symbolic computation. Computer algebra systems treat unbound variables as symbols. Using a computer algebra system, one can perform computations such as <span class="math-inline">\(x + x \rightarrow 2x\)</span> and <span class="math-inline">\((x + y)^2 \rightarrow x^2 + 2 x y + y^2\)</span>. Egison also supports such symbolic computation. This chapter explores what kinds of computations are possible with a computer algebra system.</p>
+<h2><span class="heading-number">9.1</span>Declaring Symbols</h2>
+<p><span id="ref-cas-symbol" class="anchor"></span></p>
+<p>A computer algebra system treats unbound variables as symbols. In Egison, symbols must be declared using the <code>declare symbol</code> statement before use. A type can also be specified for a symbol, as in <code>declare symbol x : MathValue</code> (the relationship between mathematical expressions and types is explained in Chapter&nbsp;<a class="reference" href="casdetail.html#ref-casdetail">11</a>).</p>
+<pre class="listing"><code class="language-egison">declare symbol x, y, z
+
+x -- x</code></pre>
+<p>Egison, as a computer algebra system, has built-in definitions for addition and multiplication of symbols. Therefore, computations such as <span class="math-inline">\(x + x \rightarrow 2x\)</span> and <span class="math-inline">\((x + y)^2 \rightarrow x^2 + 2 x y + y^2\)</span> are possible.</p>
+<pre class="listing"><code class="language-egison">x + x -- 2 * x
+(x + y)^2 -- y^2 + x^2 + 2 * x y</code></pre>
+<p>Egison automatically expands mathematical expressions into sum-of-products normal form. Sum-of-products normal form is a form of expression where multiplication appears on the inside and addition on the outside. Therefore, <span class="math-inline">\((x + y)^2\)</span> is expanded into the form <span class="math-inline">\(x^2 + 2 x y + y^2\)</span>. In the output, multiplication between a coefficient and factors is displayed with <code>*</code>, while multiplication between symbols is displayed with whitespace.</p>
+<p>The ordering of terms and factors in the output expression does not follow the order in which they appear in the user&#x27;s input expression; they are sorted into a canonical order determined by the interpreter. For example, if we swap <span class="math-inline">\(x\)</span> and <span class="math-inline">\(y\)</span> in <span class="math-inline">\((x + y)^2\)</span> above and compute <span class="math-inline">\((y + x)^2\)</span>, the output stays the same.</p>
+<pre class="listing"><code class="language-egison">(y + x)^2 -- y^2 + x^2 + 2 * x y</code></pre>
+<h2><span class="heading-number">9.2</span>Symbolic Function Application</h2>
+<p><span id="ref-cas-symbol2" class="anchor"></span></p>
+<p>For functions such as <code>sqrt x</code> and <code>exp x</code> that may take symbols as arguments, the library defines them to halt evaluation and return the expression as a symbolic value. A function application that remains as a symbolic value is displayed with a leading single quote (<code>&#x27;</code>).</p>
+<pre class="listing"><code class="language-egison">declare symbol x
+
+sqrt 4 -- 2
+sqrt x -- &#x27;sqrt x
+exp 1 -- e
+exp x -- &#x27;exp x</code></pre>
+<p>For function applications that cannot be further evaluated, such as <code>sqrt 2</code>, the library also defines them to halt evaluation and return the expression as is. Simplifications such as <span class="math-inline">\(\sqrt{8} \rightarrow 2 \sqrt{2}\)</span> are also defined in the library.</p>
+<pre class="listing"><code class="language-egison">sqrt 2 -- &#x27;sqrt 2
+sqrt 8 -- 2 * &#x27;sqrt 2</code></pre>
+<p>Nested radicals are also opened up automatically when possible (for <span class="math-inline">\(\sqrt{a+b\sqrt{c}}\)</span>, when <span class="math-inline">\(a^2-b^2c\)</span> is a perfect square).</p>
+<pre class="listing"><code class="language-egison">sqrt (9 - 4 * sqrt 5) -- &#x27;sqrt 5 - 2
+sqrt (2 + sqrt 2) -- &#x27;sqrt (&#x27;sqrt 2 + 2)</code></pre>
+<p>Such mathematical functions are declared with the <code>declare mathfunc</code> statement, and their simplification at application time is defined with the <code>declare apply</code> statement. These declaration statements are explained in Section&nbsp;<a class="reference" href="casdetail.html#ref-casdetail-mathfunc">11.3</a> of Chapter&nbsp;<a class="reference" href="casdetail.html#ref-casdetail">11</a>, and the single quote used in their definitions is explained in Section&nbsp;<a class="reference" href="mexpr.html#ref-mexpr-squote">10.3</a>.</p>
+<h2><span class="heading-number">9.3</span>Simplification of Expressions</h2>
+<p><span id="ref-cas-simplify" class="anchor"></span></p>
+<p>Simplifications that one performs when working with mathematical expressions on paper, such as <span class="math-inline">\(\sqrt{x} \cdot \sqrt{x} = x\)</span> and <span class="math-inline">\(sin^2\theta + cos^2\theta = 1\)</span>, are implemented in many computer algebra systems including Egison.</p>
+<pre class="listing"><code class="language-egison">declare symbol x, `$\theta$`
+
+sqrt x * sqrt x -- x
+(sin `$\theta$`)^2 + (cos `$\theta$`)^2 -- 1</code></pre>
+<p>Egison&#x27;s simplification functionality is implemented in two layers. The internal representation of mathematical expressions and their normalization into sum-of-products normal form are implemented in Haskell inside the Egison interpreter, using Sweet Egison (a Haskell library that provides Egison&#x27;s pattern matching capabilities, Chapter&nbsp;<a class="reference" href="sweet.html#ref-sweet">8</a>). On the other hand, most of the individual simplification rules, such as the ones above, are defined not as Haskell code but as simplification rule declarations written with Egison&#x27;s own <code>declare rule</code> statement in the standard library.</p>
+<p>Simplification rules for complex numbers and other entities are defined in the same way.</p>
+<pre class="listing"><code class="language-egison">i^2 -- -1
+w^3 -- 1
+w + w^2 -- -1</code></pre>
+<p>For example, the simplifications above for the imaginary unit <span class="math-inline">\(i\)</span> and the primitive cube root of unity <span class="math-inline">\(w\)</span> are realized by the following declarations in the standard library file <code>lib/math/normalize.egi</code> (<a href="https://github.com/egison/egison/blob/master/lib/math/normalize.egi">https://github.com/egison/egison/blob/master/lib/math/normalize.egi</a>).</p>
+<pre class="listing"><code class="language-egison">declare rule auto term i^2 = -1
+declare rule auto term w^3 = 1
+declare rule auto term w^2 = -1 - w</code></pre>
+<p>Users can declare their own simplification rules with exactly the same <code>declare rule</code> statement (Section&nbsp;<a class="reference" href="casdetail.html#ref-cas-rule">11.1</a> of Chapter&nbsp;<a class="reference" href="casdetail.html#ref-casdetail">11</a>). Only a few simplification rules for which performance is critical, such as those used in computations with differential forms, are exceptionally implemented on the Haskell side (<code>hs-src/Language/Egison/Math/Rewrite.hs</code>).</p>
+<p>Reduction of polynomial fractions is performed automatically by polynomial GCD (the Euclidean algorithm for univariate polynomials, subresultant PRS for multivariate ones).</p>
+<pre class="listing"><code class="language-egison">(x^2 - 1) / (x - 1) -- x + 1
+(x^2 - y^2) / (x - y) -- y + x</code></pre>
+<p>Normal forms modulo an ideal can also be computed, based on Gröbner basis theory: the <code>declare ideal</code> statement generates a complete rule set from a set of relations mechanically, and the <code>polyNF</code> function computes normal forms explicitly (Section&nbsp;<a class="reference" href="casdetail.html#ref-casdetail-ideal">11.2</a> of Chapter&nbsp;<a class="reference" href="casdetail.html#ref-casdetail">11</a>). Fully automating the simplification of mathematical expressions is nevertheless an extremely difficult problem, and Egison may not be able to properly simplify complex expressions.</p>
+<p>Wolfram Language (Mathematica) is capable of such advanced expression simplification. Running the Egison interpreter with the “<code>-M mathematica</code>” option outputs expressions in a format readable by the Wolfram Language. By feeding this output to the Wolfram Language interpreter, one can leverage its advanced simplification capabilities.</p>
+<pre class="listing"><code class="language-egison">$ egison -M mathematica
+&gt; declare symbol x
+&gt; x + sqrt 2
+#mathematica|x + Sqrt[2]|#</code></pre>
+<p>How users declare simplification rules and mathematical functions, select canonical forms with type annotations, extend the promotion tower of types, and work with quotient types — the details of the simplification system — is explained in Chapter&nbsp;<a class="reference" href="casdetail.html#ref-casdetail">11</a>.</p>
+<h2><span class="heading-number">9.4</span>A Program to Solve Quadratic Equations -- Writing Algorithms that Process Expressions</h2>
+<p><span id="ref-cas-quadratic" class="anchor"></span></p>
+<p>In this section, we will write an algorithm to solve quadratic equations as a program. We define a function <code>qF</code> that takes a quadratic equation and returns its solutions, as shown below.</p>
+<pre class="listing"><code class="language-egison">declare symbol x, a, b, c
+
+qF (x ^ 2 + x + 1) x
+-- ((1 / 2) * (&#x27;sqrt 3) * i + -1 / 2,
+--  (-1 / 2) * (&#x27;sqrt 3) * i + -1 / 2)
+
+qF (x ^ 2 + b * x + c) x
+-- ((-1 / 2) * b + (1 / 2) * &#x27;sqrt (b^2 - 4 * c),
+--  (-1 / 2) * b + (-1 / 2) * &#x27;sqrt (b^2 - 4 * c))
+
+qF (a * x ^ 2 + b * x + c) x
+-- ((-1 / 2) * a^-1 b + (1 / 2) * (&#x27;sqrt (b^2 - 4 * a c)) * a^-1,
+--  (-1 / 2) * a^-1 b + (-1 / 2) * (&#x27;sqrt (b^2 - 4 * a c)) * a^-1)
+
+qF (a * x ^ 2 + 2 * b * x + c) x
+-- (- a^-1 b + (&#x27;sqrt (b^2 - a c)) * a^-1,
+--  - a^-1 b - (&#x27;sqrt (b^2 - a c)) * a^-1)</code></pre>
+<p>The output is displayed in sum-of-products normal form, with the fraction of the quadratic formula <span class="math-inline">\(\frac{-b \pm \sqrt{b^2 - 4 a c}}{2 a}\)</span> distributed over the terms. Furthermore, <span class="math-inline">\(\frac{1}{a}\)</span> is displayed as the negative power <span class="math-inline">\(a^{-1}\)</span> (the internal representation of mathematical expressions in Egison is a Laurent polynomial, which permits negative exponents). <code>qF</code> can be defined by simply writing out the quadratic formula directly. The following program defines <code>qF</code> using an auxiliary function <code>qF&#x27;</code>. <code>qF&#x27;</code> takes the quadratic coefficient as the first argument, the linear coefficient as the second, and the constant term as the third. For example, <code>qF&#x27; 1 0 2</code> returns the solutions of the quadratic equation <span class="math-inline">\(x^2 + 2 = 0\)</span>. <code>coefficients</code> is a function that takes a polynomial and a symbol, and returns the list of coefficients with respect to that symbol. <code>qF&#x27;</code> is simply defined as a function that returns a tuple consisting of <span class="math-inline">\(\frac{-b + \sqrt{b^2 - 4 a c}}{2 a}\)</span> and <span class="math-inline">\(\frac{-b - \sqrt{b^2 - 4 a c}}{2 a}\)</span>.</p>
+<pre class="listing"><code class="language-egison">def qF f x :=
+  match coefficients f x as list mathValue with
+    | [$a_0, $a_1, $a_2] -&gt; qF&#x27; a_2 a_1 a_0
+
+def qF&#x27; a b c :=
+  ( ((- b) + sqrt (b ^ 2 - 4 * a * c)) / (2 * a)
+  , ((- b) - sqrt (b ^ 2 - 4 * a * c)) / (2 * a) )</code></pre>
+<p>However, since the above formulation lacks an algorithmic feel, we will instead write an algorithm that derives the quadratic formula through completing the square. Completing the square is the operation of transforming a quadratic expression such as <span class="math-inline">\(x^2 + b x + c\)</span> into the form <span class="math-inline">\((x + b / 2)^2 - b^2 / 4 + c\)</span>.</p>
+<pre class="listing"><code class="language-egison">def qF&#x27; a b c :=
+  match (a, b, c) as (mathValue, mathValue, mathValue) with
+    | (#1, #0, _) -&gt; (sqrt (- c), - sqrt (- c))
+    | (#1, _, _) -&gt;
+      let (r1, r2) := withSymbols [x, y]
+                        qF (substitute [(x, y - b / 2)] (x ^ 2 + b * x + c)) y
+       in ((- (b / 2)) + r1, (- (b / 2)) + r2)
+    | (_, _, _) -&gt; qF&#x27; 1 (b / a) (c / a)</code></pre>
+<p>When describing the algorithm for solving quadratic equations using completing the square, <code>qF&#x27;</code> becomes a function with three match clauses. The match clause on line 3 handles quadratic equations of the form <span class="math-inline">\(x^2 + c = 0\)</span>. This clause returns the result <span class="math-inline">\(\sqrt{-c}\)</span> and <span class="math-inline">\(-\sqrt{-c}\)</span>. The match clause on lines 4--7 handles quadratic equations of the form <span class="math-inline">\(x^2 + b x + c = 0\)</span>, where the leading coefficient is <span class="math-inline">\(1\)</span>. This clause is the core of the function, performing the completing-the-square operation. <code>substitute</code> is an Egison library function. <code>substitute</code> applies the substitution specified in the first argument to the expression in the second argument. Here, the substitution <code>(x, y - b / 2)</code> is specified in the first argument, so the substitution <span class="math-inline">\(x = y - b / 2\)</span> is applied to the expression <span class="math-inline">\(x^2 + b x + c\)</span>. The first argument of <code>substitute</code> takes a list, allowing multiple simultaneous substitutions. After substituting <span class="math-inline">\(x = y - b / 2\)</span>, this equation is transformed into a quadratic equation in <span class="math-inline">\(y\)</span> that matches the clause on line 3. Therefore, by passing this transformed equation to the <code>qF</code> function, we can obtain the solutions for <span class="math-inline">\(y\)</span>. By adding <span class="math-inline">\(\frac{-b}{2}\)</span> to these solutions for <span class="math-inline">\(y\)</span>, we obtain the solutions for the original variable <span class="math-inline">\(x\)</span>. The <code>withSymbols</code> expression is a syntax for generating local symbols. The symbols specified in the list of the first argument (in this case, <code>x</code> and <code>y</code>) can be used as symbols within the expression of the second argument. Thanks to this feature of <code>withSymbols</code>, even if <code>x</code> or <code>y</code> are bound to specific integers elsewhere in the program, we do not need to worry about that inside the <code>withSymbols</code> expression. The match clause on line 8 handles quadratic equations where the leading coefficient is not <span class="math-inline">\(1\)</span>. It divides the equation by the leading coefficient to convert it to an equation with leading coefficient <span class="math-inline">\(1\)</span>, and passes it to the <code>qF</code> function again.</p>
+<p>Although more complex than quadratic equations, it is interesting to write programs that solve cubic and quartic equations. These programs are available in the <code>sample/math/algebra</code> directory of the Egison source code.</p>
+<h2><span class="heading-number">9.5</span>A Program for Differentiation -- Pattern Matching on Expressions</h2>
+<p><span id="ref-cas-derivative" class="anchor"></span></p>
+<p>Egison has a library function <code>d/d</code> for performing differentiation. This function returns the result of differentiating the first argument with respect to the symbol given as the second argument. By naming the function <code>d/d</code>, differentiation can be expressed in a form close to mathematical notation. Egison allows <code>/</code> to be used in variable names.</p>
+<pre class="listing"><code class="language-egison">d/d x x -- 1
+d/d (x^2) x -- 2 * x
+d/d (exp x) x -- &#x27;exp x
+d/d (log x) x -- x^-1
+d/d (x * log x) x -- &#x27;log x + 1
+d/d (1 / log x) x -- - &#x27;log x^-2 * x^-1</code></pre>
+<p>The library <code>d/d</code> is organized with type classes so that it can also be applied directly to tensors (Chapter&nbsp;<a class="reference" href="tensor.html#ref-tensor">12</a>), and differentiation formulas for new mathematical functions can be added with the <code>declare derivative</code> statement introduced in Section&nbsp;<a class="reference" href="casdetail.html#ref-casdetail-mathfunc">11.3</a>. At its core, however, lies pattern matching on mathematical expressions. In this section, we extract this core and define a function <code>d/d&#x27;</code> that behaves like <code>d/d</code>.</p>
+<p><code>d/d&#x27;</code> can be defined as follows.</p>
+<pre class="listing"><code class="language-egison">def d/d&#x27; (f: MathValue) (x: MathValue) : MathValue :=
+  match f as mathValue with
+    -- Differentiation of symbols
+    | #x -&gt; 1
+    | symbol _ _ -&gt; 0
+    -- Differentiation of function applications
+    | apply1 #exp $g -&gt; exp g * d/d&#x27; g x
+    | apply1 #log $g -&gt; 1 / g * d/d&#x27; g x
+    | apply1 #sqrt $g -&gt; 1 / (2 * sqrt g) * d/d&#x27; g x
+    | apply2 #(^) $g $h -&gt; f * d/d&#x27; (log g * h) x
+    | apply1 #cos $g -&gt; (- sin g) * d/d&#x27; g x
+    | apply1 #sin $g -&gt; cos g * d/d&#x27; g x
+    -- Differentiation of constants
+    | #0 -&gt; 0
+    | _ * #1 -&gt; 0
+    -- Differentiation of terms
+    | #1 * $fx ^ $n -&gt; n * fx ^ (n - 1) * d/d&#x27; fx x
+    | $a * $fx ^ $n * $r -&gt; a * d/d&#x27; (fx ^&#x27; n) x * r + a * fx ^&#x27; n * d/d&#x27; r x
+    -- Differentiation of polynomials
+    | poly $ts -&gt; sum (map 1#(d/d&#x27; $1 x) ts)
+    -- Differentiation of quotients
+    | $p1 / $p2 -&gt;
+      let p1&#x27; := d/d&#x27; p1 x
+          p2&#x27; := d/d&#x27; p2 x
+       in (p1&#x27; * p2 - p2&#x27; * p1) / p2 ^ 2</code></pre>
+<p>The first argument <span class="math-inline">\(f\)</span> is pattern-matched as a mathematical expression. Lines 4--5 define the differentiation of symbols. If <code>f</code> is <code>x</code> itself, it returns <span class="math-inline">\(1\)</span>; if <code>f</code> is a symbol other than <code>x</code>, it returns <span class="math-inline">\(0\)</span>. Lines 7--12 describe the chain rule <span class="math-inline">\(\frac{df(g(x))}{dx} = \frac{df(g(x))}{dg(x)} \frac{dg(x)}{x}\)</span> for several basic function applications. For example, line 7 handles the differentiation of the exponential function. The body of this match clause represents <span class="math-inline">\(\frac{de^{g(x)}}{dx} = e^{g(x)} \frac{dg(x)}{dx}\)</span>. Line 8 handles the differentiation of the logarithmic function. The body of this match clause represents <span class="math-inline">\(\frac{dlog(g(x))}{dx} = \frac{1}{g(x)} \frac{dg(x)}{dx}\)</span>. Lines 14--15 define differentiation for constant terms. Constant terms differentiate to <span class="math-inline">\(0\)</span>. Lines 17--18 define differentiation for terms that are products of the previously defined differentiable terms. This uses the facts that <span class="math-inline">\(x^n\)</span> differentiates to <span class="math-inline">\(n x^{n-1}\)</span> and that <span class="math-inline">\(f g\)</span> differentiates to <span class="math-inline">\(f&#x27; g + f g&#x27;\)</span>. The chain rule is also used here. Line 20 defines the differentiation of polynomials. Since differentiation of monomials has already been defined, for a sum of monomials, we simply differentiate each term and sum the results. Lines 22--24 define differentiation for expressions with polynomials in both the numerator and denominator. This is defined using the quotient rule for differentiation.</p>
+<h2><span class="heading-number">9.6</span>Computation with Vectors and Matrices -- Index Notation</h2>
+<p><span id="ref-cas-linear" class="anchor"></span></p>
+<p>A distinctive feature of Egison as a computer algebra system is the ability to concisely describe computations involving vectors, matrices, and their generalization, tensors. This is because Egison supports tensor index notation as a programming language feature -- a notation invented in the early twentieth century during research in differential geometry and general relativity.</p>
+<p>Index notation expresses various kinds of tensor multiplication by attaching indices to tensors. For example, there are three types of multiplication between vectors: the tensor product, the Hadamard product, and the inner product. These are expressed by using different index patterns as follows.</p>
+<pre class="listing"><code class="language-egison">declare symbol x1, x2, y1, y2, i, j
+
+[| x1, x2 |]_i .[| y1, y2 |]_j
+-- [| [| x1 y1, x1 y2 |], [| x2 y1, x2 y2 |] |]_i_j
+[| x1, x2 |]_i .[| y1, y2 |]_i -- [| x1 y1, x2 y2 |]_i
+[| x1, x2 |]~i .[| y1, y2 |]_i -- x2 y2 + x1 y1</code></pre>
+<p>As shown above, in Egison, vectors are represented by enclosing their components in <code>[| |]</code>. Matrices are represented as vectors of vectors. From a functional programming perspective, index notation can be explained as adding indices as extra parameters to tensor multiplication functions, allowing a single function to serve multiple roles.</p>
+<p>Other programming languages also have index notation as a language feature. Among them, Egison&#x27;s distinguishing characteristic is that it incorporates index notation in a way that harmonizes well with functional programming. Thanks to this, higher-order functions and index notation can be used in combination. For example, an expression like <span class="math-inline">\(g_{i_{1}j_{1}} g_{i_{2}j_{2}} ... g_{i_{n}j_{n}}\)</span> can be written using the <code>foldl</code> function as follows.</p>
+<pre class="listing"><code class="language-egison">foldl . 1 (map (\x -&gt; g_[i_x]_[j_x]) [1..n])</code></pre>
+<p>Since index notation is an important language feature of Egison, it is covered in detail in Chapter&nbsp;<a class="reference" href="tensor.html#ref-tensor">12</a> and Chapter&nbsp;<a class="reference" href="diffgeo.html#ref-diffgeo">14</a>.</p>
+<h2><span class="heading-number">9.7</span>Output Format for Expressions</h2>
+<p>The output format can be specified using the “<code>-M</code>” option. Running “<code>egison -M latex</code>” outputs results in LaTeX format.</p>
+<pre class="listing"><code class="language-egison">$ egison -M latex
+Egison Version 5.0.0
+https://www.egison.org
+Welcome to Egison Interpreter!
+&gt; declare symbol x
+&gt; x + sqrt 2
+#latex|x + \sqrt{2}|#</code></pre>
+<p>Running “<code>egison -M mathematica</code>” outputs results in Mathematica format.</p>
+<pre class="listing"><code class="language-egison">$ egison -M mathematica
+Egison Version 5.0.0
+https://www.egison.org
+Welcome to Egison Interpreter!
+&gt; declare symbol x
+&gt; x + sqrt 2
+#mathematica|x + Sqrt[2]|#</code></pre>
+<p>The LaTeX output also integrates with Jupyter Notebook. By using the Egison plugin for Jupyter Notebook, computation results are displayed interactively as mathematical expressions, as shown in Figures&nbsp;<a class="reference" href="diffgeo.html#ref-fig-riemann-curavture-of-S2">14.2</a> and&nbsp;<a class="reference" href="diffgeo.html#ref-fig-hodge-laplacian">14.4</a>.</p>
+<figure>
+<p><img src="assets/jupyter-sample.png" alt=""></p>
+<figcaption>Running Egison on Jupyter Notebook</figcaption>
+<p><span id="ref-fig-cas-jupyter" class="anchor"></span></p>
+</figure>
+  </main>
+  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+</body>
+</html>

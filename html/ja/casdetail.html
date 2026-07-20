@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>簡約システム詳細 — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="mexpr.html">← 前へ</a><a rel="next" href="tensor.html">次へ →</a><a class="language" href="../en/casdetail.html">English</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">11</span>簡約システム詳細</h1>
+<p><span id="ref-casdetail" class="anchor"></span></p>
+<p>本章は，Egisonの数式処理システムの簡約が型システムとどのように連携しているかを詳しく解説する． 第<a class="reference" href="cas.html#ref-cas">9</a>章では数式の簡約を組み込みの機能として紹介したが，簡約システムは実際には，ユーザーが拡張できるいくつかの直交した仕組みから組み立てられている． 本章では，（1）簡約規則の宣言，（2）イデアルの宣言による規則集合の機械生成，（3）数学関数の宣言，（4）型注釈による正規形の指定，（5）型の昇格タワーとその拡張，（6）タワーの外に置かれる商の型，の6つを順にみていく．</p>
+<h2><span class="heading-number">11.1</span>簡約規則の宣言</h2>
+<p><span id="ref-cas-rule" class="anchor"></span></p>
+<p>第<a class="reference" href="cas.html#ref-cas">9</a>章<a class="reference" href="cas.html#ref-cas-simplify">9.3</a>節でみたように，<span class="math-inline">\(i^2 = -1\)</span>のような組み込みの簡約規則は，処理系のHaskellコードに埋め込まれているのではなく，標準ライブラリのなかで<code>declare rule</code>文により宣言されている． ユーザーもまったく同じ<code>declare rule</code>文で，新しい簡約規則を宣言できる． つまり，組み込みの簡約規則とユーザーの簡約規則は同じ仕組みの上に載っている．</p>
+<p><code>declare rule</code>文は，次の形で書く．</p>
+<pre class="listing"><code class="language-egison">declare rule (auto | name) (term | poly | frac) lhs = rhs</code></pre>
+<p>最初の指定子は，規則の適用のされ方を決める． <code>auto</code>を指定した規則（自動規則）は正規化処理に組み込まれ，数式に対する算術演算（<code>+</code>・<code>*</code>・<code>/</code>など）のたびに，適用できなくなるまで繰り返し自動で適用される． 規則名を指定した規則（名前付き規則）については，本節の最後で述べる． 2つ目の指定子は，左辺のパターンを数式のどの構造に対してマッチさせるかを決める． <code>term</code>は各項（単項式）に，<code>poly</code>は各（部分）多項式に，<code>frac</code>は各（部分）分数式に規則を適用する． いずれの場合も，関数適用の引数の内側のような部分式に対しても規則は適用される． 左辺には，リテラルな数式のほかに，パターン変数<code>$x</code>や値パターン<code>#x</code>を含む数式に対するパターン（<a class="reference" href="mexpr.html#ref-mexpr-pattern">10.6</a>節）を書くことができる．</p>
+<p>たとえば，第<a class="reference" href="cas.html#ref-cas">9</a>章<a class="reference" href="cas.html#ref-cas-simplify">9.3</a>節でみた<span class="math-inline">\(\sqrt{x} \cdot \sqrt{x} = x\)</span>のような<code>sqrt</code>の簡約は，標準ライブラリのなかで，<code>sqrt</code>の引数を表すパターン変数<code>$x</code>を使った規則として宣言されている． 概念的には，次のような規則である．</p>
+<pre class="listing"><code class="language-egison">declare rule auto term (sqrt $x)^2 = x</code></pre>
+<p>左辺の<code>$x</code>はパターン変数なので，<code>sqrt</code>の引数が具体的な数でもシンボルでも同じようにマッチする． そのため，この1つの規則だけで，たとえば以下がすべて成り立つ．</p>
+<pre class="listing"><code class="language-egison">declare symbol a
+
+(sqrt a)^2 -- a
+(1 + sqrt 2)^2 -- 2 * &#x27;sqrt 2 + 3</code></pre>
+<p>実際のライブラリの規則は，<span class="math-inline">\((\sqrt{x})^2\)</span>だけでなく一般の冪<span class="math-inline">\((\sqrt{x})^n\)</span>も扱えるよう，これよりもう少し複雑な形をしているが，本質は上のパターン変数を使った1つの規則である．</p>
+<p>組み込みの簡約規則も，同じ<code>declare rule</code>文で標準ライブラリの<code>lib/math/normalize.egi</code>に宣言されている． たとえば，以下は第<a class="reference" href="cas.html#ref-cas">9</a>章<a class="reference" href="cas.html#ref-cas-simplify">9.3</a>節で紹介した簡約を実現している宣言の一部である．</p>
+<pre class="listing"><code class="language-egison">declare rule auto term i^2 = -1
+declare rule auto term log (exp $n) = n
+declare rule auto term (exp $x)^$n = exp (n * x)</code></pre>
+<p>1つ目の<code>i^2 = -1</code>は，虚数単位<span class="math-inline">\(i\)</span>についての規則である． これは数学的には<span class="math-inline">\(\mathbb{Z}[i] = \mathbb{Z}[X]/(X^2+1)\)</span>という代数拡大（多項式環の商）を，シンボル<span class="math-inline">\(i\)</span>の上に導入する操作にあたる． Egisonの簡約規則は大域的であるが，シンボルは大域的に一意であるため，規則はそのシンボルが現れる数式にしか作用しない． つまり，シンボルの一意性がスコープの役割を果たしている． 二重数（<span class="math-inline">\(\varepsilon^2 = 0\)</span>），1の冪根なども，同じパターンでシンボルの上に導入される代数拡大である． 実装上も，簡約規則は左辺に現れるシンボルで索引づけられており，そのシンボルを含まない数式には規則の適用が試されない． そのため，規則を宣言しても，その規則と無関係な計算はほとんど遅くならない． 2つ目と3つ目の規則のように，左辺にパターン変数を含む規則も宣言できる．</p>
+<p>規則名を指定して宣言した名前付き規則は，自動では適用されず，<code>simplify e using name</code>と書いた場所でだけ式<code>e</code>に適用される． たとえば正弦の加法定理は，左から右に使うと式を展開し，右から左に使うと式をまとめる，方向性のある等式である． このような等式を自動規則にすると，意図しない場所でも展開が起きてしまう． 名前付き規則として宣言しておけば，展開したい場所でだけ明示的に適用できる．</p>
+<pre class="listing"><code class="language-egison">declare symbol a, b
+declare rule sinAdd term sin ($x + $y) = sin x * cos y + cos x * sin y
+
+sin (a + b) -- &#x27;sin (b + a)
+simplify (sin (a + b)) using sinAdd
+-- (&#x27;cos b) * (&#x27;sin a) + (&#x27;cos a) * (&#x27;sin b)</code></pre>
+<h2><span class="heading-number">11.2</span>イデアルの宣言</h2>
+<p><span id="ref-casdetail-ideal" class="anchor"></span></p>
+<p>前節でみたように，<span class="math-inline">\(i^2 = -1\)</span>のような簡約規則の宣言は，シンボルの上に代数拡大（多項式環のイデアルによる商）を導入する操作である． この見方を進めると，簡約規則の集合そのものをイデアルの生成元から機械的に作り出せる． 本節では，そのための<code>declare ideal</code>文と，その土台になっているグレブナー基底のライブラリ関数を紹介する．</p>
+<p>手書きの規則には完全性の問題がある． たとえば<span class="math-inline">\(\sqrt{2}\)</span>，<span class="math-inline">\(\sqrt{3}\)</span>，<span class="math-inline">\(\sqrt{6}\)</span>を表すシンボル<code>s2</code>，<code>s3</code>，<code>s6</code>を導入すると，定義から明らかな関係式は<span class="math-inline">\(s_2^2 = 2\)</span>，<span class="math-inline">\(s_3^2 = 3\)</span>，<span class="math-inline">\(s_6 = s_2 s_3\)</span>の3本である． しかし，この3本を規則として宣言するだけでは，たとえば<span class="math-inline">\(s_2 s_6\)</span>（<span class="math-inline">\(= \sqrt{2}\cdot\sqrt{6} = 2\sqrt{3}\)</span>）は簡約されない． 必要な規則をもれなく手で書き切るのは難しく，書けたとしても，停止性や合流性（適用順序によらず同じ正規形に到達すること）は目視で確かめるしかない．</p>
+<p>グレブナー基底の理論は，この問題への数学的な解を与える． 生成元の集合から，イデアルを法とする正規形が一意になる完備な規則集合（被約グレブナー基底）を計算でき，得られる規則集合の停止性と合流性は定理として保証される． EgisonではBuchbergerのアルゴリズムが，ライブラリ関数<code>groebnerBasis</code>としてEgison自身のパターンマッチで実装されている（<code>lib/math/algebra/groebner.egi</code>）．</p>
+<pre class="listing"><code class="language-egison">declare symbol s2, s3, s6
+
+groebnerBasis [s2^2 - 2, s3^2 - 3, s6 - s2 * s3]
+-- [s2^2 - 2, s2 s3 - s6, s2 s6 - 2 * s3,
+--  s3^2 - 3, s3 s6 - 3 * s2, s6^2 - 6]</code></pre>
+<p>ユーザーが与えたのは自明な3本だが，完備化により<span class="math-inline">\(\{1, \sqrt{2}, \sqrt{3}, \sqrt{6}\}\)</span>の乗法表にあたる6本が得られる． 各元は「先頭の単項式を残りの項（の符号反転）に書き換える」規則として読める（<span class="math-inline">\(s_2 s_6 \to 2 s_3\)</span>など）．</p>
+<p>計算した基底は，関数<code>polyNF</code>で式に明示的に適用できる． <code>polyNF gb e</code>は式<code>e</code>のイデアルを法とする正規形を返す． 特に，結果が<code>0</code>になることは，<code>e</code>が関係式の帰結として0に等しいこと（イデアルへの所属）を意味する．</p>
+<pre class="listing"><code class="language-egison">def gb := groebnerBasis [s2^2 - 2, s3^2 - 3, s6 - s2 * s3]
+
+polyNF gb ((s2 + s3)^2) -- 2 * s6 + 5
+polyNF gb (s2 * s3 - s6) -- 0</code></pre>
+<p>なお，<code>polyNF</code>は渡された多項式の集合をそのまま基底として使う（完備化しない）． 一意な正規形が欲しいときは，上のように<code>groebnerBasis</code>を通した基底を渡す．</p>
+<p>規則集合として常時適用したい場合は，<code>declare ideal</code>文を使う． 生成元からグレブナー基底が宣言時に一度だけ計算され，各元が項レベルの自動規則として登録される． 以後は通常の簡約規則と同じように，算術演算のたびに自動で適用される．</p>
+<pre class="listing"><code class="language-egison">declare symbol s2, s3, s6
+
+declare ideal [s2^2 - 2, s3^2 - 3, s6 - s2 * s3]
+
+s2 * s6 -- 2 * s3
+(s2 + s3)^2 -- 2 * s6 + 5
+(s2 + s3) * (s2 - s3) -- -1</code></pre>
+<p>実際に，標準ライブラリの1の原始立方根<span class="math-inline">\(w\)</span>の規則は，手書きの2本（<span class="math-inline">\(w^3 = 1\)</span>と<span class="math-inline">\(w^2 = -1-w\)</span>）から<code>declare ideal [w^2 + w + 1]</code>という1つの宣言に置き換えられている． 生成される規則<span class="math-inline">\(w^2 \to -1-w\)</span>が<span class="math-inline">\(w^3\)</span>の簡約も2段階で導くので，規則集合の完全性が慣習ではなく定理になる．</p>
+<p>複合的な原子にもそのまま使える． 数式データのなかで<code>sin θ</code>や<code>cos θ</code>は因子（原子）として扱われるので（<a class="reference" href="mexpr.html#ref-mexpr-expr">10.1</a>節），変数への置き換えなしにピタゴラスの関係式を宣言できる．</p>
+<pre class="listing"><code class="language-egison">declare symbol `$\theta$`
+
+declare ideal [(sin `$\theta$`)^2 + (cos `$\theta$`)^2 - 1]
+
+(sin `$\theta$`)^4 - (cos `$\theta$`)^4 -- 2 * &#x27;sin `$\theta$`^2 - 1
+(sin `$\theta$`)^2 + 2 * (cos `$\theta$`)^2 -- - &#x27;sin `$\theta$`^2 + 2</code></pre>
+<p>正規形にどの原子が残るかは順序で決まっており，シンボルは<code>declare symbol</code>の宣言順，生成元のなかの複合原子は出現順で，先に現れたものほど正規形に残る． 上の例では生成元に<code>sin θ</code>を先に書いたので，<span class="math-inline">\(\sin\)</span>が残って<span class="math-inline">\(\cos\)</span>の偶数冪が消える向きの規則が生成されている．</p>
+<p><code>declare ideal</code>と<code>polyNF</code>は，「常時適用するか，一度だけ適用するか」の使い分けである． 向き付けされた正規形がいつでも欲しいとは限らず，重い関係式を常時適用すると計算全体が遅くなることもある． たとえば座標の定義多項式のような，計算の最後の検算にだけ使いたい関係式は，<code>polyNF</code>で比較の時点に一度だけ適用するのがよい．</p>
+<h2><span class="heading-number">11.3</span>数学関数の宣言</h2>
+<p><span id="ref-casdetail-mathfunc" class="anchor"></span></p>
+<p><a class="reference" href="cas.html#ref-cas-symbol2">9.2</a>節で紹介した<code>sqrt</code>や<code>exp</code>のような数学関数も，専用の宣言文で定義されている． <code>declare mathfunc</code>文は，適用がシンボリックな値として残る数学関数を宣言する． 宣言しただけの関数の適用は，簡約されずそのままシンボリックな値になる． これに<code>declare apply</code>文を組み合わせると，その関数の適用時に一度だけ実行される簡約を定義できる． たとえば，標準ライブラリの対数関数<code>log</code>は以下のように宣言されている．</p>
+<pre class="listing"><code class="language-egison">declare mathfunc log
+declare apply log x :=
+  match x as mathValue with
+    | #1 -&gt; 0
+    | #e -&gt; 1
+    | _ -&gt; &#x27;log x</code></pre>
+<p><code>declare apply</code>の本体には任意のEgison式を書くことができ，簡約できない入力に対しては，シングルクオート（<a class="reference" href="mexpr.html#ref-mexpr-squote">10.3</a>節）を使って<code>&#x27;log x</code>のようにシンボリックな値を返す． <a class="reference" href="cas.html#ref-cas-symbol2">9.2</a>節でみた<span class="math-inline">\(\sqrt{8} \rightarrow 2\sqrt{2}\)</span>のような簡約も，<code>sqrt</code>の<code>declare apply</code>で定義されている．</p>
+<p><code>declare apply</code>の簡約が関数の適用時に一度だけ実行されるのに対し，<code>declare rule</code>の簡約規則は正規化のたびに収束するまで繰り返し適用される． <span class="math-inline">\(\sqrt{8} \rightarrow 2\sqrt{2}\)</span>のように引数の値を調べて計算するアルゴリズム的な簡約は<code>declare apply</code>で，<span class="math-inline">\(i^2 = -1\)</span>のように式の形に対する書き換えは<code>declare rule</code>で定義する，という使い分けである．</p>
+<p>さらに，<code>declare derivative</code>文を使うと，微分演算子<code>d/d</code>（<a class="reference" href="cas.html#ref-cas-derivative">9.5</a>節）を新しい数学関数に拡張できる． 標準ライブラリの組み込みの微分公式も，この文で宣言されている．</p>
+<pre class="listing"><code class="language-egison">declare derivative sin = cos
+declare derivative cos = \z -&gt; - sin z
+declare derivative exp = exp
+declare derivative log = \z -&gt; 1 / z
+declare derivative sqrt = \z -&gt; 1 / (2 * sqrt z)</code></pre>
+<p>これらの宣言を組み合わせると，新しい数学関数を数行で数式処理システムに追加できる． たとえば，双曲線正割関数<span class="math-inline">\(\mathrm{sech}\)</span>は以下のように導入できる． 合成関数の微分（連鎖律）は<code>d/d</code>の側が処理するため，導関数の形だけを宣言すればよい．</p>
+<pre class="listing"><code class="language-egison">declare symbol x
+
+declare mathfunc sech
+declare apply sech x :=
+  match x as mathValue with
+    | #0 -&gt; 1
+    | _ -&gt; &#x27;sech x
+declare derivative sech = \z -&gt; - sech z * tanh z
+
+sech 0 -- 1
+sech x -- &#x27;sech x
+d/d (sech (x^2)) x -- -2 * (&#x27;sech (x^2)) * (&#x27;tanh (x^2)) * x</code></pre>
+<h2><span class="heading-number">11.4</span>型による正規形の指定</h2>
+<p><span id="ref-cas-tower" class="anchor"></span></p>
+<p>同じ数式は，複数の異なるデータ構造で表現できる． たとえば，</p>
+<div class="math-display">\[(2+3i) + (1-i)x + 4x^2\]</div>
+<p>は，原子<span class="math-inline">\(\{i, x\}\)</span>の上の平坦な多項式としても，係数がガウス整数<span class="math-inline">\(\mathbb{Z}[i]\)</span>であるような<span class="math-inline">\(x\)</span>の多項式としても保持できる． どちらの正規形が適切かは，つぎに何をしたいか（<span class="math-inline">\(x\)</span>について微分したいのか，<span class="math-inline">\(\mathbb{Z}[i]\)</span>の性質を使いたいのか）に依存するため，値だけからは決められない． Egisonでは，<strong>型注釈でこの正規形を指定する</strong>．</p>
+<pre class="listing"><code class="language-egison">declare symbol i, x
+
+def v := (2 + 3 * i) + (1 - i) * x + 4 * x^2
+
+def flat : Poly Integer [i, x] := v
+inspect flat
+-- &quot;4 * x^2 - i x + x + 3 * i + 2 : Poly Integer [i, x]&quot;
+
+def byX : Poly (Poly Integer [i]) [x] := v
+inspect byX
+-- &quot;4 * x^2 + (- i + 1) * x + 3 * i + 2 : Poly (Poly Integer [i]) [x]&quot;</code></pre>
+<p>型<code>Poly Integer [i, x]</code>は「原子集合<span class="math-inline">\(\{i, x\}\)</span>の上の整数係数多項式」を表す型である． <code>Poly (Poly Integer [i]) [x]</code>のように係数の位置に多項式型を入れ子にすると，「<span class="math-inline">\(\mathbb{Z}[i]\)</span>係数の<span class="math-inline">\(x\)</span>の多項式」という正規形を表す．</p>
+<p>原子集合は，<code>[i, x]</code>や<code>[x]</code>のように具体的なシンボルを明示して書く（閉じた原子集合）ほかに，<code>[..]</code>と書いて開いたままにすることもできる． 開いた原子集合<code>[..]</code>は「原子は値から読み取る」という意味であり，どのシンボルが多項式の変数になるかを型の側では固定しない． 入れ子の多項式型の外側の原子集合も，同じように<code>[..]</code>にできる（内側を<span class="math-inline">\(\mathbb{Z}[i]\)</span>に固定したまま，外側の変数は値まかせにする）．</p>
+<pre class="listing"><code class="language-egison">def byX3 : Poly (Poly Integer [i]) [..] := v
+inspect byX3
+-- &quot;4 * x^2 + (- i + 1) * x + 3 * i + 2 : Poly (Poly Integer [i]) [x]&quot;</code></pre>
+<p>この場合，外側の原子集合には値<code>v</code>に現れる<code>x</code>が使われ，観察型は<code>Poly (Poly Integer [i]) [x]</code>になる（<span class="math-inline">\(x\)</span>と<span class="math-inline">\(y\)</span>を含む値なら<code>[x, y]</code>のように変わる）． 次節の昇格タワーが<code>Poly Integer [..]</code>のように開いた原子集合で書かれているのも，特定のシンボルに縛られない一般の多項式を表すためである．</p>
+<p>逆に，内側の原子集合を開くこともできる． 外側だけを固定すると，「指定したシンボルだけを多項式の変数として残し，それ以外の原子はすべて係数側に折り込む」という意味になる．</p>
+<pre class="listing"><code class="language-egison">def byI : Poly (Poly Integer [..]) [i] := v
+inspect byI
+-- &quot;(- x + 3) * i + 4 * x^2 + x + 2 : Poly (Poly Integer [x]) [i]&quot;</code></pre>
+<p>ここでは<span class="math-inline">\(i\)</span>だけが外側の変数として残り，同じ値が今度は「<span class="math-inline">\(\mathbb{Z}[x]\)</span>係数の<span class="math-inline">\(i\)</span>の多項式」<span class="math-inline">\((3 - x)i + (4x^2 + x + 2)\)</span>に組み替えられている． ただし，ひとつの入れ子の多項式型（タワー）のなかに<code>[..]</code>を書けるのは<strong>高々1箇所</strong>である． 開いた原子集合が1つであれば，「閉じた集合に載っている原子はその段へ，残りはすべて開いた段へ」と各原子の行き先が一意に決まるが， 2箇所を開くと（<code>Poly (Poly Integer [..]) [..]</code>など）残りの原子の行き先が曖昧になるため，このような型は型エラーとして拒否される．</p>
+<p>型注釈は値を分類するだけでなく，値の内部構造をその型のかたちに組み替える（reshape）． 組み替えは値を変えない． 実際，2つの正規形の差を計算すると<span class="math-inline">\(0\)</span>になる．</p>
+<pre class="listing"><code class="language-egison">flat - byX -- 0</code></pre>
+<p>形の異なる表現同士の演算が正しく簡約されるのは，<strong>演算の結果は常に既定の平坦形で返る</strong>という規約があるためである． 入れ子の正規形は型注釈を書いた場所にだけ現れ，演算をまたいで勝手に伝播することはない．</p>
+<p>上の例で使った<code>inspect</code>は，値と一緒にその値から読み取れる型（観察型）を表示する． よく使う型には<code>declare cas-type</code>文で別名をつけられる． 別名は透明であり，型の表示では展開されたもとの型が使われる．</p>
+<pre class="listing"><code class="language-egison">declare cas-type GaussianPolyX := Poly (Poly Integer [i]) [x]
+
+def byX2 : GaussianPolyX := v
+inspect byX2
+-- &quot;4 * x^2 + (- i + 1) * x + 3 * i + 2 : Poly (Poly Integer [i]) [x]&quot;</code></pre>
+<h2><span class="heading-number">11.5</span>昇格タワーとその拡張</h2>
+<p><span id="ref-cas-subtype" class="anchor"></span></p>
+<p>CASの型は，値を保存する埋め込みによって順序づけられている． この順序の背骨は，代数学の包含<span class="math-inline">\(\mathbb{Z} \subset \mathbb{Q} \subset \mathbb{Z}[x] \subset \mathbb{Q}[x] \subset \mathbb{Q}(x)\)</span>をそのまま型の階段にした<em>昇格タワー</em>（promotion tower）である．</p>
+<pre class="listing"><code class="language-egison">Integer                        -- integers
+  &lt;: Frac Integer              -- rationals
+  &lt;: Poly Integer [..]         -- integer-coefficient polynomials
+  &lt;: Poly (Frac Integer) [..]  -- rational-coefficient polynomials
+  &lt;: Frac (Poly Integer [..])  -- rational functions
+  &lt;: MathValue                 -- all mathematical expressions</code></pre>
+<p>タワーの各段は真の部分集合としての埋め込みであり，値を一切変えない． これに加えて，原子集合の包含（<code>Poly Integer [x] &lt;: Poly Integer [x, y]</code>）と，係数位置を通じた埋め込みも順序に含まれる． 異なる型の値を混ぜて演算すると，タワーを上へ昇り，両方を含む最小の型（join）へ自動で昇格する．</p>
+<pre class="listing"><code class="language-egison">def p : Poly Integer [x] := x + 1
+def q : Frac Integer := 1 / 2
+
+def r := p + q
+inspect r -- &quot;x + 3 / 2 : Poly (Frac Integer) [x]&quot;</code></pre>
+<p>原子集合が異なる場合も，原子集合を合併した型へ昇格する．</p>
+<pre class="listing"><code class="language-egison">declare cas-type GaussianInt := Poly Integer [i]
+declare cas-type Zsqrt2 := Poly Integer [sqrt2]
+
+def a : GaussianInt := 1 + i
+def b : Zsqrt2 := 1 + sqrt2
+
+def c := a + b
+inspect c -- &quot;sqrt2 + i + 2 : Poly Integer [i, sqrt2]&quot;</code></pre>
+<p><span class="math-inline">\(\mathbb{Z}[i]\)</span>の値と<span class="math-inline">\(\mathbb{Z}[\sqrt{2}]\)</span>の値の和が，注釈なしで<span class="math-inline">\(\mathbb{Z}[i, \sqrt{2}]\)</span>に着地している．</p>
+<p>ここまでのタワーは組み込みだが，タワーは固定ではなく，<strong>ユーザーが拡張できる</strong>． 前節の<code>declare cas-type</code>は正規形に名前を与え，<code>declare cas-subtype</code>は新しい辺（埋め込み）をタワーに追加する． たとえば，組み込みの順序は，前節の平坦形（<code>Poly Integer [i, x]</code>）と入れ子形（<code>Poly (Poly Integer [i]) [x]</code>）をあえて関係づけていない． 両者は同じ値の集合の異なる正規形であり，どちらへ昇格すべきかはユーザーの選択だからである． まさにこの選択こそが，ユーザーがタワーに書き加える情報である．</p>
+<pre class="listing"><code class="language-egison">declare cas-subtype Poly Integer [i, x] &lt;: Poly (Poly Integer [i]) [x]</code></pre>
+<p>この宣言のあとは，平坦形と入れ子形が混ざる演算は入れ子形へ昇格するようになる．</p>
+<p>勝手に辺を追加してもタワーが壊れないように，辺を宣言するたびに， 順序全体で任意の2つの型のjoinが一意に定まること（join半束性）が検査される． 一意性が壊れる宣言は，先に宣言すべき<em>完備化辺</em>の提案つきでエラーになる．</p>
+<pre class="listing"><code class="language-egison">declare cas-subtype Poly Integer [x] &lt;: Poly Integer [i, x]
+-- Warning: this edge is already derivable (redundant edge);
+--   its endpoints are still registered as nodes for the check
+
+declare cas-subtype Poly Integer [i] &lt;: Poly (Poly Integer [i]) [x]
+-- Error: join would become ambiguous (D1 semilattice check).
+--   pair (Poly Integer [i], Poly Integer [x]) would get
+--   minimal upper bounds
+--   {Poly Integer [i, x], Poly (Poly Integer [i]) [x]}
+--   hint: declare the completing edge first:
+--     declare cas-subtype Poly Integer [i, x]
+--       &lt;: Poly (Poly Integer [i]) [x]</code></pre>
+<p><span class="math-inline">\(\mathbb{Z}[i]\)</span>を入れ子形の中に置こうとすると，<span class="math-inline">\(\mathbb{Z}[i]\)</span>と<span class="math-inline">\(\mathbb{Z}[x]\)</span>の共通の上界が 平坦形と入れ子形の2つに分裂してしまうため，宣言は拒否される． 提案される完備化辺は常に数学的に正しい埋め込みであり（平坦形は入れ子形に組み替えられる）， それを先に宣言すれば元の辺も受理される． このように，拡張後のタワーの上でもjoinは常に一意のままであり，暗黙の昇格は決定的であり続ける． なお，この検査はそれまでの宣言に現れた型の上で行われる （上記の1行目の冗長な辺は，<code>Poly Integer [x]</code>を検査対象に登録するために書いている）．</p>
+<h2><span class="heading-number">11.6</span>商の型</h2>
+<p><span id="ref-cas-quotient" class="anchor"></span></p>
+<p><span class="math-inline">\(\mathbb{Z}/7\mathbb{Z}\)</span>（7で割った余りの世界）のような商は，これまでの型とは性質が異なる． <span class="math-inline">\(12\)</span>と<span class="math-inline">\(5\)</span>は<span class="math-inline">\(\mathbb{Z}\)</span>では異なる値だが，<span class="math-inline">\(\mathbb{Z}/7\mathbb{Z}\)</span>では等しい． つまり<strong>等しさそのものが型に依存する</strong>ため，値を保存する埋め込みの順序（前節）には入れられない． Egisonでは，商の型は<code>declare cas-quotient</code>文で順序の外に宣言する．</p>
+<pre class="listing"><code class="language-egison">declare cas-quotient Mod7 := Integer by (\n -&gt; modulo n 7)
+
+def a : Mod7 := projMod7 5
+def b : Mod7 := projMod7 4
+
+a + b -- 2
+projMod7 12 == projMod7 5 -- True</code></pre>
+<p>宣言すると，整数から<code>Mod7</code>への射影<code>projMod7</code>，代表元を取り出す<code>reprMod7</code>，環としての演算，等値判定が自動で導出される． 演算は毎回代表元を簡約するので，値は常に<span class="math-inline">\(0\)</span>から<span class="math-inline">\(6\)</span>の範囲に保たれる． また宣言時には，簡約関数が冪等であることと，加算・乗算と両立する（合同である）ことが，サンプル点の上で検査される．</p>
+<p><code>Mod7</code>の値と生の整数の混在（<code>a + 10</code>など）は型エラーになる． これは<span class="math-inline">\(\mathbb{Z}\)</span>の等しさと<span class="math-inline">\(\mathbb{Z}/7\mathbb{Z}\)</span>の等しさを暗黙に混同しないためであり，世界を横断するときは<code>projMod7</code>・<code>reprMod7</code>を明示的に使う． 商の上に直接関数を定義することもできる． たとえば<span class="math-inline">\(\mathbb{F}_7\)</span>における逆元は，フェルマーの小定理（<span class="math-inline">\(z^{-1} = z^5\)</span>）を使って1行で書ける．</p>
+<pre class="listing"><code class="language-egison">def inv7 (z : Mod7) : Mod7 := z * z * z * z * z
+
+reprMod7 (inv7 (projMod7 3)) -- 5</code></pre>
+<p>商の底は整数に限らず，多項式環をとることもできる． これを使うと，<span class="math-inline">\(x^3 = 0\)</span>とみなして<span class="math-inline">\(3\)</span>次以上の項を捨てる商<span class="math-inline">\(\mathbb{Z}[x]/(x^3)\)</span> ——べき級数を<span class="math-inline">\(3\)</span>次の手前で打ち切った世界——を，ひとつの型として宣言できる． 簡約関数は，各項を走査して<span class="math-inline">\(x\)</span>の次数が<span class="math-inline">\(3\)</span>未満のものだけを残す．</p>
+<pre class="listing"><code class="language-egison">declare symbol x
+
+-- keep a term only when its x-degree is below 3
+def dropHigh (t : MathValue) : MathValue :=
+  match t as mathValue with
+    | term _ ((#x, $k) :: []) -&gt; if k &lt; 3 then t else 0
+    | _ -&gt; t
+
+declare cas-quotient Series3 := Poly Integer [x] by
+  (\p -&gt; match p as mathValue with
+           | poly $ts -&gt; sum (map dropHigh ts)
+           | _ -&gt; p)
+
+def s : Series3 := projSeries3 (1 + x)
+
+reprSeries3 (s * s) -- x^2 + 2 * x + 1
+reprSeries3 (projSeries3 ((1 + x)^4)) -- 6 * x^2 + 4 * x + 1</code></pre>
+<p><span class="math-inline">\((1 + x)^4 = 1 + 4x + 6x^2 + 4x^3 + x^4\)</span>から<span class="math-inline">\(x^3\)</span>と<span class="math-inline">\(x^4\)</span>の項が消え，<span class="math-inline">\(6x^2 + 4x + 1\)</span>になっている． 底が<span class="math-inline">\(\mathbb{Z}[x]\)</span>になった点を除けば，仕組みは<code>Mod7</code>とまったく同じである． なお，この<span class="math-inline">\(x^3 = 0\)</span>は大域的な簡約規則<code>declare rule auto term x^3 = 0</code>でも表せるが， その場合は<code>x</code>が現れるすべての場所で打ち切りが起きる． 商として宣言すると，打ち切りは<code>Series3</code>型の値だけに閉じ込められ， ふつうの<code>Poly Integer [x]</code>の値は<span class="math-inline">\(3\)</span>次以上の項を保ったままになる． これが，係数領域の商をタワーの外の独立した型として扱うことの利点である．</p>
+<p>最後に，本章の道具立てが合流する例として，位数<span class="math-inline">\(4\)</span>の有限体<span class="math-inline">\(\mathrm{GF}(4) = \mathbb{F}_2[\alpha]/(\alpha^2+\alpha+1)\)</span>を作ってみよう． 必要な規律は2つある．係数を<span class="math-inline">\(2\)</span>で割った余りで数えること（係数の商）と，<span class="math-inline">\(\alpha^2 + \alpha + 1 = 0\)</span>という関係で<span class="math-inline">\(\alpha\)</span>の冪を落とすこと（<a class="reference" href="casdetail.html#ref-casdetail-ideal">11.2</a>節のイデアル）である． ライブラリ関数<code>finiteFieldReduce</code>は，素数<span class="math-inline">\(p\)</span>と最小多項式の生成元からこの2つを合成した簡約関数を作る． グレブナー基底は宣言時に一度だけ計算され，体の除算にはフェルマーの小定理による逆元が使われる（<span class="math-inline">\(p\)</span>は素数に限る）．</p>
+<pre class="listing"><code class="language-egison">declare symbol `$\alpha$`
+
+declare cas-quotient GF4 := MathValue by finiteFieldReduce 2 [`$\alpha$`^2 + `$\alpha$` + 1]
+
+def a : GF4 := projGF4 `$\alpha$`
+def u : GF4 := projGF4 1
+
+reprGF4 ((a + u) * (a + u)) -- `$\alpha$`
+reprGF4 (a * (a + u)) -- 1
+reprGF4 (a + a) -- 0</code></pre>
+<p><span class="math-inline">\((\alpha+1)^2 = \alpha\)</span>，<span class="math-inline">\(\alpha(\alpha+1) = 1\)</span>（互いに逆元），<span class="math-inline">\(a + a = 0\)</span>（標数<span class="math-inline">\(2\)</span>）と，体の構造が演算のたびに維持される．</p>
+<p>底が<code>MathValue</code>であることには意味がある． この型は体のスカラーだけでなく，<span class="math-inline">\(\mathrm{GF}(4)\)</span>係数の多項式も最初から含んでいる． 簡約関数は項の内側の係数にも規律を適用するからである．</p>
+<pre class="listing"><code class="language-egison">declare symbol x, y
+
+reprGF4 (projGF4 (x^2 + 3*x + `$\alpha$`^2)) -- x^2 + x + `$\alpha$` + 1
+
+(projGF4 (`$\alpha$`*x + y)) * (projGF4 (`$\alpha$`*x + y))
+  == projGF4 ((`$\alpha$`*x)^2 + y^2) -- True</code></pre>
+<p>1つ目では，係数<span class="math-inline">\(3\)</span>が<span class="math-inline">\(1\)</span>に，<span class="math-inline">\(\alpha^2\)</span>が<span class="math-inline">\(\alpha + 1\)</span>に，多項式の項の内側で簡約されている． 2つ目は標数<span class="math-inline">\(2\)</span>の体でだけ成り立つ恒等式<span class="math-inline">\((u+v)^2 = u^2 + v^2\)</span>である． 係数の商（本節）とイデアルによる規則生成（<a class="reference" href="casdetail.html#ref-casdetail-ideal">11.2</a>節）という2つの直交した機構が，簡約関数の合成だけで有限体に組み上がる．</p>
+  </main>
+  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+</body>
+</html>

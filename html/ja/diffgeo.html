@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>Egisonで計算する微分幾何 — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="funcsym.html">← 前へ</a><a rel="next" href="direction.html">次へ →</a><a class="language" href="../en/diffgeo.html">English</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">14</span>Egisonで計算する微分幾何</h1>
+<p><span id="ref-diffgeo" class="anchor"></span></p>
+<p>本章は，数式処理システムとしてのEgisonの実践的な応用例として微分幾何への応用を紹介する． Egisonを使うと，さまざまな多様体の曲率が定義の数式に近いプログラムを記述するだけで計算できたり，外微分やホッジ作用素のような微分形式のための作用素もプログラムで簡潔に定義できる． 本章の解説は読者に微分幾何の知識を仮定している． 微分幾何に興味を持つ読者には，小林昭七による『曲線と曲面の微分幾何』（裳華房）がおすすめである．</p>
+<h2><span class="heading-number">14.1</span>微分幾何とEgison</h2>
+<p>微分幾何は手計算がとくに大変な分野である． 例えば，曲率が自明ではないもっとも単純な多様体は球面<span class="math-inline">\(S^2\)</span>であるが，そのリーマン曲率テンソルを手計算すると，初めての場合，30分くらいかかる． 続けて，その次に単純な多様体であるトーラス<span class="math-inline">\(T^2\)</span>のリーマン曲率テンソルを計算すると，またしても30分以上はかかる． 実際の研究のためには，より高次元の複雑な多様体の曲率を計算することが多い． このような場合，計算に一ヶ月以上かかることもある． そのため，微分幾何は数式処理システムがもっとも応用しやすい分野でもある．</p>
+<p>数式処理システムを使えば，<span class="math-inline">\(S^2\)</span>のリーマン曲率テンソルは，球面座標系，リーマン計量，クリストッフェル記号，リーマン曲率テンソルの定義をプログラムとして記述すれば，数秒で計算できる． <span class="math-inline">\(T^2\)</span>については，<span class="math-inline">\(S^2\)</span>のリーマン曲率テンソルを計算をするプログラムを書いた後であれば，座標系の設定以外の部分は使いまわせるため，数分の作業で計算できる． より高次元の複雑な多様体についても，計量の設定を変更するだけで，計算することができる．</p>
+<p>Egisonは，<a class="reference" href="cas.html#ref-cas-derivative">9.5</a>節で解説した微分演算子，第<a class="reference" href="tensor.html#ref-tensor">12</a>章で解説したテンソルのための言語機能，第<a class="reference" href="funcsym.html#ref-funcsym">13</a>章で解説した関数シンボルを組み合わせて，従来の数式処理システムよりも数学の記法に近い形で微分幾何の計算をプログラムとして記述できる． また，<a class="reference" href="tensor.html#ref-tensor-completion">12.9</a>節で触れたように，外微分やホッジ作用素のような微分形式のための作用素もプログラムで簡潔に定義するための仕組みも提供している． 本章では，これらの機能を実演し，微分幾何の研究・教育にEgisonが役に立つことを紹介する．</p>
+<h2><span class="heading-number">14.2</span>リーマン曲率テンソルの計算</h2>
+<p><span id="ref-diffgeo-riemann" class="anchor"></span></p>
+<p>本節は，球面について，リーマン計量や，クリストッフェル記号，リーマン曲率テンソル，リッチ曲率，スカラー曲率といった様々な微分幾何的な量をEgisonを使って計算するプログラムを解説する． 図<a class="reference" href="diffgeo.html#ref-fig-riemann-curavture-of-S2">14.2</a>は，Jupyter Notebook上で球面のリーマン曲率テンソルを計算するEgisonプログラムとその実行結果の出力である． さまざまな幾何学的不変量は，曲率から計算される． 本節で解説するプログラムの計量の部分だけを変えれば，あらゆる多様体の曲率を計算できる． そのため，本節のプログラムを理解すれば，実際の微分幾何の研究にもEgisonが使える． 本節は，このプログラムの各箇所について順番に説明していくことによって進める．</p>
+<figure>
+<p><img src="assets/riemann-curvature-S2.png" alt=""></p>
+<figcaption>球面のリーマン曲率テンソルの計算</figcaption>
+<p><span id="ref-fig-riemann-curavture-of-S2" class="anchor"></span></p>
+</figure>
+<h3><span class="heading-number">14.2.1</span>球座標系 - <code>[1]</code>-<code>[2]</code></h3>
+<p>球座標系は，<span class="math-inline">\(r\)</span>と<span class="math-inline">\(θ\)</span>，<span class="math-inline">\(φ\)</span>の3つのパラメーターからなる． <span class="math-inline">\(r\)</span>は原点からの距離をあらわす． <span class="math-inline">\(θ\)</span>は<span class="math-inline">\(z\)</span>軸との角度，緯度をあらわす． <span class="math-inline">\(φ\)</span>は<span class="math-inline">\(xy\)</span>平面における<span class="math-inline">\(x\)</span>軸からの回転量，経度をあらわす． 球座標系の<span class="math-inline">\(r\)</span>の値を固定すれば，球面の座標系を得ることができる． 球座標系とデカルト座標系は，<span class="math-inline">\(x = r \cos \theta \sin \phi, y = r \cos \theta \cos \phi, z = r \sin \theta\)</span>という関係式で結ばれている． 以上が，図<a class="reference" href="diffgeo.html#ref-fig-riemann-curavture-of-S2">14.2</a>の<code>[1]</code>と<code>[2]</code>で表現されている内容である．</p>
+<h3><span class="heading-number">14.2.2</span>接ベクトルとリーマン計量 - <code>[3]</code>-<code>[7]</code></h3>
+<p>球面上の<span class="math-inline">\(θ\)</span>，<span class="math-inline">\(φ\)</span>によって定まる各点の上の接空間の基底となるベクトルをまず計算している． <code>[3]</code>でそのようなベクトルを計算し，<code>[4]</code>でそのベクトルを表示している． <code>[4]</code>の出力の<span class="math-inline">\(1\)</span>行目と<span class="math-inline">\(2\)</span>行目が基底となるベクトルの成分である．</p>
+<p>リーマン計量は，各点における接ベクトルの大きさや向きの情報をもつ行列として表現できる． <code>[5]</code>でベクトルの内積を計算すことによって基底ベクトルの大きさが計算されている． <code>[6]</code>では，<code>[5]</code>で定義したリーマン計量の値を表示している． 球座標系においては，座標から自然に定まる基底の大きさが，各点で異なる． たとえば，経度（<span class="math-inline">\(\phi\)</span>）方向の基底ベクトルの大きさが，緯度（<span class="math-inline">\(\theta\)</span>）によって変わる． この情報は，<code>g_i_j</code>の<span class="math-inline">\(2,2\)</span>成分の<span class="math-inline">\(r^2 \sin^2 \theta\)</span>にあらわれている．</p>
+<p><code>[7]</code>では，逆行列を計算する関数<code>M.inverse</code>を使って，上添字がつくリーマン計量を求めている． リーマン計量には下添字がつく<span class="math-inline">\(g_{ij}\)</span>と上添字がつく<span class="math-inline">\(g^{ij}\)</span>の2種類がある．</p>
+<h3><span class="heading-number">14.2.3</span>クリストッフェル記号とリーマン曲率テンソル - <code>[8]</code>-<code>[12]</code></h3>
+<p><code>[8]</code>と<code>[9]</code>は，第一種クリストッフェル記号と第二種クリストッフェル記号の数式による定義をプログラムとして記述したものである． 数式に非常に近いかたちでプログラムとして表現されている． 直感的には，クリストッフェル記号<span class="math-inline">\(\Gamma^{i}_{\;jk}\)</span>は，基底ベクトル<span class="math-inline">\(e_j\)</span>を<span class="math-inline">\(e_k\)</span>方向に動かしたときの<span class="math-inline">\(e_i\)</span>方向への変化の具合を表現する．</p>
+<div class="math-display">\[{2}
+\Gamma_{ijk} = \frac{1}{2} (\frac{\partial g_{ij}}{\partial x^k} + \frac{\partial g_{ik}}{\partial x^j} - \frac{\partial g_{kj}}{\partial x^i}) &amp;\qquad
+\Gamma^{i}_{\;jk} = g^{im} \Gamma_{mjk} &amp;\qquad\]</div>
+<p>リーマン曲率テンソルも，<code>[11]</code>のように，その数式による定義をそのままプログラムとして記述できている． 直感的には，リーマン曲率テンソル<span class="math-inline">\(R^{i}_{\;jkl}\)</span>は，<span class="math-inline">\(e_k\)</span>と<span class="math-inline">\(e_l\)</span>によって作られる閉路に沿って<span class="math-inline">\(e_j\)</span>を動かしたときの<span class="math-inline">\(e_i\)</span>方向への変化の具合を表現する．</p>
+<div class="math-display">\[R^{i}_{\;jkl} = \frac{\partial \Gamma^{i}_{\;jl}}{\partial x^k} - \frac{\partial \Gamma^{i}_{\;jk}}{\partial x^l} + \Gamma^{m}_{\;jl} \Gamma^{i}_{\;mk} - \Gamma^{m}_{\;jk} \Gamma^{i}_{\;ml}\]</div>
+<h3><span class="heading-number">14.2.4</span>リッチ曲率とスカラー曲率 - <code>[13]</code>-<code>[16]</code></h3>
+<p><code>[13]</code>-<code>[14]</code>でリッチ曲率を，<code>[15]</code>-<code>[16]</code>でスカラー曲率を計算している． それぞれ下記の数式に対応している．</p>
+<div class="math-display">\[{2}
+Ric_{ij} = ^{m}_{\;imj} &amp;\qquad
+S = g^{ij} Ric_{ij} &amp;\qquad\]</div>
+<h3><span class="heading-number">14.2.5</span>計量を変えてみる</h3>
+<p>本節で解説したプログラムの計量の部分を変えるだけで，いろいろな多様体のクリストッフェル記号やリーマン曲率テンソルを計算できる．</p>
+<p>たとえば，トーラス<span class="math-inline">\(T^2\)</span>のリーマン曲率テンソルを計算するには，球座標系をトーラスの座標系に変更すればよい． トーラスの座標系はたとえば，図<a class="reference" href="diffgeo.html#ref-fig-riemann-curvature-of-T2">14.2.5</a>の<code>[1]</code>-<code>[2]</code>のように設定できる． バッククォート(“<code>`</code>”)が，この式の中で使われている． <a class="reference" href="mexpr.html#ref-mexpr-backquote">10.2</a>節で解説したように，バッククォートのついた数式は，Egison処理系に一つのシンボルと同じように扱われる． ここでは，バッククォートを適切に挿入することより，計算プロセスや，最終的な計算結果が単純になっている．</p>
+<figure>
+<p><img src="assets/riemann-curvature-T2.png" alt=""></p>
+<figcaption>トーラスのリーマン曲率テンソルの計算</figcaption>
+<p><span id="ref-fig-riemann-curvature-of-T2" class="anchor"></span></p>
+</figure>
+<p>また，計量を以下のように定義されるSchwarzschild計量に変えれば，原点を中心に一つだけ質量をもつ天体がある宇宙についての一般相対性理論の計算ができる． この計算結果は，「時空の曲がり=重力」ということをあらわしている．</p>
+<pre class="listing"><code class="language-egison">declare symbol G, M, c, t, r, `$\theta$`, `$\phi$`
+
+def g_i_j : Tensor MathValue :=
+  [| [| `(c^2 * r - 2 * G * M) / (c^2 * r), 0, 0, 0 |]
+   , [| 0, (-1) / (`(c^2 * r - 2 * G * M) / (c^2 * r)), 0, 0 |]
+   , [| 0, 0, -r^2, 0 |]
+   , [| 0, 0, 0, -r^2 * (sin `$\theta$`)^2 |]
+   |]</code></pre>
+<p>このプログラムの全体は，Egisonのソースコードの<code>sample/math/geometry/riemann-curvature-tensor-of-Schwarzschild-metric.egi</code>にある．</p>
+<h2><span class="heading-number">14.3</span>曲率形式の計算 - 微分形式を使った計算（1）</h2>
+<p><span id="ref-diffgeo-curvature" class="anchor"></span></p>
+<p><a class="reference" href="tensor.html#ref-tensor-tensorfunc">12.8</a>節や，<a class="reference" href="tensor.html#ref-tensor-completion">12.9</a>節，<a class="reference" href="tensor.html#ref-tensor-refs">12.14</a>節で言及したように，Egisonのテンソル関連の機能は微分形式を使った計算を簡潔に表現できるように設計されている． 微分形式を使うと，テンソルに関する演算をより抽象的に記述できるようになる．</p>
+<p>本節では，微分形式の計算の例として，曲率形式の計算を紹介する． 曲率形式は，リーマン曲率テンソルを一般化したもので，曲率形式の公式<span class="math-inline">\(\Omega^{i}_{\;j} = d \omega^{i}_{\;j} + \omega^{i}_{\;k} \wedge \omega^{k}_{\;j}\)</span>というリーマン曲率テンソルの公式よりも簡潔な形の式を使って計算できる． 上記の公式にあらわれる<span class="math-inline">\(\omega\)</span>は接続形式と呼ばれ，微分形式において第二種クリストッフェル記号に対応するものである．</p>
+<figure>
+<p><img src="assets/curvature-form.png" alt=""></p>
+<figcaption>曲率形式の計算</figcaption>
+<p><span id="ref-fig-curvature-form" class="anchor"></span></p>
+</figure>
+<h3><span class="heading-number">14.3.1</span>ウェッジ積・曲率形式</h3>
+<p>図<a class="reference" href="diffgeo.html#ref-fig-curvature-form">14.3</a>は<span class="math-inline">\(S^2\)</span>の曲率形式をEgisonで計算したプログラムである． <code>[1]</code>-<code>[5]</code>で球面座標系のパラメータと，リーマン計量，クリストッフェル記号を設定している． <code>[6]</code>で接続形式<span class="math-inline">\(\omega\)</span>を第二種クリストッフェル記号を使って定義している． <code>[7]</code>で外微分演算子を定義している． <code>[8]</code>-<code>[9]</code>でウェッジ積を定義している． ウェッジ積は中置演算子として定義されている． <code>[10]</code>-<code>[12]</code>で曲率形式を計算して出力している．</p>
+<h3><span class="heading-number">14.3.2</span>オイラー形式とオイラー数</h3>
+<p>オイラー類は，積分したらオイラー数が得られる特性類として有名な特性類である． 以下のプログラムは，トーラス<span class="math-inline">\(T^2\)</span>のオイラー形式を計算している．</p>
+<pre class="listing"><code class="language-egison">def eulerForm : Tensor MathValue :=
+  (1 / (4 * `$\pi$`)) * withSymbols [t1, t2]
+    (`$\Omega$`~1_2_t1_t2 - `$\Omega$`~2_1_t1_t2)
+
+eulerForm
+-- [| [| 0, (1 / 2) * (&#x27;cos `$\theta$`) * `$\pi$`^-1 |],
+--    [| (-1 / 2) * (&#x27;cos `$\theta$`) * `$\pi$`^-1, 0 |] |]</code></pre>
+<p>ここで<span class="inline-code"><span class="math-inline">\(\Omega\)</span></span>は添字について反対称化した曲率形式である． このプログラムの全体は，Egisonのソースコードの<code>sample/math/geometry/euler-form-of-T2.egi</code>にある．</p>
+<p>積分のための関数がEgisonには実装されていないため，手計算でこれを積分した結果を記す． 積分すると<span class="math-inline">\(T^2\)</span>のオイラー数である<span class="math-inline">\(0\)</span>が得られる．</p>
+<div class="math-display">\[\chi(T^2) = \int_{T^2} d \theta d \phi \frac{\cos \theta}{2 \pi} = \int_{0}^{2 \pi} d \theta \cos \theta = \left[\sin \theta \right]_{0}^{2 \pi} = \sin 2 \pi - \sin 0 = 0\]</div>
+<h2><span class="heading-number">14.4</span>ホッジ・ラプラシアンの計算 - 微分形式を使った計算（2）</h2>
+<p><span id="ref-diffgeo-hodge" class="anchor"></span></p>
+<p>本節では，微分形式を使った計算をプログラムする例を紹介する．</p>
+<p>図<a class="reference" href="diffgeo.html#ref-fig-hodge-laplacian">14.4</a>は，極座標のラプラシアンをホッジ・ラプラシアンの公式<span class="math-inline">\(\Delta = d \delta + \delta d\)</span>を使って計算するEgisonプログラムとその実行結果である． 本節の前半は，このプログラムの解説をしながら進む．</p>
+<figure>
+<p><img src="assets/laplacian.png" alt=""></p>
+<figcaption>極座標のホッジ・ラプラシアンの計算</figcaption>
+<p><span id="ref-fig-hodge-laplacian" class="anchor"></span></p>
+</figure>
+<h3><span class="heading-number">14.4.1</span>外微分・ホッジ作用素</h3>
+<p>図<a class="reference" href="diffgeo.html#ref-fig-hodge-laplacian">14.4</a>の前半<code>[1]</code>-<code>[4]</code>は，極座標系のパラメーターと計量を設定している． その後，外微分・ホッジ作用素・外微分の随伴作用素という微分形式の基本的な演算子を<code>[5]</code>-<code>[8]</code>で定義している． <code>[6]</code>のホッジ作用素の定義には以下の公式を使っている． この定義のなかで使われている<code>subrefs</code>は，第二引数のシンボルのリストを，第一引数のテンソルの下添字として順番に付加する組み込み関数である．</p>
+<div class="math-display">\[*A = \sqrt{\det|g|} \cdot \epsilon_{i_{1}...i_{n}} \cdot A_{j_{1}...j_{k}} \cdot g^{i_{1}j_{1}} \cdots g^{i_{k}j_{k}} \cdot e^{i_{k+1}} \wedge ... \wedge e^{i_{n}}\]</div>
+<h3><span class="heading-number">14.4.2</span>ホッジ・ラプラシアン</h3>
+<p>微分形式を使うと，ラプラシアンは<span class="math-inline">\(\Delta = d \delta + \delta d\)</span>と座標系に依存しないように定義できる． この公式を使って表現されるラプラシアンはホッジ・ラプラシアンと呼ばれる． <code>[8]</code>においてこの公式がEgisonで表現されている． <code>[8]</code>の定義において，<span class="math-inline">\(0\)</span>形式と<span class="math-inline">\(2\)</span>形式の場合が特別扱いされている． これは，<span class="math-inline">\(2\)</span>次元座標系における<span class="math-inline">\(2\)</span>形式にたいして<span class="math-inline">\(d\)</span>が，<span class="math-inline">\(0\)</span>形式にたいして<span class="math-inline">\(\delta\)</span>が，厳密には未定義であるためである．</p>
+<p><code>[9]</code>で定義した関数シンボルに，<code>[10]</code>でホッジ・ラプラシアンを適用している． <a class="reference" href="diffgeo.html#ref-diffgeo-riemann">14.2</a>節で解説したリーマン曲率テンソルと同様，ホッジ・ラプラシアンについても計量を変えるだけで，いろいろな座標系のラプラシアンを計算できる．</p>
+<h2><span class="heading-number">14.5</span>その他の微分形式についての演算子 - 内部積・リー微分</h2>
+<p>内部積やリー微分も，Egisonで簡潔に定義できることを紹介しておく． これらの演算子は，たとえば，流体力学の質量保存の法則やナビエ・ストークス方程式の微分形式による表現をするときに使う． 内部積は，ライブラリ（<code>lib/math/geometry/differential-form.egi</code>）で以下のように定義されている． <code>DiffForm a</code>は微分形式を表す組み込みの型である．</p>
+<pre class="listing"><code class="language-egison">def `$\iota$` {Field a} (X: DiffForm a) (Y: DiffForm a) : DiffForm a :=
+  withSymbols [i] dfOrder Y * (X...~i . dfNormalize Y..._i)</code></pre>
+<p>リー微分は以下のように定義できる（<code>N</code>は多様体の次元である）．</p>
+<pre class="listing"><code class="language-egison">def Lie {Field a} (X: DiffForm a) (Y: DiffForm a) : DiffForm a :=
+  match dfOrder Y as integer with
+    | #0 -&gt; `$\iota$` X (d Y)
+    | #N -&gt; d (`$\iota$` X Y)
+    | _  -&gt; `$\iota$` X (d Y) + d (`$\iota$` X Y)</code></pre>
+  </main>
+  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+</body>
+</html>

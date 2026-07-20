@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>Handling Mathematical Expression Data — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="prev" href="cas.html">← Previous</a><a rel="next" href="casdetail.html">Next →</a><a class="language" href="../ja/mexpr.html">日本語</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">10</span>Handling Mathematical Expression Data</h1>
+<p><span id="ref-mexpr" class="anchor"></span></p>
+<p>This chapter introduces Egison&#x27;s features for handling symbolic computation.</p>
+<h2><span class="heading-number">10.1</span>Internal Representation of Mathematical Expression Data</h2>
+<p><span id="ref-mexpr-expr" class="anchor"></span></p>
+<p>Mathematical expressions are directly implemented as a built-in data type within the Egison interpreter using Haskell data types. This section explains the internal data structure that represents mathematical expression data.</p>
+<p>Mathematical expression data is represented as a fraction that takes polynomials in sum-of-products normal form for both the numerator and denominator. Therefore, for example, the result of adding two fractions whose denominators are polynomials is combined into a single fraction over the common denominator.</p>
+<pre class="listing"><code class="language-egison">declare symbol x, y, a, b, c
+
+a / (b + 1) + x / (y + 1)
+-- (b x + a y + x + a) / (b y + y + b + 1)</code></pre>
+<p>A polynomial is represented as data consisting of a list of terms. A term is represented as data consisting of a coefficient and an association list of factors and exponents. For example, the term <code>3 * x^2 * sqrt 2</code> has <code>3</code> as the coefficient and <code>[(x, 2), (sqrt 2, 1)]</code> as the association list. Exponents can also be negative integers. That is, polynomials in Egison are Laurent polynomials. A fraction whose denominator consists of a single term is not kept as a fraction; it is folded into the terms using negative exponents.</p>
+<pre class="listing"><code class="language-egison">a / b + x / y -- x y^-1 + a b^-1</code></pre>
+<p>Besides symbols, factors can be the symbolic function applications introduced in Section&nbsp;<a class="reference" href="cas.html#ref-cas-symbol2">9.2</a>, the quoted expressions introduced in Section&nbsp;<a class="reference" href="mexpr.html#ref-mexpr-backquote">10.2</a>, and the function symbols explained in Chapter&nbsp;<a class="reference" href="funcsym.html#ref-funcsym">13</a>. A symbol consists of its name string and a list of indices. Indices are explained in Chapter&nbsp;<a class="reference" href="tensor.html#ref-tensor">12</a>, which covers tensors.</p>
+<p>This internal structure can be decomposed by pattern matching with the <code>mathValue</code> matcher defined in the Egison library. For example, a polynomial can be decomposed into its list of terms.</p>
+<pre class="listing"><code class="language-egison">match (x - sqrt 2) as mathValue with
+  | poly $ts -&gt; ts
+-- [x, - &#x27;sqrt 2]</code></pre>
+<p>Patterns for mathematical expressions are introduced in detail in Section&nbsp;<a class="reference" href="mexpr.html#ref-mexpr-pattern">10.6</a>. Furthermore, the same mathematical expression can be represented by several different internal structures (for example, a flat polynomial and a nested polynomial), and the structure can be selected with type annotations. This is explained in Chapter&nbsp;<a class="reference" href="casdetail.html#ref-casdetail">11</a>.</p>
+<p>Numbers are a complex data type. Up to natural numbers, they can be elegantly defined as algebraic data types. However, when considering subtraction, the inverse of addition over natural numbers, the concept of negative numbers emerges. Furthermore, considering the inverse of multiplication, which is obtained by repeated addition, leads to the concept of rational numbers. Moreover, considering the inverse of exponentiation, which is obtained by repeated multiplication, leads to the concepts of square roots, imaginary numbers, and algebraic numbers that include them.</p>
+<h2><span class="heading-number">10.2</span>Controlling Expression Expansion with Backquotes (<code>`</code>)</h2>
+<p><span id="ref-mexpr-backquote" class="anchor"></span></p>
+<p>As mentioned in Section&nbsp;<a class="reference" href="cas.html#ref-cas-symbol">9.1</a>, Egison automatically expands mathematical expressions into sum-of-products normal form, but this expansion can be controlled using backquotes (<code>`</code>). An expression following a backquote is treated like a single symbol.</p>
+<pre class="listing"><code class="language-egison">`(x + 1)^2
+--  `(x + 1)^2
+
+`(x + 1) + `(x + 1)
+--  2 * `(x + 1)
+
+`(x + 1) + (x + 1)
+-- x + `(x + 1) + 1</code></pre>
+<p>Backquotes are useful when we do not want expressions to be expanded. Reduction of polynomial fractions itself is performed automatically by polynomial GCD, as mentioned in Section&nbsp;<a class="reference" href="cas.html#ref-cas-simplify">9.3</a>, but both the input and the result are expanded into sum-of-products normal form.</p>
+<pre class="listing"><code class="language-egison">(x + 1)^2 / (x + 1) -- x + 1
+(x^2 - y^2) / (x - y) -- y + x</code></pre>
+<p>If the factored form is preserved using backquotes, the expression is reduced without going through expansion, and the result is also obtained in factored form.</p>
+<pre class="listing"><code class="language-egison">`(x + y)^2 / `(x + y) -- `(y + x)
+`(x - y) * `(x + y) / `(x - y) -- `(y + x)</code></pre>
+<p>An expression quoted with a backquote is treated as a factor, on the same footing as a symbol, within Egison&#x27;s internal mathematical expression data. This is why <code>`(x + 1)^2</code> above is kept as a power of a single factor without being expanded.</p>
+<h2><span class="heading-number">10.3</span>Controlling Function Application with Single Quotes (<code>&#x27;</code>)</h2>
+<p><span id="ref-mexpr-squote" class="anchor"></span></p>
+<p>For applications of defined functions, we sometimes want to return a symbolic result without evaluating the function application. For example, we want the <code>sqrt</code> function to behave as follows, as we saw in Section&nbsp;<a class="reference" href="cas.html#ref-cas-symbol2">9.2</a>.</p>
+<pre class="listing"><code class="language-egison">declare symbol x, a
+
+sqrt 4 -- 2
+sqrt x -- &#x27;sqrt x</code></pre>
+<p>To realize this behavior, Egison provides single quotes (<code>&#x27;</code>) as a built-in syntax. A single quote is followed by a function, and even if that function is defined, the application is returned as a symbolic function application without being evaluated.</p>
+<pre class="listing"><code class="language-egison">def f (x: MathValue) : MathValue := x + 1
+
+f a -- a + 1
+&#x27;f a -- &#x27;f a</code></pre>
+<p>Symbolic function applications are also displayed with a leading single quote in the output. Single quotes are used in the bodies of the <code>declare apply</code> statements introduced in Section&nbsp;<a class="reference" href="casdetail.html#ref-casdetail-mathfunc">11.3</a> — for example in the definitions of <code>sqrt</code> and the trigonometric functions <code>sin</code> and <code>cos</code> — to return symbolic values for inputs that cannot be simplified further.</p>
+<h2><span class="heading-number">10.4</span>Suppressing Rule Application with <code>&#x27;( )</code></h2>
+<p><span id="ref-mexpr-rsquote" class="anchor"></span></p>
+<p>Prefixing a parenthesized expression with a single quote builds the expression without applying the rewrite rules declared with <code>declare rule</code> (Section&nbsp;<a class="reference" href="casdetail.html#ref-cas-rule">11.1</a> of Chapter&nbsp;<a class="reference" href="casdetail.html#ref-casdetail">11</a>). Structural normalization — expansion into sum-of-products normal form and merging of like terms — still happens.</p>
+<pre class="listing"><code class="language-egison">declare symbol x, `$\theta$`
+
+w^2 + w + 1 -- 0
+&#x27;(w^2 + w + 1) -- w^2 + w + 1
+
+(sin `$\theta$`)^2 + (cos `$\theta$`)^2 - 1 -- 0
+&#x27;((sin `$\theta$`)^2 + (cos `$\theta$`)^2 - 1) -- &#x27;sin `$\theta$`^2 + &#x27;cos `$\theta$`^2 - 1
+
+&#x27;(2 * x + x) -- 3 * x
+&#x27;((x + 1)^2) -- x^2 + 2 * x + 1</code></pre>
+<p>The typical situation that needs this quote is treating a relation that is itself subject to simplification rules as data. For example, when passing ideal generators to <code>polyNF</code> (Section&nbsp;<a class="reference" href="casdetail.html#ref-casdetail-ideal">11.2</a> of Chapter&nbsp;<a class="reference" href="casdetail.html#ref-casdetail">11</a>), writing the Pythagorean relation plainly would let the existing auto rules collapse it to <code>0</code> at construction time. Wrapped in <code>&#x27;( )</code>, the relation survives as an expression.</p>
+<p>This completes the set of three quotes. The backquote <code>`</code> freezes an expression into a single atom and stops expansion (Section&nbsp;<a class="reference" href="mexpr.html#ref-mexpr-backquote">10.2</a>), the single quote <code>&#x27;f</code> stops the evaluation of a function application (Section&nbsp;<a class="reference" href="mexpr.html#ref-mexpr-squote">10.3</a>), and <code>&#x27;( )</code> stops the application of rewrite rules. Each quote freezes a different layer: the structure of an expression, function application, and the equational theory.</p>
+<h2><span class="heading-number">10.5</span>Declaring Local Symbols with <code>withSymbols</code> Expressions</h2>
+<p><span id="ref-mexpr-withsym" class="anchor"></span></p>
+<p>Symbols declared with the <code>declare symbol</code> statement are global. For cases where symbols are needed only temporarily, Egison provides the <code>withSymbols</code> expression, a syntax for declaring local symbols. The <code>withSymbols</code> expression takes a list of variables as its first argument, and these variables are treated as symbols during the evaluation of the expression in the second argument. Even if a variable is already defined, it is treated as a symbol inside the <code>withSymbols</code> expression.</p>
+<pre class="listing"><code class="language-egison">def k : Integer := 10
+
+k -- 10
+withSymbols [k] k -- k
+k + withSymbols [k] k -- k + 10</code></pre>
+<p>Local symbols declared with a <code>withSymbols</code> expression are processed as symbols independent of the global symbols declared with the <code>declare symbol</code> statement. The two <code>j</code>s below are displayed with the same name, but since they are different symbols, they are not combined into <code>2 * j</code>.</p>
+<pre class="listing"><code class="language-egison">declare symbol j
+
+j + withSymbols [j] j -- j + j</code></pre>
+<h2><span class="heading-number">10.6</span>Pattern Matching on Mathematical Expression Data</h2>
+<p><span id="ref-mexpr-pattern" class="anchor"></span></p>
+<p>This section introduces the patterns provided for mathematical expression data. The matcher <code>mathValue</code> for mathematical expressions is implemented in the Egison library. The definition of <code>mathValue</code> can be found in <code>lib/math/expression.egi</code>. In addition, several syntactic sugars are built in for writing patterns for mathematical expressions in a form closer to mathematical notation. This section also introduces these syntactic sugars. Pattern matching on mathematical expressions is demonstrated in Section&nbsp;<a class="reference" href="cas.html#ref-cas-derivative">9.5</a>. Please refer to the program in Section&nbsp;<a class="reference" href="cas.html#ref-cas-derivative">9.5</a> for concrete examples of using these patterns.</p>
+<h3><span class="heading-number">10.6.1</span>Pattern Matching on Factors</h3>
+<p>The pattern constructors for factors are <code>symbol</code>, <code>apply1</code> through <code>apply4</code>, <code>quote</code>, and <code>func</code>. <code>symbol</code> pattern-matches symbols; <code>apply1</code> through <code>apply4</code> pattern-match the symbolic function applications introduced in Section&nbsp;<a class="reference" href="cas.html#ref-cas-symbol2">9.2</a>; <code>quote</code> pattern-matches backquoted expressions introduced in Section&nbsp;<a class="reference" href="mexpr.html#ref-mexpr-backquote">10.2</a>; and <code>func</code> pattern-matches objects called function symbols, explained in Chapter&nbsp;<a class="reference" href="funcsym.html#ref-funcsym">13</a>.</p>
+<p>The first argument of the <code>symbol</code> pattern constructor pattern-matches the name string of the symbol, and the second argument pattern-matches the list of indices. Indices are covered again in Chapter&nbsp;<a class="reference" href="tensor.html#ref-tensor">12</a>, which explains tensors.</p>
+<pre class="listing"><code class="language-egison">match x as mathValue with
+  | symbol $s _ -&gt; s
+-- &quot;x&quot;</code></pre>
+<p>Although symbols can be pattern-matched using the <code>symbol</code> pattern constructor, in practice, value patterns are more commonly used.</p>
+<pre class="listing"><code class="language-egison">match x as mathValue with
+  | #x -&gt; &quot;Matched&quot;
+  | _ -&gt; &quot;Not matched&quot;
+-- &quot;Matched&quot;</code></pre>
+<p>For symbolic function applications, the pattern constructors <code>apply1</code> through <code>apply4</code> are used according to the number of arguments. The first argument pattern-matches the function itself, and the remaining arguments pattern-match the expressions of the respective arguments. For the function itself, value patterns such as <code>#sqrt</code> are commonly used.</p>
+<pre class="listing"><code class="language-egison">match (sqrt x) as mathValue with
+  | apply1 #sqrt $g -&gt; g
+-- x</code></pre>
+<p>The <code>quote</code> pattern constructor takes a pattern for mathematical expressions as its argument. This pattern is matched against the expression inside the quote using the <code>mathValue</code> matcher.</p>
+<pre class="listing"><code class="language-egison">match `(x + 1) as mathValue with
+  | quote $e -&gt; e
+-- x + 1</code></pre>
+<h3><span class="heading-number">10.6.2</span>Pattern Matching on Terms</h3>
+<p>The <code>term</code> pattern constructor is used for pattern matching on terms. The first argument of the <code>term</code> pattern constructor pattern-matches the coefficient, and the second argument pattern-matches the association list of factors and exponents. The assocMultiset matcher introduced in Section&nbsp;<a class="reference" href="matcher.html#ref-matcher-assoc">6.7</a> is used for pattern matching the association list of factors.</p>
+<pre class="listing"><code class="language-egison">matchAll 3 * x^2 * y as mathValue with
+  | term $a (($x, $n) :: $xs) -&gt; (a, x, n, xs)
+-- [(3, x, 2, [(y, 1)]), (3, y, 1, [(x, 2)])]</code></pre>
+<p>The <code>term</code> pattern constructor has syntactic sugar for writing patterns in a form closer to mathematical notation. In the first pattern below, <code>$x</code> matches a factor together with its power, such as <code>x^2</code>, and <code>$xs</code> matches the product of the remaining factors. As in the second pattern, a pattern for the exponent can also be written following <code>^</code>.</p>
+<pre class="listing"><code class="language-egison">matchAll 3 * x^2 * y as mathValue with
+  | $a * $x * $xs -&gt; (a, x, xs)
+-- [(3, x^2, y), (3, y, x^2)]
+
+matchAll 3 * x^2 * y as mathValue with
+  | $a * $x^#2 * $xs -&gt; (a, x, xs)
+-- [(3, x, y)]</code></pre>
+<h3><span class="heading-number">10.6.3</span>Pattern Matching on Polynomials</h3>
+<p>The <code>poly</code> pattern constructor is used for pattern matching on polynomials. The <code>poly</code> pattern constructor takes a pattern that matches a list of terms as its argument.</p>
+<pre class="listing"><code class="language-egison">matchAll x + y + 1 as mathValue with
+  | poly ($x :: $xs) -&gt; (x, xs)
+-- [(y, [x, 1]), (x, [y, 1]), (1, [y, x])]</code></pre>
+<p>The <code>poly</code> pattern constructor also has syntactic sugar for writing patterns in a form closer to mathematical notation.</p>
+<pre class="listing"><code class="language-egison">matchAll x + y + 1 as mathValue with
+  | $x + $xs -&gt; (x, xs)
+-- [(y, x + 1), (x, y + 1), (1, y + x)]</code></pre>
+<h3><span class="heading-number">10.6.4</span>Pattern Matching on Rational Expressions</h3>
+<p>The <code>frac</code> pattern constructor is used for pattern matching on rational expressions. The first argument of the <code>frac</code> pattern constructor pattern-matches the numerator polynomial, and the second argument pattern-matches the denominator polynomial.</p>
+<pre class="listing"><code class="language-egison">matchAll (a + b) / (c + 1) as mathValue with
+  | frac $x $y -&gt; (x, y)
+-- [(b + a, c + 1)]</code></pre>
+<p>Note that, as mentioned in Section&nbsp;<a class="reference" href="mexpr.html#ref-mexpr-expr">10.1</a>, a fraction whose denominator consists of a single term is represented as a term with negative exponents, and hence does not match the <code>frac</code> pattern.</p>
+<p>The <code>frac</code> pattern constructor also has syntactic sugar for writing patterns in a form closer to mathematical notation.</p>
+<pre class="listing"><code class="language-egison">matchAll (a + b) / (c + 1) as mathValue with
+  | $x / $y -&gt; (x, y)
+-- [(b + a, c + 1)]</code></pre>
+  </main>
+  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+</body>
+</html>

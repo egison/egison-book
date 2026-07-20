@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>Sweet Egison - EgisonパターンマッチのHaskellライブラリ — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="etc.html">← 前へ</a><a rel="next" href="cas.html">次へ →</a><a class="language" href="../en/sweet.html">English</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">8</span>Sweet Egison - EgisonパターンマッチのHaskellライブラリ</h1>
+<p><span id="ref-sweet" class="anchor"></span></p>
+<p>Egisonパターンマッチの実装には，本書でここまで紹介してきたEgisonの言語実装のほかに，既存言語上のDomain Specific Language（DSL）として実装したライブラリ実装もある． 既存言語のライブラリ実装には，deep embedding（インタプリタを埋め込むによりDSLを実現する手法）による実装であるminiEgison系と，shallow embedding（コンパイラを埋め込むことによりDSLを実現する手法）による実装であるSweet Egison系の二種類がある． 本章は，これらの実装のなかでもっとも高速なSweet EgisonのHaskell実装の使い方を紹介する． Egisonと異なりHaskellは静的型システムをもつ． そのため，Sweet Egisonを使ったパターンマッチはコンパイル時に型検査がなされる．</p>
+<h2><span class="heading-number">8.1</span>Sweet Egisonの使い方</h2>
+<p><span id="ref-sweet-match" class="anchor"></span></p>
+<p>Sweet EgisonはHackageを通してHaskellライブラリとして公開されている． 本節はSweet Egisonをすでにインストールしているものとして使い方を解説する．</p>
+<p>Sweet EgisonにはEgisonと同様に<code>matchAll</code>式がある． <code>matchAll</code>は引数として探索戦略とターゲットマッチャー，マッチ節のリストをとる． Sweet Egisonでは<code>matchAll</code>はHaskellの関数として実装されており，<code>as</code>や<code>with</code>のようなキーワードは挟まない．</p>
+<pre class="listing"><code class="language-haskell">matchAll dfs [1, 2, 3] (List Something)
+  [[mc| $x : $xs -&gt; (x, xs) |]]
+-- [(1, [2, 3])]</code></pre>
+<p>上記の<code>matchAll</code>式は探索戦略として深さ優先探索<code>dfs</code>が指定されている． Sweet Egisonではユーザが新しい評価戦略を定義できる． これはEgisonにはないSweet Egisonの機能である． 探索戦略の定義の方法は<a class="reference" href="sweet.html#ref-sweet-strategy">8.6</a>節で解説する． 上記の<code>matchAll</code>式のマッチャーは<code>(List Something)</code>である． <a class="reference" href="sweet.html#ref-sweet-matcher">8.5</a>節で改めて解説するように，Sweet EgisonではマッチャーはHaskellのデータとして表現される． マッチ節は<code>mc</code>クアジ・クォーター（quasi-quoter）を使って表現される． クアジ・クォーターはTemplate Haskellが提供する機能のひとつで，<code>[mc|</code>と<code>|]</code>で囲まれた部分を文字列として受け取り，Haskellプログラムを返す関数を定義することで，ユーザはHaskellメタプログラミングすることができる． マッチ節がどのようなHaskellプログラムに展開されるのかは，<a class="reference" href="sweet.html#ref-sweet-mechanism">8.2</a>節で紹介する． コンス・パターンはHaskellと同様にコロンひとつで表現する．</p>
+<p>ライブラリに最初から定義されている探索戦略には，深さ優先探索<code>dfs</code>と幅優先探索<code>bfs</code>がある． 深さ優先探索<code>dfs</code>は，無限にあるパターンマッチの結果をすべて列挙できないことがあるが，高速である．</p>
+<pre class="listing"><code class="language-haskell">take 10 (matchAll dfs [1..] (Set Something)
+  [[mc| $x : $y : _ -&gt; (x, y) |]])
+-- [(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7), (1, 8), (1, 9), (1, 10)]</code></pre>
+<p>幅優先探索<code>bfs</code>は，無限にあるパターンマッチの結果をすべて列挙できるが，深さ優先探索<code>dfs</code>にくらべて実行効率がよくない．</p>
+<pre class="listing"><code class="language-haskell">take 10 (matchAll bfs [1..] (Set Something)
+  [[mc| $x : $y : _ -&gt; (x, y) |]])
+-- [(1, 1), (1, 2), (2, 1), (1, 3), (2, 2), (3, 1), (1, 4), (2, 3), (3, 2), (4, 1)]</code></pre>
+<p><code>matchAll</code>式がマッチ節のリストを引数にとるのは，複数のマッチ節を扱うためである． Egisonと同様に“<code>matchAll</code> <span class="math-inline">\(t\)</span> <span class="math-inline">\(m\)</span> [<span class="math-inline">\(c_1\)</span>,<span class="math-inline">\(c_2\)</span>,<span class="math-inline">\(...\)</span>]”というプログラムは，“<code>matchAll</code> <span class="math-inline">\(t\)</span> <span class="math-inline">\(m\)</span> [<span class="math-inline">\(c_1\)</span>] <code>++</code> <code>matchAll</code> <span class="math-inline">\(t\)</span> <span class="math-inline">\(m\)</span> [<span class="math-inline">\(c_2\)</span>] <code>++</code> <span class="math-inline">\(...\)</span>”と同値である．</p>
+<pre class="listing"><code class="language-haskell">matchAll [1, 2, 3] (List Something)
+  [[mc| $x : $xs -&gt; (x, xs) |]
+  ,[mc| _ : $x : $xs -&gt; (x, xs) |]]
+-- [(1, [2, 3]), (2, [3])]</code></pre>
+<p>Sweet Egisonでは，Egisonと同様に<code>#</code>を使って値パターンを表現する． 値パターンを使って非線形パターンを表現できる．</p>
+<pre class="listing"><code class="language-haskell">matchAll [1, 5, 2, 4] (Multiset Eql)
+  [[mc| $x : #(x + 1) : _ -&gt; (x, x + 1) |]]
+-- [(1, 2), (4, 5)]</code></pre>
+<p>最初のパターンマッチの結果だけを返す<code>match</code>もSweet Egisonには実装されている． <code>matchAll</code>を使って<code>match</code>は以下のように定義される．</p>
+<pre class="listing"><code class="language-haskell">match s tgt m cs = head (matchAll s tgt m cs)</code></pre>
+<p><code>match</code>を使ってポーカーの役判定は図<a class="reference" href="sweet.html#ref-fig-pokerProgram">8.1</a>のように記述できる． Sweet Egisonでは，ターゲットのデータ型とマッチャーの両方でデータコンストラクタを使うために，データコンストラクタの名前がかぶりやすい． そのため，マッチャーのほうに<code>CardM</code>のように末尾にマッチャーの<code>M</code>をつけて，名前の衝突を回避することがある．</p>
+<figure>
+<pre class="listing"><code class="language-haskell">data Suit = Spade | Heart | Club | Diamond deriving (Eq)
+data Card = Card Suit Integer
+
+poker :: [Card] -&gt; String
+poker cs =
+  matchDFS cs (Multiset CardM)
+    [[mc| [card $s $n, card #s #(n-1), card #s #(n-2), card #s #(n-3), card #s #(n-4)] -&gt; &quot;Straight flush&quot; |],
+     [mc| [card _ $n, card _ #n, card _ #n, card _ #n, _] -&gt; &quot;Four of a kind&quot; |],
+     [mc| [card _ $m, card _ #m, card _ #m, card _ $n, card _ #n] -&gt; &quot;Full house&quot; |],
+     [mc| [card $s _, card #s _, card #s _, card #s _, card #s _] -&gt; &quot;Flush&quot; |],
+     [mc| [card _ $n, card _ #(n-1), card _ #(n-2), card _ #(n-3), card _ #(n-4)] -&gt; &quot;Straight&quot; |],
+     [mc| [card _ $n, card _ #n, card _ #n, _, _] -&gt; &quot;Three of a kind&quot; |],
+     [mc| [card _ $m, card _ #m, card _ $n, card _ #n, _] -&gt; &quot;Two pair&quot; |],
+     [mc| [card _ $n, card _ #n, _, _, _] -&gt; &quot;One pair&quot; |],
+     [mc| _ -&gt; &quot;Nothing&quot; |]]</code></pre>
+<figcaption>ポーカーの役判定をするHaskellプログラム</figcaption>
+<p><span id="ref-fig-pokerProgram" class="anchor"></span></p>
+</figure>
+<h2><span class="heading-number">8.2</span>Sweet Egisonの仕組み</h2>
+<p><span id="ref-sweet-mechanism" class="anchor"></span></p>
+<p>Sweet Egisonの実装のアイデアを説明するために，まず以下の<code>matchAll</code>式がどのようなHaskellプログラムに変換されるのかみる． <code>cons $x _</code>は<code>$x : _</code>と同値のパターンである． Sweet Egisonでは中置演算子は組み込みで<code>:</code>と<code>++</code>のみが実装されている． 説明をわかりやすくするために，本節では前置記法でコンス・パターンを記述する．</p>
+<pre class="listing"><code class="language-haskell">matchAll dfs [1, 2, 3] (Multiset Something) [[mc| cons $x _ -&gt; x |]]</code></pre>
+<p>上記のプログラムは以下のようなリスト・モナドについての<code>do</code>式に展開される．</p>
+<pre class="listing"><code class="language-haskell">(\ (matcher, target) -&gt; do
+   (x, _) &lt;- cons matcher target
+   let (_, _) = consM matcher target
+   return x)
+ (Multiset Something, [1, 2, 3]) -- [1, 2, 3]</code></pre>
+<p>展開後のプログラムにあらわれる<code>cons</code>と<code>consM</code>はそれぞれネクスト・ターゲット，ネクスト・マッチャーを計算するための関数である． <code>cons</code>と<code>consM</code>はHaskellで定義された関数である． <code>cons</code>と<code>consM</code>は，マッチャーとターゲットを引数に取る． マッチャーを引数にとる理由はパターンの多相性を実現するためである．</p>
+<pre class="listing"><code class="language-haskell">cons (Multiset Something) [1, 2, 3] -- [(1, [2, 3]), (2, [1, 3]), (3, [1, 2])]
+consM (Multiset Something) [1, 2, 3] -- (Something, Multiset Something)</code></pre>
+<pre class="listing"><code class="language-haskell">matchAll dfs [1, 2, 3] (Multiset Something) [[mc| cons $x (cons $y _) -&gt; (x, y) |]]
+-- [(1, 2), (1, 3), (2, 1), (2, 3), (3, 1), (3,2)]</code></pre>
+<pre class="listing"><code class="language-haskell">(\ (matcher, target) -&gt; do
+   (x, target&#x27;) &lt;- cons matcher target
+   let (_, matcher&#x27;) = consM matcher target
+   (y, _) &lt;- cons matcher&#x27; target&#x27;
+   let (_, _) = consM matcher&#x27; target&#x27;
+   return (x, y))
+ (Multiset Something, [1, 2, 3])</code></pre>
+<p>値パターンを含むパターンの展開もみる．</p>
+<pre class="listing"><code class="language-haskell">matchAll dfs [1, 2, 3] (Multiset Eql)
+  [[mc| cons $x (cons #(x * 2) _) -&gt; (x, y) |]]
+-- [(1, 2), (1, 3), (2, 1), (2, 3), (3, 1), (3,2)]</code></pre>
+<p><code>valuePat</code>はHaskellで定義された関数であり，さきほど登場した<code>cons</code>関数と同様にHaskellで定義された関数である．</p>
+<pre class="listing"><code class="language-haskell">(\ (matcher, target) -&gt; do
+   (x, target&#x27;) &lt;- cons matcher target
+   let (_, matcher&#x27;) = consM matcher target
+   (target&#x27;&#x27;, _) &lt;- cons matcher&#x27; target&#x27;
+   let (matcher&#x27;&#x27;, _) = consM matcher&#x27; target&#x27;
+   valuePat (x * 2) matcher&#x27;&#x27; target&#x27;&#x27;
+   return (x, y))
+  (Multiset Something, [1, 2, 3])</code></pre>
+<h2><span class="heading-number">8.3</span>Sweet Egisonの最適化</h2>
+<p><span id="ref-sweet-optimize" class="anchor"></span></p>
+<p>実際のSweet Egisonは<a class="reference" href="sweet.html#ref-sweet-mechanism">8.2</a>節で解説した展開よりも，最適化のために，もうすこし複雑な展開をする． 特にワイルドカード最適化のために特別な工夫がある． 本節ではこれらの工夫を紹介する．</p>
+<h3><span class="heading-number">8.3.1</span>ワイルドカードのパターンマッチの最適化</h3>
+<p><a class="reference" href="matcher.html#ref-matcher-wildcard">6.6</a>節で述べたワイルドカード最適化をSweet Egisonでもおこなうことができる． ワイルドカード最適化とは，ワイルドカードを含むパターンについて，ワイルドカードにマッチするターゲットの計算を省くことにより，パターンマッチの処理を高速化することであった． 本節は，<a class="reference" href="matcher.html#ref-matcher-wildcard">6.6</a>節と同様に，多重集合に対するコンス・パターンの第二引数がワイルドカードであった場合の最適化の例を使ってSweet Egisonでこの最適化を使う方法を説明する．</p>
+<pre class="listing"><code class="language-haskell">matchAll dfs [1, 2, 3] (Multiset Something) [[mc| $x : _ -&gt; x |]]
+-- [1, 2, 3]</code></pre>
+<p>上記の<code>matchAll</code>式はワイルドカード最適化のために以下のように展開される．</p>
+<pre class="listing"><code class="language-haskell">(\ (matcher, target) -&gt; do
+   (x, _) &lt;- cons (GP, WC) matcher target
+   let (_, _) = consM matcher target
+   return x)
+ (Multiset Something, [1, 2, 3])</code></pre>
+<p><span class="math-inline">\(2\)</span>行目の<code>cons</code>関数が第一引数にパターンに対するパターンを追加で引数にとっている． パターンに対するパターンは，ワイルドカードとそれ以外のパターンを区別する． 以下，<code>PP</code>はパターンに対するパターン（Patterns for Patterns），<code>WC</code>はワイルドカード（Wildcard），<code>GP</code>は一般のパターン（General Patterns）の略である．</p>
+<pre class="listing"><code class="language-haskell">data PP a = WC | GP</code></pre>
+<p><code>cons</code>関数は第一引数として追加でこのパターンに対するパターンを追加で引数にとる． 以下のように<code>cons</code>パターンの第二引数がワイルドカードである場合は，その第二引数に対するネクスト・ターゲットとして<code>undefined</code>を返す．</p>
+<pre class="listing"><code class="language-haskell">cons (GP, WC) (Multiset Something) [1, 2, 3]
+-- [(1, undefined), (2, undefined), (3, undefined)]</code></pre>
+<p><code>cons</code>パターンの第二引数がワイルドカード以外である場合は，ネクスト・ターゲットとしてコレクションを計算して返す．</p>
+<pre class="listing"><code class="language-haskell">cons (GP, GP) (Multiset Something) [1, 2, 3]
+-- [(1, [2, 3]), (2, [1, 3]), (3, [1, 2])]</code></pre>
+<h3><span class="heading-number">8.3.2</span>パターン・フュージョン</h3>
+<p><a class="reference" href="matcher.html#ref-matcher-sorted">6.5</a>節で解説した最適化であるパターン・フュージョンは，パターンのパターンマッチがでいないSweet Egisonではユーザーが追加することができない． リストに対するパターンマッチで頻出するジョイン・コンス・パターンについてのみ組み込みでパターン・フュージョンが定義されている． Sweet Egisonはジョイン・コンス・パターン<span class="math-inline">\(p_{1}\)</span> <code>++</code> <span class="math-inline">\(p_{2}\)</span> <code>:</code> <span class="math-inline">\(p_{3}\)</span>を<code>joinCons</code> <span class="math-inline">\(p_{1}\)</span> <span class="math-inline">\(p_{2}\)</span> <span class="math-inline">\(p_{3}\)</span>に変換する．</p>
+<pre class="listing"><code class="language-haskell">matchAll dfs [1, 2, 3] (List Something) [[mc| _ ++ $x : _ -&gt; x |]]
+-- [1, 2, 3]</code></pre>
+<p>たとえば，上記の<code>matchAll</code>式は以下のように展開される．</p>
+<pre class="listing"><code class="language-haskell">(\ (matcher, target) -&gt; do
+  (_, x, _) &lt;- joinCons (WC, GP, WC) matcher target
+  let (_, _, _) = joinConsM matcher target
+  (List Something, [1, 2, 3])</code></pre>
+<h2><span class="heading-number">8.4</span>マッチャーとパターンの型</h2>
+<p><span id="ref-sweet-type" class="anchor"></span></p>
+<p>マッチャーの型はクラスメソッドのない型クラスを使って表現される．</p>
+<pre class="listing"><code class="language-haskell">class Matcher m tgt</code></pre>
+<p>この型クラスを使って，たとえば<code>Something</code>マッチャーは下記のように定義される． データ<code>Something</code>をもつ型<code>Something</code>を定義し，型<code>Something</code>のデータは型<code>a</code>のマッチャーであるという関係をインスタンス宣言で表現している． 本来は，データ<code>Something</code>に<code>Matcher a</code>のような型を直接つけることが理想であるが，これはHaskellの型システムの制約のためできない．</p>
+<pre class="listing"><code class="language-haskell">data Something = Something
+
+instance Matcher Something a</code></pre>
+<p>パターンは，<a class="reference" href="sweet.html#ref-sweet-optimize">8.3</a>節で述べたように，パターンに対するパターンと，マッチャー，ターゲットを引数にとり，ネクスト・ターゲットを返す関数として定義される．</p>
+<pre class="listing"><code class="language-haskell">type Pattern ps im it ot = ps -&gt; im -&gt; it -&gt; [ot]</code></pre>
+<p>パターンの多相性を実現するためには，パターンを型クラスに属する関数として定義する． たとえば，コレクションに対するパターンは以下のような型クラスを使って定義される．</p>
+<pre class="listing"><code class="language-haskell">class CollectionPattern m t where
+  type ElemM m
+  type ElemT t
+  nil :: Pattern () m t ()
+  nilM :: m -&gt; t -&gt; ()
+  cons :: Pattern (PP (ElemT t), PP t) m t (ElemT t, t)
+  consM :: m -&gt; t -&gt; (ElemM m, m)
+  join :: Pattern (PP t, PP t) m t (t, t)
+  joinM :: m -&gt; t -&gt; (m, m)
+  joinCons :: Pattern (PP t, PP (ElemT t), PP t) m t (t, ElemT t, t)
+  joinConsM :: m -&gt; t -&gt; (m, ElemM m, m)</code></pre>
+<h2><span class="heading-number">8.5</span>Sweet Egisonのマッチャー定義</h2>
+<p><span id="ref-sweet-matcher" class="anchor"></span></p>
+<p>多重集合のマッチャーは以下のように定義される．</p>
+<pre class="listing"><code class="language-haskell">newtype Multiset m = Multiset m
+
+instance Matcher m t =&gt; Matcher (Multiset m) [t]
+
+instance Matcher m t =&gt; CollectionPattern (Multiset m) [t] where
+  type ElemM (Multiset m) = m
+  type ElemT [t] = t
+  cons (_, WC) (Multiset _) xs = map (\x -&gt; (x, undefined)) xs
+  cons _       (Multiset _) xs = matchAll dfs xs (List Something)
+    [[mc| $hs ++ $x : $ts -&gt; (x, hs ++ ts) |]]
+  consM (Multiset m) _ = (m, Multiset m)</code></pre>
+<h2><span class="heading-number">8.6</span>ユーザによる探索戦略の追加</h2>
+<p><span id="ref-sweet-strategy" class="anchor"></span></p>
+<p>バックトラッキングによる探索アルゴリズムを記述することに使えるモナドをバックトラッキング・モナドという． 代表的なバックトラッキング・モナドとしてリスト・モナドが知られている． リスト・モナドは以下のようにバックトラッキングを記述することに使える． リスト・モナドを使って<span class="math-inline">\(1\)</span>から<span class="math-inline">\(3\)</span>の整数のペアを列挙している．</p>
+<pre class="listing"><code class="language-haskell">do ns &lt;- [1..3]
+   x &lt;- ns
+   y &lt;- ns
+   return (x, y)
+-- [(1,1),(1,2),(1,3),(2,1),(2,2),(2,3),(3,1),(3,2),(3,3)]</code></pre>
+<p>リスト・モナドは探索木を深さ優先探索の順番で探索する． そのため，探索木が無限に大きい場合，すべての結果を列挙できないことがある．</p>
+<pre class="listing"><code class="language-haskell">do ns &lt;- [1..]
+   x &lt;- ns
+   y &lt;- ns
+   return (x, y)
+-- [(1,1),(1,2),(1,3),(1,4),(1,5),...]</code></pre>
+<p>ここで，深さ優先探索に対するリスト・モナドのように，深さ優先探索以外の探索戦略についても対応するモナドが存在するのかという疑問が生じる． Spiveyによって幅優先探索について，リストのリストをベースのデータ構造にするモナドが対応することが発見されている[<a href="bibliography.html#cite-spivey2009algebras">4</a>]． このモナドは<span class="math-inline">\(n\)</span>要素目のリストに，探索木の深さ<span class="math-inline">\(n\)</span>の場所にあるノードを保持する．</p>
+<p>バックトラッキング・モナドは，<code>fromList</code>と<code>toList</code>という関数をもつ． これらはモナドのベースとなるデータ構造とリストとの間の変換関数である． 深さ優先探索のモナドの場合は，ベースとなるデータ構造がリストであるため，どちらも<code>id</code>関数として実装できる． 幅優先探索のモナドの場合は，ベースとなるデータ構造がリストのリストであるため，<code>toList</code>関数が<code>concat</code>になったりする． バックトラッキング・モナドの実装の詳細は，<code>backtracking</code>という名前のHaskellライブラリとしてHackageで公開されているのでそちらを参照してほしい[<a href="bibliography.html#cite-backtrackingGitHub">5</a>]．</p>
+<p>バックトラッキング・モナドを使うと探索戦略を多相的に切り替えることができる． 以下<code>dfs</code>と<code>bfs</code>はそれぞれ深さ優先探索と幅優先探索のモナドのベースとなるデータ構造を初期化するための関数である． <code>dfs</code>と<code>bfs</code>を置き換えるだけで，探索戦略を制御できる．</p>
+<pre class="listing"><code class="language-haskell">toList (do
+  ns &lt;- dfs [1..]
+  x &lt;- fromList ns
+  y &lt;- fromList ns
+  return (x, y))
+-- [(1,1),(1,2),(1,3),(1,4),...]</code></pre>
+<pre class="listing"><code class="language-haskell">toList (do
+  ns &lt;- bfs [1..]
+  x &lt;- fromList ns
+  y &lt;- fromList ns
+  return (x, y))
+-- [(1,1),(1,2),(2,1),(1,3),...]</code></pre>
+<p><code>matchAll</code>の第一引数に渡されるのはこの探索戦略ごとのモナドを初期化するための関数である．</p>
+<pre class="listing"><code class="language-haskell">matchAll strategy [1..] (Set Something) [[mc| $x : $y : _ -&gt; (x, y) |]]</code></pre>
+<p><code>matchAll</code>の変換結果に適切に，この初期化関数と<code>fromList</code>と<code>toList</code>を挿入すれば，探索戦略を制御することができる．</p>
+<pre class="listing"><code class="language-haskell">toList
+  ((\ (matcher, target) -&gt; do
+     (x, target&#x27;) &lt;- fromList (cons matcher target)
+     let (_, matcher&#x27;) = consM matcher target
+     (y, _) &lt;- fromList (cons matcher&#x27; target&#x27;)
+     let (_, _) = consM matcher&#x27; target&#x27;
+     return (x, y))
+   (strategy (Set Something, [1..])))</code></pre>
+<p>深さ優先探索や幅優先探索のためのモナドはHaskellで定義されている． ユーザーが新しく別の探索戦略のためのモナドを追加することも可能である． この機能はEgison本体にはないSweet Egisonならではの機能である．</p>
+  </main>
+  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>プログラミングEgisonとは — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="preface.html">← 前へ</a><a rel="next" href="quick.html">次へ →</a><a class="language" href="../en/intro.html">English</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">1</span>プログラミングEgisonとは</h1>
+<p><span id="ref-intro" class="anchor"></span></p>
+<p>本章では，Egisonがどのような言語であるのか紹介する． Egisonとそれが提唱しているパターンマッチ指向プログラミングについて，その大体のイメージをつかんでもらいたい．</p>
+<h2><span class="heading-number">1.1</span>プログラミング言語全体の中でのEgisonの位置づけ</h2>
+<p><span id="ref-intro-egison" class="anchor"></span></p>
+<p>プログラミング言語の機能には大きく分けて2種類ある． コンピュータを含むさまざまな機械の操作を簡潔に記述するための機能と，人間の頭のなかにある抽象的な概念をプログラムとして表現するための機能である． コンピュータは物理的なデバイスであるため，前者の機能は必須である． この機能には，たとえばキャッシュやメモリ管理ための操作を自動化する機能などが含まれる． 後者の機能は，プログラマの頭のなかにあるアルゴリズムの認識を，コンピュータ向けに翻訳することなく記述できるようにすることを目指す． コンピュータに解かせたい問題のなかには，その解法に抽象的な概念が関係する問題が多くある． 人間には簡単に理解できる抽象化でも，コンピュータが理解できる形で表現することは難しいことが多い． Egisonは後者の機能の拡充に注力してつくられている．</p>
+<p>アルゴリズムを簡潔に記述することを目指す主流の流派は，関数型プログラミング言語である． 関数型プログラミング言語によるプログラムの記述の大きな特徴は，関数を他の組み込みデータ型と同じようにプログラマが扱えることである． 具体的にいうと，関数を別の関数の引数として渡したり，関数を返す関数を定義することができる． そのおかげで，関数型プログラミング言語以外の言語ではモジュール化がむずかしい処理をモジュール化できることが多々ある． 関数型プログラミングでは，物理的なデバイスであるコンピュータの操作は，多くの場合，コンパイラによってプログラマから隠される．</p>
+<p>しかし，関数型プログラミング言語でも，頭のなかのアルゴリズムのイメージを，プログラムとして記述できるように翻訳する必要がある場合がある． 非自由データ型を扱うアルゴリズムは，その典型的な例である． 非自由データ型とは，同じデータにたいして複数の同値な表現形があるデータ型のことをいう． たとえば，多重集合（要素の重複を許す集合）は非自由データ型である． <span class="math-inline">\(\{a, a, b\}\)</span>という多重集合は，<span class="math-inline">\(\{a, b, a\}\)</span>や<span class="math-inline">\(\{b, a ,a\}\)</span>とも表現できるからである． ほかには，グラフや数式なども非自由データ型である．</p>
+<p>非自由データ型にたいするパターンマッチを可能にすることによって，簡潔に記述できるアルゴリズムの範囲が広げることを目指してEgisonは開発された． Egisonには非自由データ型のデータをパターンマッチするための機能が実装されている． そして，このパターンマッチを活かしたプログラミング・パラダイムであるパターンマッチ指向プログラミングを提唱している．</p>
+<p>また，このパターンマッチ機能を活かしてEgisonの上に数式処理システムが実装されている． 数式処理システムとは，<span class="math-inline">\(x + x = 2 x\)</span>や<span class="math-inline">\((x + y)^2 = x^2 + 2 x y + y^2\)</span>のようにシンボリックな計算ができるプログラミング言語のことをいう． Egisonを使えば数式に対するパターンマッチが簡単に定義できるため，数式処理システムが他の言語にくらべて簡単に実装できる． この数式処理システムの簡潔な実装による拡張性を活かして，Egisonにはいくつか数式処理システムとして新しい機能が実装されている． 特にテンソルについての計算を記述するための機能が発展しており，従来ユーザーが定義することが困難であった微分幾何学の演算子を簡単に定義できるようになっている．</p>
+<aside class="callout">
+<h5>新しい表記法の追求と科学研究</h5>
+<p>既存の言語では，我々の頭の中のイメージをそのまま表現できないことがある． このような不都合は，我々が頭の中でおこなっている抽象化を，言語では表現できないときに生じる． このような抽象化を表現可能にする新しい構文を発見して，言語に組み込むことができれば，この問題は解決される． 実際，プログラミング言語について，このような抽象化をひとつ見つけて，作りはじめたのがEgisonである．</p>
+<p>そもそも，すべてのイメージを表現できるような言語を作ることが本当にできるのかという問題は非常に難しい． というのは，我々の頭の中のイメージは，対象に対する我々の理解が深まると同時に変化するものであるからである． その変化と同時に，我々にとって便利な表現も自然と変わっていく．</p>
+<p>このことを実感するために，ある極端な例を考えてみる．</p>
+<p>数の概念はすでに知っているけれども，たし算やかけ算の概念は知らないひとがいるとする． そのひとにとっては，10進法は理解不能な概念であり，10進表記もまったく理解不能な表記である． しかし，たし算やかけ算の概念とその性質をある程度知っているひとにとっては，10進表記は非常に便利で，直感的な数の表現である．</p>
+<p>たし算・かけ算を知らないというのは極端な例に思うかもしれない． しかし，我々がまだ知らない重要な概念は科学史をふりかえってみるとまだまだあってもおかしくない． このような概念が発見され，自然に対する我々の認識が深まれば，それを表現するために新しい表記法が言語に生まれる． 逆に，このようにして生まれた新しい表記法は我々が自然をより深く理解することを助け，その結果，さらなる新しい表記法が生まれる． このように，表記法の進化と科学の発展は表裏一体の関係にある．</p>
+<p>ゆえに，表記法について研究することには大きな意義があるだろう． 「新しい表記法を見つけるための一般的な方法はあるのだろうか？」，「よりよい表記法が満たす一般的法則はあるのだろうか？」，「表記法の表現力を測る一般的な方法はあるのだろうか？」など興味深い問題はいくつも存在する． これらの問題の答えが見えたとき，まったく新しい世界観が生まれると筆者は期待している． 新しいプログラミング言語を作ることをとおして，これらの問題の答えに近づきたいというのが，Egisonを作った動機である．</p>
+</aside>
+<aside class="callout">
+<h5>独自のプログラミング言語を用意する理由</h5>
+<p>Egisonに実装されている新しいプログラミング言語の機能を，独自のプログラミング言語Egisonにではなく，既存のプログラミング言語を拡張して実装するという手段もある． このような手段を選ばず，独自のプログラミング言語Egisonを作る理由は，そのほうが新しい機能をすばやく確実に実装できるためである． 既存のプログラミング言語に新しく発明した機能を追加するには，その新機能が既存の機能と競合し，言語の実装の広範囲に影響を与える場合があるために，新機能本体の実装以外のための大規模な調査や実装が必要になってしまう場合がある． 実際，Egisonのパターンマッチとテンソルの添字記法は両者ともそのような機能である． たとえば，HaskellにEgisonのパターンマッチを実装しようとしたら，パターンマッチ機能の実装に加えて型システムの設計と実装もせねばならない． また，Haskellにテンソルの添字記法を実装する場合も，シンボリックな添字を扱うためのシンボル計算の機能や，シンボリックな添字をもつテンソルを扱うためのデータ構造の設計や型システムの設計・実装も必要となる． たいして，自身で発明した新機能を実装するために設計した独自のプログラミング言語を用意すれば，新機能の実装を最低限の労力で実装できる． ただし，独自のプログラミング言語を用意することには，既知の機能を再実装する必要があったり，新規ユーザーを得るのが難しいというデメリットもある．</p>
+<p>なお，Egisonは2026年1月の開発により静的型付けシステムを備えるようになった（Egison version 5）． 型推論により多くの場合型アノテーションを省略できるが，必要に応じて明示的に型を指定することもできる． この型システムは，非自由データ型のパターンマッチやテンソル計算など，Egisonの高度な機能と統合されている． 静的型システムの導入により，プログラムの信頼性が向上し，特に数式処理システムとしての実用性が大幅に高まった．</p>
+<p>2019年からは既存のメジャーなプログラミング言語にEgisonの機能を実装することにも取り組み始めている． 他言語へのEgisonの機能の移植については，<a class="reference" href="direction.html#ref-direction-language-library">15.1.2</a>節で言及する．</p>
+</aside>
+<h2><span class="heading-number">1.2</span>第<a class="reference" href="quick.html#ref-part-pmo">I</a>部 パターンマッチ指向プログラミング</h2>
+<p><span id="ref-intro-pmo" class="anchor"></span></p>
+<p>Egisonが提唱する新しいプログラミング・パラダイムであるパターンマッチ指向プログラミングについて，第<a class="reference" href="quick.html#ref-part-pmo">I</a>部は解説する．</p>
+<h3><span class="heading-number">1.2.1</span>パターンマッチ指向プログラミングとは</h3>
+<p>本節では，いくつかの例をみることによって，パターンマッチ指向プログラミングとはどのようなプログラミング・パラダイムであるのかそのイメージを紹介する．</p>
+<p>パターンマッチ指向プログラミングによってプログラムの記述が直感的になっていることのわかりやすい例に<code>intersect</code>関数の実装がある． <code>intersect</code>は2つのリストを引数にとり，それらのリストに共通する要素のリストを返す関数である． Egisonを使って引数のリストをそれぞれ要素の順序を無視する集合としてパターンマッチすると，2つのリストの共通要素にマッチするパターンを記述することにより，<code>intersect</code>を記述できる． プログラムの読み方は次章以降で紹介する．</p>
+<pre class="listing"><code class="language-egison">def intersect xs ys :=
+  matchAllDFS (xs, ys) as (set eq, set eq) with
+  | ($x :: _, #x :: _) -&gt; x</code></pre>
+<p>対して，Egisonのパターンマッチを使わずに関数型プログラミングのスタイルでHaskellで記述すると，リストに対する関数を組み合わせて共通要素を抜き出すための方法を記述する必要がある．</p>
+<pre class="listing"><code class="language-egison">intersect xs ys =  filter (\x -&gt; any (== x) ys) xs</code></pre>
+<p>このプログラムは，リスト内包表記を使って以下のように書き直すこともできる．</p>
+<pre class="listing"><code class="language-egison">intersect xs ys =  [x | x &lt;- xs, any (== x) ys]</code></pre>
+<p>Egisonのパターンマッチを使ったプログラムは，2つのリストの共通要素にマッチするパターンを記述しているだけであるのに対し，関数型プログラミングでは，どうやってその共通要素を取り出すかその方法をプログラマが考えて記述する． 前者のように「何を計算したいか（what to do）」を記述するプログラミングスタイルは宣言型プログラミング，後者のように「どうのように計算するか（how to do）」を記述するプログラミングスタイルは手続き型プログラミングと呼ばれている． 「何を計算したいか」から「どのように計算するか」が明らかである場合は，「何を計算したいか」を記述する宣言型プログラミングのほうがプログラムが読みやすく簡潔になる． <code>intersect</code>の例の場合は，Egisonが集合のパターンマッチアルゴリズムをモジュール化できるおかげで，宣言的なプログラミングが可能になっている．</p>
+<p>少し毛色の違う例として，<code>concat</code>関数をパターンマッチ指向プログラミングで定義する． リストのリストの要素にマッチするパターンを記述することにより，<code>concat</code>を定義できる．</p>
+<pre class="listing"><code class="language-egison">def concat xss :=
+  matchAllDFS xss as list (list something) with
+  | _ ++ (_ ++ $x :: _) :: _ -&gt; x
+
+concat [[1,2],[3],[4,5]]
+-- [1,2,3,4,5]</code></pre>
+<p>さらにもう1つのパターンマッチ指向プログラミングの例として，<code>unique</code>関数を定義する． 後方に自身と同じ値が含まれない要素にマッチするパターンを記述することにより<code>unique</code>を定義できる．</p>
+<pre class="listing"><code class="language-egison">def unique xs :=
+  matchAllDFS xs as list eq with
+  | _ ++ $x :: !(_ ++ #x :: _) -&gt; x
+
+unique [1,2,3,2,4]
+-- [1,3,2,4]</code></pre>
+<p>次章以降で，上記のプログラムで使われているEgisonの構文や，機能，プログラミングテクニックの解説をしていく．</p>
+<h3><span class="heading-number">1.2.2</span>第<a class="reference" href="quick.html#ref-part-pmo">I</a>部の構成</h3>
+<p>第<a class="reference" href="quick.html#ref-part-pmo">I</a>部は可能な限りコンパクトに，パターンマッチ指向プログラミングとそのためのEgisonの機能の解説をまとめることを目指した． そのため，本書は前提知識として，関数型プログラミング（Lisp系言語や，OCaml，Haskellを使ったプログラミング）の知識を仮定している． 既存の関数型言語にも存在する簡単な機能については，登場したときに軽く解説するにとどめた．</p>
+<p>第<a class="reference" href="quick.html#ref-part-pmo">I</a>部の構成は以下の通りである． 第<a class="reference" href="quick.html#ref-quick">2</a>章では，パターンマッチに関係するEgisonの構文を一通り紹介する． 第<a class="reference" href="pmo.html#ref-pmo">3</a>章では，パターンマッチ指向プログラミングで頻出するテクニックを紹介する． 第<a class="reference" href="essence.html#ref-essence">4</a>章では，Egisonのパターンマッチを活かしたプログラミングスタイルであるパターンマッチ指向プログラミングとはなにか解説する． 第<a class="reference" href="mechanism.html#ref-mechanism">5</a>章では，Egison内部のパターンマッチの仕組みも解説する． 第<a class="reference" href="matcher.html#ref-matcher">6</a>章では，ユーザーによるマッチャー定義の方法を説明する． 第<a class="reference" href="etc.html#ref-etc">7</a>章では，実際にプログラミングするときに便利な，無名パラメータ関数やIO入出力するための機能について解説する． 第<a class="reference" href="sweet.html#ref-sweet">8</a>章では，EgisonのパターンマッチをHaskellで使うためのライブラリSweet Egisonの使い方を紹介する．</p>
+<p>ユーザーとしてEgisonに興味がある読者は，第<a class="reference" href="quick.html#ref-quick">2</a>章，第<a class="reference" href="pmo.html#ref-pmo">3</a>章，第<a class="reference" href="essence.html#ref-essence">4</a>章，第<a class="reference" href="mechanism.html#ref-mechanism">5</a>章<a class="reference" href="mechanism.html#ref-mechanism-overview">5.1</a>節，第<a class="reference" href="matcher.html#ref-matcher">6</a>章を順に読んでいくのがよい． Egisonの設計・実装に興味がある読者は，第<a class="reference" href="quick.html#ref-quick">2</a>章の前半部分を読んだ後，第<a class="reference" href="mechanism.html#ref-mechanism">5</a>章，第<a class="reference" href="matcher.html#ref-matcher">6</a>章を読むことができる．</p>
+<h2><span class="heading-number">1.3</span>第<a class="reference" href="cas.html#ref-part-cas">II</a>部 数式処理システムとしてのEgison</h2>
+<p><span id="ref-intro-cas" class="anchor"></span></p>
+<p>数式処理システムとしてEgisonがもつ機能を第<a class="reference" href="cas.html#ref-part-cas">II</a>部は紹介する．</p>
+<h3><span class="heading-number">1.3.1</span>数式処理システムとしてのEgisonとその特徴</h3>
+<p>数式処理システムとは，<span class="math-inline">\(x + x = 2 x\)</span>のようにシンボリックな計算ができるプログラミング言語のことである． このようなシンボリックな計算は，我々が日頃おこなっている計算の大きな部分を占める． 実際，中学校以降の数学で現れる計算のほとんどはシンボリックな計算を含む． そのため，シンボリックな計算をできるプログラミング言語を作ることは重要である．</p>
+<p>数式処理システムを作ることがむずかしい原因は，シンボリックな変数を含む数式が一つの定まった形を持たない非自由データ型であることである． たとえば，<span class="math-inline">\((x + y)^2\)</span>という数式は，<span class="math-inline">\(x^2 + 2 x y + y^2\)</span>という形の数式とも同値である． Egisonの非自由データ型に対しても適用可能なパターンマッチ機能を使うと数式の書き換え処理を簡潔に実装できるために数式処理システムを，既存のプログラミング言語よりもかなり少ないコード量で実装することができる． このような考えをもとに2016年にEgisonで数式処理システムは実装された． この数式処理システムはEgison処理系と統合されており，Egison上で使うことができる．</p>
+<p>この数式処理システムの実装は，ほかの数式処理システムの実装にくらべてシンプルである． そのために機能拡張がしやすいというメリットがある． 実際，このおかげで，Egison独自の重要な特徴であるテンソルの添字記法をプログラミングへの導入についても，簡単に実装することができた． テンソルの添字記法をプログラミング言語に導入する手法は，この数式処理システムを使って微分幾何の計算をするプログラムのサンプルを作っている最中に発案され，数週間で実装された．</p>
+<p>プログラミング言語に数式処理システムの機能を実装することには，実用的なものが作りやすいという利点がある． 数式処理システムは，手で計算するより速ければ喜ばれるケースが多く，通常のプログラミング言語とくらべて，実行速度がシビアに求められない． 実行速度よりも，普段手で書いている数学記法をプログラムでも記述できることのほうが数学の研究者にとってはうれしいことが多い． そのため，数式処理システムの実装は，新しい記法のプログラミングへの導入を目指すEgisonにとって格好の課題といえる．</p>
+<h3><span class="heading-number">1.3.2</span>第<a class="reference" href="cas.html#ref-part-cas">II</a>部の構成</h3>
+<p>第<a class="reference" href="cas.html#ref-part-cas">II</a>部の最初に数式処理システムの使い方について解説したあと，Egisonのもつ数式処理システムとしての機能を解説する．</p>
+<p>第<a class="reference" href="cas.html#ref-part-cas">II</a>部の構成は以下の通りである． 第<a class="reference" href="cas.html#ref-cas">9</a>章では，数式処理システムの特徴であるシンボリックな計算の方法と，具体的なプログラムの例を紹介する． 第<a class="reference" href="mexpr.html#ref-mexpr">10</a>章では，Egison内部で数式データがどう表現されているのか解説する． 第<a class="reference" href="casdetail.html#ref-casdetail">11</a>章では，簡約システムの詳細として，簡約規則の宣言，数学関数の宣言，型注釈による正規形の指定，型の昇格タワーとその拡張，商の型を解説する． 第<a class="reference" href="tensor.html#ref-tensor">12</a>章では，テンソルの添字記法を使ったプログラムの記述の方法を解説する． 第<a class="reference" href="funcsym.html#ref-funcsym">13</a>章では，関数シンボルについて解説する． 第<a class="reference" href="diffgeo.html#ref-diffgeo">14</a>章では，ここまで解説した機能の実践的な応用として，微分幾何の計算をするプログラムを紹介する．</p>
+  </main>
+  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+</body>
+</html>

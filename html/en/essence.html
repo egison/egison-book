@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>The Benefits of Pattern-Match-Oriented Programming — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="prev" href="pmo.html">← Previous</a><a rel="next" href="mechanism.html">Next →</a><a class="language" href="../ja/essence.html">日本語</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">4</span>The Benefits of Pattern-Match-Oriented Programming</h1>
+<p><span id="ref-essence" class="anchor"></span></p>
+<p>The purpose of this chapter is to clarify in what situations and how pattern-match-oriented programming is useful. All the examples in the previous chapters involved only single <code>matchAll</code> or <code>match</code> expressions, but in this chapter we examine what role Egison&#x27;s pattern matching plays in the writing of larger programs.</p>
+<h2><span class="heading-number">4.1</span>Implementing a SAT Solver</h2>
+<p><span id="ref-essence-sat" class="anchor"></span></p>
+<p>To observe the benefits of pattern-match-oriented programming in the context of writing a reasonably large program, we implement a SAT solver. A SAT solver is a program that determines whether there exists an assignment of truth values to logical variables that makes a given propositional formula true. The logical formulas taken as input by SAT solvers are typically in <em>conjunctive normal form</em>. A logical formula is in conjunctive normal form when it is a conjunction of clauses, each of which is a disjunction of <em>literals</em>. A literal is a formula of the form <span class="math-inline">\(p\)</span> or <span class="math-inline">\(\neg p\)</span>. For example, <span class="math-inline">\((p \lor q) \wedge (\neg p \lor r) \wedge (\neg p \lor \neg r)\)</span> is a formula in conjunctive normal form that becomes true under the assignment <span class="math-inline">\(p = \texttt{False}\)</span>, <span class="math-inline">\(q = \texttt{True}\)</span>, <span class="math-inline">\(r = \texttt{True}\)</span>.</p>
+<h3><span class="heading-number">4.1.1</span>The Davis-Putnam Algorithm</h3>
+<p>Here we implement the Davis-Putnam algorithm&nbsp;[<a href="bibliography.html#cite-harrison2009handbook">3</a>], a relatively simple algorithm among those for solving SAT problems. In the implementation of this section, propositional formulas in conjunctive normal form are represented as a collection of collections of literals. Since <span class="math-inline">\(\wedge\)</span> and <span class="math-inline">\(\lor\)</span> are commutative operators, this collection of collections can be pattern-matched as a multiset of multisets of literals. Furthermore, literals are represented as integers: a literal of the form <span class="math-inline">\(p\)</span> is a positive integer, and a literal of the form <span class="math-inline">\(\neg p\)</span> is the negation (multiplied by <span class="math-inline">\(-1\)</span>) of the positive integer corresponding to <span class="math-inline">\(p\)</span>.</p>
+<p>Then, the matcher for these formulas can be defined as <code>multiset (multiset integer)</code>. The following program is the core implementation of the Davis-Putnam algorithm. The <code>dp</code> function takes a list of logical variables and a formula as arguments, and returns <code>True</code> if a solution exists and <code>False</code> otherwise. The type annotation indicates that the <code>dp</code> function takes a list of integers (logical variables) and a list of lists of integers (a formula) and returns a <code>Bool</code>.</p>
+<pre class="listing"><code class="language-egison">def dp (vars: [Integer]) (cnf: [[Integer]]) : Bool :=
+  match (vars, cnf) as (multiset integer, multiset (multiset integer)) with
+  | (_, []) -&gt; True
+  | (_, [] :: _) -&gt; False
+  -- 1-literal rule
+  | (_, ($l :: []) :: _) -&gt; dp (delete (abs l) vars) (assignTrue l cnf)
+  -- pure literal rule (positive)
+  | ($v :: $vs, !((#(neg v) :: _) :: _)) -&gt; dp vs (assignTrue v cnf)
+  -- pure literal rule (negative)
+  | ($v :: $vs, !((#v :: _) :: _)) -&gt; dp vs (assignTrue (neg v) cnf)
+  -- otherwise
+  | ($v :: $vs, _) -&gt;
+    dp vs
+       ((resolveOn v cnf) ++ (deleteClausesWith v (deleteClausesWith (neg v) cnf)))</code></pre>
+<p>The first match clause (line 3) states that if the input formula is empty, then it is satisfiable. The second match clause (line 4) states that if the input formula contains an empty clause, then no solution exists. The third match clause (line 6) represents the <em>1-literal rule</em>. When the input formula has a clause consisting of a single literal, we can immediately assign <code>True</code> to that literal. The fourth match clause (line 8) states that if the negation of a certain logical variable does not appear as a literal at all, then we can immediately assign <code>True</code> to that variable. For example, <span class="math-inline">\((p \lor q) \wedge (\neg p \lor r) \wedge (\neg p \lor \neg r)\)</span> does not contain the negation of the logical variable <span class="math-inline">\(q\)</span>, so <code>True</code> can be assigned to <span class="math-inline">\(q\)</span>. The fifth match clause (line 10) expresses the converse of the fourth match clause. This clause states that if only the negation of a certain logical variable appears in the input formula, then <code>False</code> can be assigned to that variable. The last match clause (lines 12--14) applies the <em>resolution principle</em>. This clause enumerates all pairs of clauses of the form <span class="math-inline">\(p \lor C\)</span> and <span class="math-inline">\(\neg p \lor D\)</span> (where <span class="math-inline">\(C\)</span> and <span class="math-inline">\(D\)</span> are disjunctions of literals) and generates clauses of the form <span class="math-inline">\(C \lor D\)</span>.</p>
+<p>The above definition of <code>dp</code> describes all the rules for simplifying the input formula using pattern matching on multisets. In traditional functional programming, achieving the same thing would require combining multiple library functions or defining auxiliary functions. An OCaml implementation of the Davis-Putnam algorithm can be found in&nbsp;[<a href="bibliography.html#cite-harrison2009handbook">3</a>].</p>
+<h3><span class="heading-number">4.1.2</span>The Resolution Principle</h3>
+<p>This section presents the implementation of the <code>resolveOn</code> function. We begin by presenting a naive implementation. The <code>resolveOn</code> function can be defined using a <code>matchAll</code> expression as follows. The type annotation indicates that the <code>resolveOn</code> function takes an integer <code>v</code> and a formula <code>cnf</code> and returns a list of derived clauses.</p>
+<pre class="listing"><code class="language-egison">def resolveOn (v: Integer) (cnf: [[Integer]]) : [[Integer]] := matchAll cnf as multiset (multiset integer) with
+| (#v :: $xs) :: (#(negate v) :: $ys) :: _ -&gt; unique (filter (\c -&gt; not (tautology c)) (xs ++ ys))</code></pre>
+<p>The pattern for enumerating pairs of clauses of the form <span class="math-inline">\(p \lor C\)</span> and <span class="math-inline">\(\neg p \lor D\)</span> can be described using pattern matching on a multiset of multisets. However, this alone would also match cases where <span class="math-inline">\(C \lor D\)</span> is a tautological clause (which happens when <span class="math-inline">\(C\)</span> contains a literal <span class="math-inline">\(q\)</span> and <span class="math-inline">\(D\)</span> contains a literal <span class="math-inline">\(\neg q\)</span>). To handle this, the <code>filter</code> function and the <code>tautology</code> function are used to remove such clauses. By defining the <code>resolveOn</code> function using sequential not patterns (Section&nbsp;<a class="reference" href="pmo.html#ref-pmo-tuple">3.3</a> of Chapter&nbsp;<a class="reference" href="pmo.html#ref-pmo">3</a>), such operations can be incorporated into the pattern itself.</p>
+<pre class="listing"><code class="language-egison">def resolveOn (v: Integer) (cnf: [[Integer]]) : [[Integer]] :=
+  matchAll cnf as multiset (multiset integer) with
+  | {(#v :: (@ &amp; $xs)) :: (#(neg v) :: (@ &amp; $ys)) :: _,
+     !($l :: _, #(neg l) :: _)}
+    -&gt;  unique (xs ++ ys)</code></pre>
+<h2><span class="heading-number">4.2</span>Separating Two Kinds of Loops</h2>
+<p><span id="ref-essence-pmo" class="anchor"></span></p>
+<p>The SAT solver implemented in Section&nbsp;<a class="reference" href="essence.html#ref-essence-sat">4.1</a> contained a loop that could not be eliminated by pattern-match-oriented programming. That loop is the recursion of the <code>dp</code> function. This recursion is an essential loop for narrowing the search space in solving SAT problems. This search space reduction cannot be achieved by a simple backtracking algorithm. In contrast, all other loops that can be implemented through backtracking have been pushed into the patterns. In traditional functional programming, both kinds of loops had to be written using recursion. Pattern-match-oriented programming confines loops implementable by backtracking into patterns, allowing programmers to focus solely on writing the essential loops that reduce time complexity. This improves both the ease of writing and the readability of programs.</p>
+  </main>
+  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+</body>
+</html>

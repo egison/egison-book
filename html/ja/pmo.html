@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>パターンマッチ指向プログラミング入門 — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="quick.html">← 前へ</a><a rel="next" href="essence.html">次へ →</a><a class="language" href="../en/pmo.html">English</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">3</span>パターンマッチ指向プログラミング入門</h1>
+<p><span id="ref-pmo" class="anchor"></span></p>
+<p>本章は，第<a class="reference" href="quick.html#ref-quick">2</a>章でみてきたパターンマッチのための構文やさまざまな組み込みパターンを使って，どのようなプログラミングができるのかを解説する． そのために，Egisonパターンマッチを活用したプログラミングにおいて頻出するパターンを紹介していく． 本章でEgisonのパターンマッチを使ったプログラミングの具体的なイメージをつかんでいってもらいたい．</p>
+<h2><span class="heading-number">3.1</span>パターンマッチによるリスト・プログラミング</h2>
+<p>本節は，リスト・プログラミングがEgisonのパターンマッチによってどのように変わるのか観察する． ここでリスト・プログラミングとは，関数型プログラミング言語を含む一般のプログラミング言語のリスト・ライブラリで提供されているような関数を定義するためのプログラミングのことをいう． <code>_ ++ $x :: _</code>という2引数目がコンス・パターンのジョイン・パターンは，リスト・プログラミングにおいて頻出する． そのためこのパターンに名前をつけ，<em>ジョイン・コンス・パターン</em>（<em>join-cons pattern</em>）と呼んでいる． 本節で示すように，リストに対する関数の多くがジョイン・コンス・パターンを使って定義できる．</p>
+<h3><span class="heading-number">3.1.1</span>単一のジョイン・コンス・パターン — <code>map</code>関数とその仲間</h3>
+<p><code>list</code>マッチャーについて，パターン<code>_ ++ $x :: _</code>は，ターゲットのそれぞれの要素にマッチする． その結果，下記の<code>matchAll</code>式は，<code>xs</code>のそれぞれの要素にマッチし，それらに関数<code>f</code>を適用した結果を返す． これはまさに<code>map</code>関数の定義である． 型注釈により，<code>map</code>関数が任意の型<code>a</code>のリストを受け取り，型<code>b</code>のリストを返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def map (f: a -&gt; b) (xs: [a]) : [b] := matchAll xs as list something with
+  | _ ++ $x :: _ -&gt; f x</code></pre>
+<p>この<code>matchAll</code>式を変更して，さまざまな関数を定義できる． たとえば，<code>filter</code>関数は述語パターンを挿入して定義できる． 型注釈により，述語関数<code>pred</code>が型<code>a</code>の値を受け取り<code>Bool</code>を返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def filter (pred: a -&gt; Bool) (xs: [a]) : [a] := matchAll xs as list something with
+  | _ ++ (?pred &amp; $x) :: _ -&gt; x</code></pre>
+<p><code>member</code>関数は値パターンを挿入することにより定義できる． <code>member</code>関数は第一引数の要素が第二引数のコレクションに含まれているかどうか判定する述語である． <code>member</code>関数は，<code>match</code>式を使って定義する． <code>match</code>式は，<code>car (matchAll ...)</code><span class="footnote" role="note"><code>car</code>はコレクションの先頭要素を取り出す関数である．</span>のエイリアスとして実装されている． この実装が可能であるのは，Egisonが<code>matchAll</code>式を遅延評価するためである．</p>
+<p>型注釈により，<code>member</code>関数が任意の型<code>a</code>の値とリストを受け取り，<code>Bool</code>を返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def member (x: a) (xs: [a]) : Bool := match xs as list eq with
+  | _ ++ #x :: _ -&gt; True
+  | _            -&gt; False</code></pre>
+<p>}</p>
+<p><code>delete</code>関数は，<code>member</code>関数をすこし編集して実装できる． <code>delete</code>関数は，第一引数<code>x</code>の最初の出現を第二引数のコレクション<code>xs</code>から取り除く．</p>
+<pre class="listing"><code class="language-egison">def delete (x: a) (xs: [a]) : [a] := match xs as list eq with
+  | $hs ++ #x :: $ts -&gt; hs ++ ts
+  | _                -&gt; xs</code></pre>
+<p>}</p>
+<p>述語<code>any</code>と<code>every</code>も同様に<code>match</code>式により実装できる． <code>any</code>は第二引数のコレクションの要素のうちに第一引数の述語を満たすものがあるかどうか判定する述語である． <code>every</code>は第二引数のコレクションの要素のすべてが第一引数の述語を満たすかどうか判定する述語である．</p>
+<pre class="listing"><code class="language-egison">def any (pred: a -&gt; Bool) (xs: [a]) : Bool := match xs as list something with
+  | _ ++ ?pred :: _ -&gt; True
+  | _               -&gt; False
+
+def every (pred: a -&gt; Bool) (xs: [a]) : Bool := match xs as list something with
+  | _ ++ !?pred :: _ -&gt; False
+  | _                -&gt; True</code></pre>
+<h3><span class="heading-number">3.1.2</span>ジョイン・コンス・パターンのネスト — <code>unique</code>・<code>concat</code>関数</h3>
+<p><span id="ref-pmo-nested-join-cons" class="anchor"></span></p>
+<p>複数のジョイン・コンス・パターンを組み合わせることで，さらに強力なパターンをつくることができる． その例として<code>unique</code>関数を紹介する． <code>unique</code>関数をパターンマッチ指向プログラミングにより定義すると以下のようになる． 型注釈により，<code>unique</code>関数が任意の型<code>a</code>のリストを受け取り，同じ型のリストを返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def unique (xs: [a]) : [a] := matchAllDFS xs as list eq with
+  | _ ++ $x :: !(_ ++ #x :: _) -&gt; x</code></pre>
+<p>notパターンが，<code>x</code>が<code>x</code>のあとにそれ以上現れ<em>ない</em>ことを表現するために使われている． その結果このパターンは，それぞれの要素の最後の出現にマッチする．</p>
+<pre class="listing"><code class="language-egison">unique [1,2,3,2,4] -- [1,3,2,4]</code></pre>
+<p>述語パターンを上手に使って，それぞれの要素の最初の出現からなるコレクションを返す<code>unique</code>関数を定義することも可能である． 最初の出現だけにマッチするために，その要素より前に同じ要素が出現しないときにマッチするパターンを書く必要がある． Egisonのパターンマッチはパターンを左から右に処理するため，そのようなパターンは，コンス・パターンとジョイン・パターンを単純に組み合わせるだけでは書けない．</p>
+<pre class="listing"><code class="language-egison">def unique2 (xs: [a]) : [a] := matchAllDFS xs as list eq with
+  | $hs ++ (!?(\x -&gt; member x hs) &amp; $x) :: _ -&gt; x
+
+unique2 [1,2,3,2,4] -- [1,2,3,4]</code></pre>
+<p>もうひとつのもっとエレガントな方法に，シーケンシャル・パターンを使う方法がある． 同じ意味のパターンを，ジョイン・パターンの第一引数に後回しパターン変数を使うシーケンシャル・パターンにより表現できる．</p>
+<pre class="listing"><code class="language-egison">def unique (xs: [a]) : [a] := matchAllDFS xs as list eq with
+  |  {@               ++ $x :: _,
+      !(_ ++ #x :: _)}
+  -&gt; x</code></pre>
+<p>ネストしたジョイン・コンス・パターンのもうひとつの例に，第<a class="reference" href="quick.html#ref-quick">2</a>章<a class="reference" href="quick.html#ref-quick-matchalldfs">2.5</a>節で紹介した<code>concat</code>関数がある． マッチャー合成（第<a class="reference" href="quick.html#ref-quick">2</a>章<a class="reference" href="quick.html#ref-quick-matcher-composition">2.10</a>節）とジョイン・コンス・パターンを組み合わせることにより，<code>concat</code>をパターンマッチ指向プログラミングにより定義できる． 型注釈により，<code>concat</code>関数がリストのリストを受け取り，フラット化されたリストを返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def concat (xss: [[a]]) : [a] := matchAllDFS xss as list (list something) with
+  | _ ++ (_ ++ $x :: _) :: _ -&gt; x</code></pre>
+<h2><span class="heading-number">3.2</span>多重集合プログラミング</h2>
+<p>多重集合を直接パターンマッチできることは，Egisonの大きな特徴である． 多重集合のパターンマッチを活かしたプログラミングのコツを本節では紹介したい． これ以降の本書に出てくるパターンマッチはほぼ多重集合のパターンマッチである．</p>
+<h3><span class="heading-number">3.2.1</span>多重集合のコンス・パターン</h3>
+<p><code>multiset</code>マッチャーのコンス・パターンは，要素の順序を無視してコレクションのパターンマッチをするのに便利である． 数学のアルゴリズムを記述するとき，このような状況はよく現れる．</p>
+<p>簡単な例からはじめる． 連想リストに対する<code>lookup</code>関数は，単一のコンス・パターンで定義できる． 単一の多重集合のコンス・パターンは，リストのジョイン・コンス・パターンと置き換えることもできる． 型注釈により，<code>lookup</code>関数がキー<code>k</code>と連想リストを受け取り，対応する値を返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def lookup (k: a) (ls: [(a, b)]) : b := match ls as multiset (eq, something) with
+  | (#k, $x) :: _ -&gt; x</code></pre>
+<p>ただし，ネストした多重集合のコンス・パターンは，リストのジョイン・コンス・パターンと置き換えることができない． <span class="math-inline">\(k\)</span>重にネストした多重集合のコンス・パターンは<span class="math-inline">\(P(n,k) = \frac{n!}{(n-k)!}\)</span>通りの<span class="math-inline">\(k\)</span>個の要素のパーミュテーションを列挙するために使えるのに対し，<span class="math-inline">\(k\)</span>重にネストしたリストのジョイン・コンス・パターンは<span class="math-inline">\(C(n,k) = \frac{n!}{k!(n-k)!}\)</span>通りの<span class="math-inline">\(k\)</span>個の要素の組み合わせを列挙するために使える．</p>
+<pre class="listing"><code class="language-egison">matchAll [1, 2, 3] as list something with
+| _ ++ $x :: _ ++ $y :: _ -&gt; (x, y)
+-- [(1,2),(1,3),(2,3)]
+
+matchAll [1, 2, 3] as multiset something with
+| $x :: $y :: _ -&gt; (x, y)
+-- [(1,2),(1,3),(2,1),(2,3),(3,1),(3,2)]</code></pre>
+<p>上記と同等なプログラムは，従来の関数型プログラミングの一般的な方法では，リスト内包表記によって以下のように記述できる． <code>tails</code>は，引数のリストの後方部分からなる部分リストを返す関数である． <code>splits</code>は，引数のリストを先頭部分のリストと残りのリストに分解したものを返す関数である．</p>
+<pre class="listing"><code class="language-egison">[ (x, y) | x : ts &lt;- tails [1, 2, 3], y &lt;- ts ]
+-- [(1,2),(1,3),(2,3)]
+
+[ (x, y) | (hs, x : ts) &lt;- splits [1, 2, 3], y &lt;- hs ++ ts ]
+-- [(1,2),(1,3),(2,1),(2,3),(3,1),(3,2)]</code></pre>
+<p>多重集合のためのライブラリは，従来のプログラミング言語にも用意されているものの，多重集合として扱いたいコレクションをリストとして捉え直す必要がある場面は多い． 実際，上記のリスト内包表記による<span class="math-inline">\(C(n,2)\)</span>個の要素の組み合わせの列挙では，<code>splits</code>関数と<code>++</code>関数という2つのリストを処理するための関数を使っており，対象のコレクションをリストとして捉え直した処理を記述している． 多重集合に対するパターンマッチは，このようなコレクションをリストとして捉え直す処理をパターンの定義（この例の場合，<code>multiset</code>マッチャーの<code>::</code>パターンの定義）に隠すことによって，多重集合として扱いたいコレクションを直接多重集合として扱える機会を広げる． 本書のこれ以降の部分は，多重集合に対するさまざまなパターンを，第<a class="reference" href="quick.html#ref-quick">2</a>章で紹介したパターンと組み合わせて記述していく．</p>
+<h3><span class="heading-number">3.2.2</span>ポーカーの役判定</h3>
+<p><span id="ref-pmo-poker" class="anchor"></span></p>
+<p>多重集合に対する非線形パターンの応用例としてポーカーの役判定を紹介する． 多重集合に対する非線形パターンにより，ポーカーのすべての役はそれぞれ1つのパターンとして表現できる． <span class="footnote" role="note">著者がEgisonのマッチ式を設計したとき，ポーカーの役判定をするプログラムを簡潔に記述できることを必要条件として設計した．</span> “<code>[</code><span class="math-inline">\(p_1\)</span><code>,</code> <span class="math-inline">\(p_2\)</span><code>,</code> <span class="math-inline">\(...\)</span><code>,</code> <span class="math-inline">\(p_n\)</span><code>]</code>”というパターンは，“<span class="math-inline">\(p1\)</span> <code>:</code> <span class="math-inline">\(p_2\)</span> <code>:</code> <span class="math-inline">\(...\)</span> <code>:</code> <span class="math-inline">\(p_n\)</span> <code>: []</code>”に展開される糖衣構文である．</p>
+<pre class="listing"><code class="language-egison">def poker (cs: [Card]) : String :=
+  match cs as multiset card with
+  | card $s $n :: card #s #(n-1) :: card #s #(n-2) :: card #s #(n-3) :: card #s #(n-4) :: _
+    -&gt; &quot;Straight flush&quot;
+  | card _ $n :: card _ #n :: card _ #n :: card _ #n :: _ :: []
+    -&gt; &quot;Four of a kind&quot;
+  | card _ $m :: card _ #m :: card _ #m :: card _ $n :: card _ #n :: []
+    -&gt; &quot;Full house&quot;
+  | card $s _ :: card #s _ :: card #s _ :: card #s _ :: card #s _ :: []
+    -&gt; &quot;Flush&quot;
+  | card _ $n :: card _ #(n-1) :: card _ #(n-2) :: card _ #(n-3) :: card _ #(n-4) :: []
+    -&gt; &quot;Straight&quot;
+  | card _ $n :: card _ #n :: card _ #n :: _ :: _ :: []
+    -&gt; &quot;Three of a kind&quot;
+  | card _ $m :: card _ #m :: card _ $n :: card _ #n :: _ :: []
+    -&gt; &quot;Two pair&quot;
+  | card _ $n :: card _ #n :: _ :: _ :: _ :: []
+    -&gt; &quot;One pair&quot;
+  | _ :: _ :: _ :: _ :: _ :: [] -&gt; &quot;Nothing&quot;</code></pre>
+<p>この<code>poker</code>関数は以下のように動く．</p>
+<pre class="listing"><code class="language-egison">poker [Card Spade 5, Card Spade 6, Card Spade 7, Card Spade 8, Card Spade 9]
+-- &quot;Straight flush&quot;
+poker [Card Spade 5, Card Diamond 5, Card Spade 7, Card Club 5, Card Heart 5]
+-- &quot;Four of a kind&quot;
+poker [Card Spade 5, Card Diamond 5, Card Spade 7, Card Club 5, Card Heart 7]
+-- &quot;Full house&quot;
+poker [Card Spade 5, Card Spade 6, Card Spade 7, Card Spade 13, Card Spade 9]
+-- &quot;Flush&quot;
+poker [Card Spade 5, Card Club 6, Card Spade 7, Card Spade 8, Card Spade 9]
+-- &quot;Straight&quot;
+poker [Card Spade 5, Card Diamond 5, Card Spade 7, Card Club 5, Card Heart 8]
+-- &quot;Three of a kind&quot;
+poker [Card Spade 5, Card Diamond 10, Card Spade 7, Card Club 5, Card Heart 10]
+-- &quot;Two pair&quot;
+poker [Card Spade 5, Card Diamond 10, Card Spade 7, Card Club 5, Card Heart 8]
+-- &quot;One pair&quot;
+poker [Card Spade 5, Card Spade 6, Card Spade 7, Card Spade 8, Card Diamond 11]
+-- &quot;Nothing&quot;</code></pre>
+<p>パターンコンストラクタ（<code>card</code>）は小文字から始まり，データコンストラクタ（<code>Card</code>）は大文字から始まるというルールがEgisonにはある． <code>poker</code>関数の型注釈により，カードのリストを受け取り，役を表す文字列を返すことを示している．</p>
+<p>なお，上の例でカードのマッチャーは以下のように代数的データマッチャーとして定義されている．</p>
+<pre class="listing"><code class="language-egison">def suit := algebraicDataMatcher
+  | spade
+  | heart
+  | club
+  | diamond
+
+def card := algebraicDataMatcher
+  | card suit (mod 13)</code></pre>
+<h2><span class="heading-number">3.3</span>タプル・パターンによるデータの比較</h2>
+<p><span id="ref-pmo-tuple" class="anchor"></span></p>
+<p>複数のデータをくらべたいという場面は，プログラミングにおいて頻出する． このような場面で，とくにnotパターンと一緒に使われるタプル・パターンが役に立つことがおおい． たとえば， <code>difference</code>関数は，第<a class="reference" href="quick.html#ref-quick">2</a>章<a class="reference" href="quick.html#ref-quick-matcher-composition">2.10</a>節に登場した<code>intersect</code>関数の実装にnotパターンを挿入することにより定義できる． 型注釈により，2つの集合を受け取り，差集合を返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def difference (xs: [a]) (ys: [a]) : [a] := matchAll (xs, ys) as (set eq, set eq) with
+  | ($x :: _, !(#x :: _)) -&gt; x</code></pre>
+<p><code>!($x :: _, #x :: _)</code>のように，notパターンの挿入位置を変えることにより，2つのコレクションに共通要素が1つもない場合にパターンマッチに成功するパターンも記述できる．</p>
+<p>これらのパターンをシーケンシャル・パターンと組み合わせることにより，さらに複雑なパターンを記述することができる． シーケンシャル・パターンは，notパターンを，パターンの複数の離れた部分にまとめて適用することを可能にするからである． たとえば，第<a class="reference" href="quick.html#ref-quick">2</a>章<a class="reference" href="quick.html#ref-quick-seq-pat">2.8</a>節では，2つのコレクションに共通要素が1つしかないことをチェックする<code>singleCommonElem</code>関数をパターンマッチにより定義した． シーケンシャル・notパターンは，数学のアルゴリズムを記述するときに必要となることがある． たとえば，第<a class="reference" href="essence.html#ref-essence">4</a>章<a class="reference" href="essence.html#ref-essence-sat">4.1</a>節でで紹介するSATソルバーの実装でもシーケンシャル・notパターンは現れる． 型注釈により，2つのリストを受け取り，真偽値を返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def singleCommonElem (xs: [a]) (ys: [a]) : Bool := match (xs, ys) as (multiset eq, multiset eq) with
+                    | [($x :: @, #x :: @),
+                       !($y :: _, #y :: _)] -&gt; True
+                    | _ -&gt; False</code></pre>
+<p>シーケンシャル・パターンをループ・パターンと組み合わせることも可能である． たとえば，2つのリストの共通の先頭部分にマッチするパターンを，シーケンシャル・ループ・パターンにより記述できる．</p>
+<pre class="listing"><code class="language-egison">match (xs, ys) as (list eq, list eq) with
+| loop $i (1,$n)
+    [($x_i :: @, #x_i :: @), [...]]
+    !($y :: _, #y :: _)
+-&gt; map (\i -&gt; x_i) [1..n]</code></pre>
+<h2><span class="heading-number">3.4</span>ループ・パターンによる再帰的パターン</h2>
+<p><span id="ref-pmo-loop" class="anchor"></span></p>
+<p>ループ・パターンは，パターンの繰り返しを表現するために使われる． ループ・パターンは，シンプルなパターンコンストラクタを組み合わせて複雑なパターンを構築したり，パターン変数の数がパラメーターによって変わるパターンを記述するときに役に立つ． そのような状況では，複雑な再帰を記述する必要がてでくる． ループ・パターンを使うと，それらの再帰をパターンに押し込め，直感的な記述ができる． 本節では，そのような例を紹介していく．</p>
+<h3><span class="heading-number">3.4.1</span>Nクイーン問題</h3>
+<p><span id="ref-pmo-loop-nqueen" class="anchor"></span></p>
+<p>本節は，Nクイーン問題を解くプログラムをみせることにより，技巧的であるがトリッキーなループ・パターンの例を紹介する． Nクイーン問題とは，<span class="math-inline">\(n \times n\)</span>のチェス盤に<span class="math-inline">\(n\)</span>個のチェスのクイーンの駒をお互いが攻撃しあえないように配置する問題である． チェスのクイーンは，縦横斜め何マス離れている駒でも攻撃することができる． 将棋でいうと，飛車と角行を合わせた動きをチェスのクイーンはできる．</p>
+<p><span class="math-inline">\(4\)</span>クイーン問題をとくプログラムからはじめよう． このプログラムでは，<span class="math-inline">\(4\)</span>つのクイーンの配置をリストで表現する． リストの<span class="math-inline">\(n\)</span>番目の要素は，<span class="math-inline">\(n\)</span>行目のクイーンが何列目の位置にあるかを表現する． このとき，解は，コレクション<code>[1,2,3,4]</code>の要素の順番が並び替わったコレクションである必要がある． <span class="math-inline">\(2\)</span>つのクイーンを同じ行や列に配置できないためである． それゆえ，コレクション<code>[1,2,3,4]</code>を整数の多重集合としてパターンマッチする． クイーン同士が斜めのラインを共有できないという条件は，<span class="math-inline">\(a_1 \pm 1 \neq a_2\)</span>，<span class="math-inline">\(a_1 \pm 2 \neq a_3\)</span>，<span class="math-inline">\(a_2 \pm 1 \neq a_3\)</span>，<span class="math-inline">\(a_1 \pm 3 \neq a_4\)</span>，<span class="math-inline">\(a_2 \pm 2 \neq a_4\)</span>，<span class="math-inline">\(a_3 \pm 1 \neq a_4\)</span>という条件により表現する．</p>
+<pre class="listing"><code class="language-egison">matchAll [1,2,3,4] as multiset integer with
+  $a_1 ::
+   (!#(a_1 - 1) &amp; !#(a_1 + 1) &amp; $a_2) ::
+    (!#(a_1 - 2) &amp; !#(a_1 + 2) &amp; !#(a_2 - 1) &amp; !#(a_2 + 1) &amp; $a_3) ::
+     (!#(a_1 - 3) &amp; !#(a_1 + 3) &amp; !#(a_2 - 2) &amp; !#(a_2 + 2) &amp; !#(a_3 - 1) &amp; !#(a_3 + 1) &amp; $a_4) ::
+      [] -&gt; [a_1,a_2,a_3,a_4]
+-- [[2,4,1,3],[3,1,4,2]]</code></pre>
+<p>上記のプログラムを<span class="math-inline">\(n\)</span>クイーン問題のために一般化するには，二重にネストしたループ・パターンを使うことができる． 外側のループ・パターンの添字変数<code>i</code>が，内側のループ・パターン添字範囲にて，内側のループの繰り返し回数の違いを表現するために使われている． また，前の繰り返しパターンで束縛された値，たとえば，<code>$a_j</code>に束縛された値が，<code>#(a_j - (i - j))</code>や<code>#(a_j + (i - j))</code>のように参照されていることにも注意してほしい． このように，添字付きパターン変数の非線形性（パターンの左側で添字付きパターン変数に束縛した値が参照できること）がうまく機能している． 型注釈により，<code>nQueens</code>関数が整数<code>n</code>を受け取り，整数のリストのリストを返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def nQueens (n: Integer) : [[Integer]] :=
+  matchAll [1..n] as multiset integer with
+  | $a_1 ::
+     (loop $i (2,n)
+           ((loop $j (1, i - 1)
+                  (!#(a_j - (i - j)) &amp; !#(a_j + (i - j)) &amp; ...)
+                  $a_i) :: ...)
+           [] -&gt; map (\i -&gt; a_i) [1..n]
+
+nQueens 4 -- [[2,4,1,3],[3,1,4,2]]</code></pre>
+<h3><span class="heading-number">3.4.2</span>ツリーのパターンマッチ</h3>
+<p><span id="ref-pmo-tree" class="anchor"></span></p>
+<p>本節は，ツリーのパターンマッチをみせることにより，ループ・パターンの実例を紹介する． 本節のツリーのノードは，XMLのように任意の個数の部分ツリーを子供としてもつ． また，これらのサブツリーは多重集合として扱われる． このようなツリーに対するマッチャーは第<a class="reference" href="quick.html#ref-quick">2</a>章<a class="reference" href="quick.html#ref-quick-matcher-composition">2.10</a>節にて定義した． このマッチャーを本節では使う．</p>
+<p>プログラミング言語をカテゴリー分けしたツリーにたいしてパターンを書く． <code>treeData</code>がそのカテゴリーツリーを定義している． たとえば，<code>&quot;Egison&quot;</code>は，<code>&quot;pattern-match-oriented&quot;</code>（パターンマッチ指向）カテゴリーと，<code>&quot;Functional programming&quot;</code>（関数型プログラミング）カテゴリーの<code>&quot;Dynamically typed&quot;</code>（動的型付け）サブカテゴリーに属している． データコンストラクタ<code>Node</code>と<code>Leaf</code>は大文字から始まる．</p>
+<pre class="listing"><code class="language-egison">def treeData :=
+  Node &quot;Programming language&quot;
+    [Node &quot;pattern-match-oriented&quot; [Leaf &quot;Egison&quot;],
+     Node &quot;Functional language&quot;
+       [Node &quot;Strictly typed&quot; [Leaf &quot;OCaml&quot;, Leaf &quot;Haskell&quot;, Leaf &quot;Curry&quot;, Leaf &quot;Coq&quot;],
+        Node &quot;Dynamically typed&quot; [Leaf &quot;Egison&quot;, Leaf &quot;Lisp&quot;, Leaf &quot;Scheme&quot;, Leaf &quot;Racket&quot;]],
+     Node &quot;Logic programming&quot; [Leaf &quot;Prolog&quot;, Leaf &quot;Curry&quot;],
+     Node &quot;Object oriented&quot; [Leaf &quot;C++&quot;, Leaf &quot;Java&quot;, Leaf &quot;Ruby&quot;, Leaf &quot;Python&quot;, Leaf &quot;OCaml&quot;]]</code></pre>
+<p>下記の<code>matchAll</code>式は，ある言語が属するカテゴリーを列挙する． ツリーの末端は任意の深さでありうるため，添字範囲の終了値がパターン（下記の場合<code>$n</code>）であるループ・パターンが使われている． このループ・パターンの三点リーダーパターンは，繰り返しパターンの末尾でない場所に位置している． 繰り返しの場所をユーザーが指定できることも，正規表現のクリーネスター演算子にはないループ・パターンの強みのひとつである． パターンコンストラクタ<code>node</code>と<code>leaf</code>は小文字から始まる． 型注釈により，<code>ancestors</code>関数が文字列<code>x</code>とツリー<code>t</code>を受け取り，祖先ノードのパスのリストを返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def ancestors (x: String) (t: Tree String) : [[String]] := matchAll t as tree string with
+  | loop $i (1,$n)
+      (node $c_i (... ::  _))
+      (leaf #x)
+  -&gt; map (\i -&gt; c_i) [1..n]
+
+ancestors &quot;Egison&quot; treeData
+-- [[&quot;Programming language&quot;, &quot;pattern-match-oriented&quot;], [&quot;Programming language&quot;, &quot;Functional language&quot;, &quot;Dynamically typed&quot;]]</code></pre>
+<p>あるサブカテゴリーに属する言語をすべて列挙するようなパターンを記述することも可能である． 二重にネストしたループ・パターンを使えば，そのサブカテゴリーが任意の深さにあってもよいようにできる． 以下のパターンは，特定のカテゴリーに属するすべての言語を列挙する． ツリーのなかで現れる順番と同じ順番で言語を列挙するために，<code>matchAllDFS</code>が使われている． 型注釈により，<code>descendants</code>関数が文字列<code>x</code>とツリー<code>t</code>を受け取り，子孫ノードのリストを返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def descendants (x: String) (t: Tree String) : [String] := matchAllDFS t as tree string with
+  | loop _ (1,_)
+      (node _ (... ::  _))
+      (node #x ((loop _ (1,_)
+                   (node _ (... :: _))
+                   (leaf $y)) :: _))
+  -&gt; y
+
+descendants &quot;Functional language&quot; treeData
+-- [&quot;OCaml&quot;, &quot;Haskell&quot;, &quot;Curry&quot;, &quot;Coq&quot;, &quot;Egison&quot;, &quot;Lisp&quot;, &quot;Scheme&quot;, &quot;Racket&quot;]</code></pre>
+<p>ツリーのパターンマッチができるDSL（domain-specific language）としては，XML pathがある． ユーザー定義可能な数少ないパターンコンストラクタとループ・パターンを組み合わせて幅広いパターンを記述できることがEgisonの利点である． XML pathは，たとえば<code>ancestor</code>コマンドなど，多くの組み込みコマンドを使ってパターンを記述する．</p>
+<h3><span class="heading-number">3.4.3</span>グラフのパターンマッチ</h3>
+<p><span id="ref-pmo-graph" class="anchor"></span></p>
+<p>本節では，グラフに対するパターンマッチを紹介する． 辺の集合として表現したグラフと，隣接リストとして表現したグラフの両方についてのパターンマッチを紹介する．</p>
+<h4>辺の集合としてのグラフ</h4>
+<p><span id="ref-pmo-graph-set" class="anchor"></span></p>
+<p>本節は，辺の集合として表現したグラフに対してパターンマッチをおこなう． まず，以下のようなマッチャーとグラフを定義する．</p>
+<pre class="listing"><code class="language-egison">def graph := set edge
+def edge := algebraicDataMatcher
+  | edge integer integer
+
+def graphData :=
+  [ Edge 1 2, Edge 2 1, Edge 2 3,  Edge 2 4, Edge 3 4, Edge 4 5, Edge 4 6, Edge 4 7
+  , Edge 5 4, Edge 5 6, Edge 5 7,  Edge 6 4, Edge 6 5, Edge 6 7, Edge 7 4, Edge 7 5
+  , Edge 7 6, Edge 7 8, Edge 9 10, Edge 10 7 ]</code></pre>
+<figure>
+<p><img src="assets/graph.png" alt=""></p>
+<figcaption><code>graphData</code>の描画</figcaption>
+<p><span id="ref-fig-graphVis" class="anchor"></span></p>
+</figure>
+<p>パターンコンストラクタ<code>edge</code>は小文字から始まり，データコンストラクタ<code>Edge</code>は大文字から始まっている． 図<a class="reference" href="pmo.html#ref-fig-graphVis">3.4.3</a>は，上記のグラフを描画している． 本節は，このグラフに対していくつかのパターンマッチを紹介する．</p>
+<p>あるノード<code>s</code>から2辺でたどり着けるノードを列挙するパターンは以下のように書ける．</p>
+<pre class="listing"><code class="language-egison">let s := 1 in
+  matchAll graphData as graph with
+  | edge (#s &amp; $x_1) $x_2 :: edge #x_2 $x_3 :: _
+  -&gt; x
+-- [1,3,4,5,6,7]</code></pre>
+<p>ノード<code>s</code>を始点とする辺でノード<code>s</code>とつながっているが，自身を始点とする辺がノード<code>s</code>に対してでていないノードを列挙するパターンはnotパターンを使って以下のように書ける．</p>
+<pre class="listing"><code class="language-egison">let s := 1 in
+  matchAll graphData as graph with
+  | edge #s $x :: !(edge #x #s :: _)
+  -&gt; x
+-- [4]</code></pre>
+<p>ノード<code>s</code>からノード<code>e</code>へのパスすべてを列挙するパターンはループ・パターンを使って記述できる． Egisonは，パターン中で<code>let</code>式を使うことを許している． この<code>let</code>式は，<code>$x_1</code>に<code>s</code>を束縛するために使われている． この<code>let</code>式のおかげで，ループ・パターンの最初の繰り返しパターンを特別扱いする必要がなくなっている．</p>
+<pre class="listing"><code class="language-egison">let (s, e) := (1, 8) in
+  matchAll graphData as graph with
+  | let x_1 := s in
+      loop $i (2, $n)
+           (edge #x_(i - 1) $x_i :: ...)
+           (edge #x_(n - 1) (#e &amp; $x_n) :: _)
+  -&gt; map (\i -&gt; x_i) [1..n]
+-- [[1,4,7,8], ...]</code></pre>
+<p>サイズ<span class="math-inline">\(n\)</span>のクリーク（完全グラフになっている部分グラフ）を列挙するパターンは以下のように書ける． 二重にネストしたループ・パターンを使う．</p>
+<pre class="listing"><code class="language-egison">let n := 4 in
+  matchAll graphData2 as graph with
+  | edge $x_1 $x_2 :: loop $i (3, n)
+                           (edge #x_1 $x_i :: loop $j (2, i - 1)
+                                                   (edge #x_j #x_i :: ...)
+                                                   ...)
+                          _
+  -&gt; map (\i -&gt; x_i) [1..n]
+-- [[4,5,6,7],...]</code></pre>
+<p>本節は，有向グラフのパターンマッチを紹介した． 上記の有向グラフに対するパターンを無向グラフに対するパターンに変更することは簡単で，<code>Edge a b</code>と<code>Edge b a</code>を同一視するようなマッチャーを使えばよい． そのような無向グラフに対するマッチャーは，第<a class="reference" href="matcher.html#ref-matcher">6</a>章<a class="reference" href="matcher.html#ref-matcher-basic">6.2</a>節で紹介するunordered pairに対するマッチャーを使えば定義できる．</p>
+<h4>隣接グラフ</h4>
+<p>本節は，重み付き隣接リストにより表現したグラフのパターンマッチをおこなう． 重み付き隣接リストに対するマッチャーは，マッチャー合成（第<a class="reference" href="quick.html#ref-quick">2</a>章<a class="reference" href="quick.html#ref-quick-matcher-composition">2.10</a>節）により定義できる． 下記のプログラム中の<code>graphData</code>は隣接リストにより空路による都市間のネットワークを重み付き隣接リストにより表現している． 2つの都市間の移動にかかる時間が，重みとして整数により表現されている．</p>
+<pre class="listing"><code class="language-egison">def graph := multiset (string, multiset (string, integer))
+
+def graphData :=
+  [(&quot;Berlin&quot;, [(&quot;New York&quot;, 14), (&quot;London&quot;, 2), (&quot;Tokyo&quot;, 14), (&quot;Vancouver&quot;, 13)]),
+   (&quot;New York&quot;, [(&quot;Berlin&quot;, 14), (&quot;London&quot;, 12), (&quot;Tokyo&quot;, 18), (&quot;Vancouver&quot;, 6)]),
+   (&quot;London&quot;, [(&quot;Berlin&quot;, 2), (&quot;New York&quot;, 12), (&quot;Tokyo&quot;, 15), (&quot;Vancouver&quot;, 10)]),
+   (&quot;Tokyo&quot;, [(&quot;Berlin&quot;, 14), (&quot;New York&quot;, 18), (&quot;London&quot;, 15), (&quot;Vancouver&quot;, 12)]),
+   (&quot;Vancouver&quot;, [(&quot;Berlin&quot;, 13), (&quot;New York&quot;, 6), (&quot;London&quot;, 10), (&quot;Tokyo&quot;, 12)])]</code></pre>
+<p>以下のプログラム中のパターンは，ベルリンを出発して，すべての都市をまわって，ベルリンに戻るルートにマッチする． このパターンを使って，巡回セールスマン問題を解いている． 非線形ループ・パターンを効果的に使っている． 型注釈により，<code>trips</code>関数がグラフデータから経路のリストを計算し，総距離と都市のリストのタプルのリストを返すことを示している．</p>
+<pre class="listing"><code class="language-egison">def trips : [(Integer, [String])] :=
+  let n := length graphData in
+    matchAll graphData as graph with
+    | (#&quot;Berlin&quot;, (($s_1,$p_1) :: _)) ::
+        loop $i (2, n - 1)
+          ((#s_(i - 1), ($s_i, $p_i) :: _) :: ...)
+          ((#s_(n - 1), (#&quot;Berlin&quot; &amp; $s_n, $p_n) :: _) :: [])
+    -&gt; (sum (map (\i -&gt; p_i) [1..n]), map (\i -&gt; s_i) [1..n])
+
+head (sortBy (\(_, x), (_, y) -&gt; compare x y) trips)
+-- (46, [&quot;London&quot;, &quot;New York&quot;, &quot;Vancouver&quot;, &quot;Tokyo&quot;, &quot;Berlin&quot;])</code></pre>
+<p>ツリー（<a class="reference" href="pmo.html#ref-pmo-tree">3.4.2</a>節）と同様に，グラフに対するパターンマッチのためのDSLがいくつかグラフ・データベースに対するクエリー言語として開発されている． いくつかのユーザー定義パターン・コンストラクタと，ループ・パターンをはじめとする少数の組み込みパターンを組み合わせて多様なパターンを表現できることが，EgisonのこれらのDSLにたいする利点である．</p>
+  </main>
+  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+</body>
+</html>

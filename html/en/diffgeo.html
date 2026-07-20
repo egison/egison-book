@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>Differential Geometry with Egison — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="prev" href="funcsym.html">← Previous</a><a rel="next" href="direction.html">Next →</a><a class="language" href="../ja/diffgeo.html">日本語</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">14</span>Differential Geometry with Egison</h1>
+<p><span id="ref-diffgeo" class="anchor"></span></p>
+<p>This chapter introduces the application of Egison to differential geometry as a practical example of Egison as a computer algebra system. Using Egison, one can compute the curvature of various manifolds simply by writing programs that closely resemble the mathematical definitions, and operators for differential forms such as the exterior derivative and the Hodge star operator can be concisely defined as programs. The explanations in this chapter assume the reader has knowledge of differential geometry. For readers interested in differential geometry, we recommend <em>Curves and Surfaces in Differential Geometry</em> by Shoshichi Kobayashi (Shokabo).</p>
+<h2><span class="heading-number">14.1</span>Differential Geometry and Egison</h2>
+<p>Differential geometry is a field where hand computation is particularly laborious. For example, the simplest manifold with nontrivial curvature is the sphere <span class="math-inline">\(S^2\)</span>, but computing its Riemann curvature tensor by hand takes about 30 minutes for a first attempt. Subsequently, computing the Riemann curvature tensor of the torus <span class="math-inline">\(T^2\)</span>, the next simplest manifold, also takes more than 30 minutes. In actual research, one often computes the curvature of higher-dimensional and more complex manifolds. In such cases, computation may take more than a month. Therefore, differential geometry is also the field where computer algebra systems are most readily applicable.</p>
+<p>Using a computer algebra system, the Riemann curvature tensor of <span class="math-inline">\(S^2\)</span> can be computed in seconds by writing the definitions of the spherical coordinate system, the Riemannian metric, the Christoffel symbols, and the Riemann curvature tensor as programs. For <span class="math-inline">\(T^2\)</span>, once a program has been written to compute the Riemann curvature tensor of <span class="math-inline">\(S^2\)</span>, parts other than the coordinate system setup can be reused, so the computation takes only a few minutes of work. For higher-dimensional and more complex manifolds, one only needs to change the metric setting.</p>
+<p>Egison can describe differential geometry computations as programs in a form closer to mathematical notation than conventional computer algebra systems, by combining the differentiation operator described in Section&nbsp;<a class="reference" href="cas.html#ref-cas-derivative">9.5</a>, the tensor language features described in Chapter&nbsp;<a class="reference" href="tensor.html#ref-tensor">12</a>, and the function symbols described in Chapter&nbsp;<a class="reference" href="funcsym.html#ref-funcsym">13</a>. Additionally, as mentioned in Section&nbsp;<a class="reference" href="tensor.html#ref-tensor-completion">12.9</a>, Egison also provides a mechanism for concisely defining operators for differential forms such as the exterior derivative and the Hodge star operator. This chapter demonstrates these features and shows how Egison can be useful for research and education in differential geometry.</p>
+<h2><span class="heading-number">14.2</span>Computing the Riemann Curvature Tensor</h2>
+<p><span id="ref-diffgeo-riemann" class="anchor"></span></p>
+<p>This section explains the Egison programs for computing various differential geometric quantities such as the Riemannian metric, Christoffel symbols, Riemann curvature tensor, Ricci curvature, and scalar curvature for the sphere. Figure&nbsp;<a class="reference" href="diffgeo.html#ref-fig-riemann-curavture-of-S2">14.2</a> shows an Egison program computing the Riemann curvature tensor of the sphere on Jupyter Notebook and its output. Various geometric invariants are computed from the curvature. By changing only the metric part of the program explained in this section, one can compute the curvature of any manifold. Therefore, understanding the program in this section enables you to use Egison for actual differential geometry research. This section proceeds by explaining each part of this program in order.</p>
+<figure>
+<p><img src="assets/riemann-curvature-S2.png" alt=""></p>
+<figcaption>Computing the Riemann curvature tensor of the sphere</figcaption>
+<p><span id="ref-fig-riemann-curavture-of-S2" class="anchor"></span></p>
+</figure>
+<h3><span class="heading-number">14.2.1</span>Spherical Coordinate System -- <code>[1]</code>-<code>[2]</code></h3>
+<p>The spherical coordinate system consists of three parameters: <span class="math-inline">\(r\)</span>, <span class="math-inline">\(\theta\)</span>, and <span class="math-inline">\(\phi\)</span>. <span class="math-inline">\(r\)</span> represents the distance from the origin. <span class="math-inline">\(\theta\)</span> represents the angle from the <span class="math-inline">\(z\)</span>-axis, i.e., the latitude. <span class="math-inline">\(\phi\)</span> represents the rotation from the <span class="math-inline">\(x\)</span>-axis in the <span class="math-inline">\(xy\)</span>-plane, i.e., the longitude. By fixing the value of <span class="math-inline">\(r\)</span> in the spherical coordinate system, one obtains a coordinate system for the sphere. The spherical coordinate system and the Cartesian coordinate system are related by <span class="math-inline">\(x = r \cos \theta \sin \phi, y = r \cos \theta \cos \phi, z = r \sin \theta\)</span>. This is the content expressed in <code>[1]</code> and <code>[2]</code> of Figure&nbsp;<a class="reference" href="diffgeo.html#ref-fig-riemann-curavture-of-S2">14.2</a>.</p>
+<h3><span class="heading-number">14.2.2</span>Tangent Vectors and Riemannian Metric -- <code>[3]</code>-<code>[7]</code></h3>
+<p>First, the basis vectors of the tangent space at each point on the sphere determined by <span class="math-inline">\(\theta\)</span> and <span class="math-inline">\(\phi\)</span> are computed. In <code>[3]</code>, these vectors are computed, and in <code>[4]</code>, they are displayed. The first and second rows of the output of <code>[4]</code> are the components of the basis vectors.</p>
+<p>The Riemannian metric can be expressed as a matrix that contains information about the magnitude and direction of tangent vectors at each point. In <code>[5]</code>, the magnitudes of the basis vectors are computed by calculating the inner product of the vectors. In <code>[6]</code>, the values of the Riemannian metric defined in <code>[5]</code> are displayed. In the spherical coordinate system, the magnitudes of the basis vectors naturally determined by the coordinates differ at each point. For example, the magnitude of the basis vector in the longitude (<span class="math-inline">\(\phi\)</span>) direction changes depending on the latitude (<span class="math-inline">\(\theta\)</span>). This information appears in the <span class="math-inline">\(2,2\)</span> component of <code>g_i_j</code> as <span class="math-inline">\(r^2 \sin^2 \theta\)</span>.</p>
+<p>In <code>[7]</code>, the Riemannian metric with superscript indices is obtained using the matrix inversion function <code>M.inverse</code>. There are two types of Riemannian metric: <span class="math-inline">\(g_{ij}\)</span> with subscript indices and <span class="math-inline">\(g^{ij}\)</span> with superscript indices.</p>
+<h3><span class="heading-number">14.2.3</span>Christoffel Symbols and Riemann Curvature Tensor -- <code>[8]</code>-<code>[12]</code></h3>
+<p><code>[8]</code> and <code>[9]</code> express the mathematical definitions of the Christoffel symbols of the first kind and second kind as programs. They are expressed as programs in a form very close to the mathematical formulas. Intuitively, the Christoffel symbol <span class="math-inline">\(\Gamma^{i}_{\;jk}\)</span> represents the degree of change in the <span class="math-inline">\(e_i\)</span> direction when the basis vector <span class="math-inline">\(e_j\)</span> is moved in the <span class="math-inline">\(e_k\)</span> direction.</p>
+<div class="math-display">\[{2}
+\Gamma_{ijk} = \frac{1}{2} (\frac{\partial g_{ij}}{\partial x^k} + \frac{\partial g_{ik}}{\partial x^j} - \frac{\partial g_{kj}}{\partial x^i}) &amp;\qquad
+\Gamma^{i}_{\;jk} = g^{im} \Gamma_{mjk} &amp;\qquad\]</div>
+<p>The Riemann curvature tensor can also be written as a program directly from its mathematical definition, as shown in <code>[11]</code>. Intuitively, the Riemann curvature tensor <span class="math-inline">\(R^{i}_{\;jkl}\)</span> represents the degree of change in the <span class="math-inline">\(e_i\)</span> direction when <span class="math-inline">\(e_j\)</span> is moved along the closed path formed by <span class="math-inline">\(e_k\)</span> and <span class="math-inline">\(e_l\)</span>.</p>
+<div class="math-display">\[R^{i}_{\;jkl} = \frac{\partial \Gamma^{i}_{\;jl}}{\partial x^k} - \frac{\partial \Gamma^{i}_{\;jk}}{\partial x^l} + \Gamma^{m}_{\;jl} \Gamma^{i}_{\;mk} - \Gamma^{m}_{\;jk} \Gamma^{i}_{\;ml}\]</div>
+<h3><span class="heading-number">14.2.4</span>Ricci Curvature and Scalar Curvature -- <code>[13]</code>-<code>[16]</code></h3>
+<p><code>[13]</code>-<code>[14]</code> compute the Ricci curvature, and <code>[15]</code>-<code>[16]</code> compute the scalar curvature. They correspond to the following mathematical formulas.</p>
+<div class="math-display">\[{2}
+Ric_{ij} = ^{m}_{\;imj} &amp;\qquad
+S = g^{ij} Ric_{ij} &amp;\qquad\]</div>
+<h3><span class="heading-number">14.2.5</span>Changing the Metric</h3>
+<p>By changing only the metric part of the program explained in this section, one can compute the Christoffel symbols and Riemann curvature tensor of various manifolds.</p>
+<p>For example, to compute the Riemann curvature tensor of the torus <span class="math-inline">\(T^2\)</span>, one only needs to change the spherical coordinate system to the coordinate system of the torus. The coordinate system for the torus can be set up as in <code>[1]</code>-<code>[2]</code> of Figure&nbsp;<a class="reference" href="diffgeo.html#ref-fig-riemann-curvature-of-T2">14.2.5</a>. Backquotes (“<code>`</code>”) are used in this expression. As explained in Section&nbsp;<a class="reference" href="mexpr.html#ref-mexpr-backquote">10.2</a>, expressions with backquotes are treated by the Egison interpreter as if they were a single symbol. Here, by appropriately inserting backquotes, the computation process and the final results become simpler.</p>
+<figure>
+<p><img src="assets/riemann-curvature-T2.png" alt=""></p>
+<figcaption>Computing the Riemann curvature tensor of the torus</figcaption>
+<p><span id="ref-fig-riemann-curvature-of-T2" class="anchor"></span></p>
+</figure>
+<p>Furthermore, by changing the metric to the Schwarzschild metric defined below, one can perform general relativity calculations for a universe with a single massive celestial body at the origin. This computation result represents “spacetime curvature = gravity.”</p>
+<pre class="listing"><code class="language-egison">declare symbol G, M, c, t, r, `$\theta$`, `$\phi$`
+
+def g_i_j : Tensor MathValue :=
+  [| [| `(c^2 * r - 2 * G * M) / (c^2 * r), 0, 0, 0 |]
+   , [| 0, (-1) / (`(c^2 * r - 2 * G * M) / (c^2 * r)), 0, 0 |]
+   , [| 0, 0, -r^2, 0 |]
+   , [| 0, 0, 0, -r^2 * (sin `$\theta$`)^2 |]
+   |]</code></pre>
+<p>The complete program is available at <code>sample/math/geometry/riemann-curvature-tensor-of-Schwarzschild-metric.egi</code> in the Egison source code.</p>
+<h2><span class="heading-number">14.3</span>Computing the Curvature Form -- Computation Using Differential Forms (1)</h2>
+<p><span id="ref-diffgeo-curvature" class="anchor"></span></p>
+<p>As mentioned in Sections&nbsp;<a class="reference" href="tensor.html#ref-tensor-tensorfunc">12.8</a>, <a class="reference" href="tensor.html#ref-tensor-completion">12.9</a>, and&nbsp;<a class="reference" href="tensor.html#ref-tensor-refs">12.14</a>, Egison&#x27;s tensor-related features are designed to concisely express computations using differential forms. Differential forms allow tensor operations to be described more abstractly.</p>
+<p>This section introduces the computation of the curvature form as an example of differential form computation. The curvature form is a generalization of the Riemann curvature tensor, which can be computed using the formula <span class="math-inline">\(\Omega^{i}_{\;j} = d \omega^{i}_{\;j} + \omega^{i}_{\;k} \wedge \omega^{k}_{\;j}\)</span>, a more concise formula than that of the Riemann curvature tensor. The <span class="math-inline">\(\omega\)</span> appearing in the above formula is called the connection form and corresponds to the Christoffel symbols of the second kind in the context of differential forms.</p>
+<figure>
+<p><img src="assets/curvature-form.png" alt=""></p>
+<figcaption>Computing the curvature form</figcaption>
+<p><span id="ref-fig-curvature-form" class="anchor"></span></p>
+</figure>
+<h3><span class="heading-number">14.3.1</span>Wedge Product and Curvature Form</h3>
+<p>Figure&nbsp;<a class="reference" href="diffgeo.html#ref-fig-curvature-form">14.3</a> shows an Egison program that computes the curvature form of <span class="math-inline">\(S^2\)</span>. <code>[1]</code>-<code>[5]</code> set up the parameters of the spherical coordinate system, the Riemannian metric, and the Christoffel symbols. <code>[6]</code> defines the connection form <span class="math-inline">\(\omega\)</span> using the Christoffel symbols of the second kind. <code>[7]</code> defines the exterior derivative operator. <code>[8]</code>-<code>[9]</code> define the wedge product. The wedge product is defined as an infix operator. <code>[10]</code>-<code>[12]</code> compute and output the curvature form.</p>
+<h3><span class="heading-number">14.3.2</span>Euler Form and Euler Number</h3>
+<p>The Euler class is a well-known characteristic class: it is a characteristic class that yields the Euler number when integrated. The following program computes the Euler form of the torus <span class="math-inline">\(T^2\)</span>.</p>
+<pre class="listing"><code class="language-egison">def eulerForm : Tensor MathValue :=
+  (1 / (4 * `$\pi$`)) * withSymbols [t1, t2]
+    (`$\Omega$`~1_2_t1_t2 - `$\Omega$`~2_1_t1_t2)
+
+eulerForm
+-- [| [| 0, (1 / 2) * (&#x27;cos `$\theta$`) * `$\pi$`^-1 |],
+--    [| (-1 / 2) * (&#x27;cos `$\theta$`) * `$\pi$`^-1, 0 |] |]</code></pre>
+<p>Here, <span class="inline-code"><span class="math-inline">\(\Omega\)</span></span> is the curvature form antisymmetrized over its indices. The complete program is available at <code>sample/math/geometry/euler-form-of-T2.egi</code> in the Egison source code.</p>
+<p>Since Egison does not have an integration function, we record the result of integrating this by hand. Integration yields <span class="math-inline">\(0\)</span>, which is the Euler number of <span class="math-inline">\(T^2\)</span>.</p>
+<div class="math-display">\[\chi(T^2) = \int_{T^2} d \theta d \phi \frac{\cos \theta}{2 \pi} = \int_{0}^{2 \pi} d \theta \cos \theta = \left[\sin \theta \right]_{0}^{2 \pi} = \sin 2 \pi - \sin 0 = 0\]</div>
+<h2><span class="heading-number">14.4</span>Computing the Hodge Laplacian -- Computation Using Differential Forms (2)</h2>
+<p><span id="ref-diffgeo-hodge" class="anchor"></span></p>
+<p>This section introduces another example of programming computations using differential forms.</p>
+<p>Figure&nbsp;<a class="reference" href="diffgeo.html#ref-fig-hodge-laplacian">14.4</a> shows an Egison program and its output that computes the Laplacian in polar coordinates using the Hodge Laplacian formula <span class="math-inline">\(\Delta = d \delta + \delta d\)</span>. The first half of this section explains this program.</p>
+<figure>
+<p><img src="assets/laplacian.png" alt=""></p>
+<figcaption>Computing the Hodge Laplacian in polar coordinates</figcaption>
+<p><span id="ref-fig-hodge-laplacian" class="anchor"></span></p>
+</figure>
+<h3><span class="heading-number">14.4.1</span>Exterior Derivative and Hodge Star Operator</h3>
+<p>The first part of Figure&nbsp;<a class="reference" href="diffgeo.html#ref-fig-hodge-laplacian">14.4</a>, <code>[1]</code>-<code>[4]</code>, sets up the parameters and metric of the polar coordinate system. Then, the basic operators for differential forms -- the exterior derivative, the Hodge star operator, and the adjoint of the exterior derivative -- are defined in <code>[5]</code>-<code>[8]</code>. The definition of the Hodge star operator in <code>[6]</code> uses the following formula. The <code>subrefs</code> used in this definition is a built-in function that sequentially attaches the symbols in the second argument list as subscript indices to the tensor given as the first argument.</p>
+<div class="math-display">\[*A = \sqrt{\det|g|} \cdot \epsilon_{i_{1}...i_{n}} \cdot A_{j_{1}...j_{k}} \cdot g^{i_{1}j_{1}} \cdots g^{i_{k}j_{k}} \cdot e^{i_{k+1}} \wedge ... \wedge e^{i_{n}}\]</div>
+<h3><span class="heading-number">14.4.2</span>Hodge Laplacian</h3>
+<p>Using differential forms, the Laplacian can be defined coordinate-independently as <span class="math-inline">\(\Delta = d \delta + \delta d\)</span>. The Laplacian expressed using this formula is called the Hodge Laplacian. This formula is expressed in Egison in <code>[8]</code>. In the definition of <code>[8]</code>, the cases of 0-forms and 2-forms are treated specially. This is because, strictly speaking, <span class="math-inline">\(d\)</span> is undefined for 2-forms in a 2-dimensional coordinate system, and <span class="math-inline">\(\delta\)</span> is undefined for 0-forms.</p>
+<p>In <code>[9]</code>, the function symbol is defined, and in <code>[10]</code>, the Hodge Laplacian is applied to it. As with the Riemann curvature tensor explained in Section&nbsp;<a class="reference" href="diffgeo.html#ref-diffgeo-riemann">14.2</a>, the Laplacian for various coordinate systems can be computed by simply changing the metric.</p>
+<h2><span class="heading-number">14.5</span>Other Differential Form Operators -- Interior Product and Lie Derivative</h2>
+<p>We briefly introduce that the interior product and Lie derivative can also be concisely defined in Egison. These operators are used, for example, in expressing the law of conservation of mass in fluid dynamics and the Navier-Stokes equations using differential forms. The interior product is defined in the library (<code>lib/math/geometry/differential-form.egi</code>) as follows. <code>DiffForm a</code> is a built-in type representing differential forms.</p>
+<pre class="listing"><code class="language-egison">def `$\iota$` {Field a} (X: DiffForm a) (Y: DiffForm a) : DiffForm a :=
+  withSymbols [i] dfOrder Y * (X...~i . dfNormalize Y..._i)</code></pre>
+<p>The Lie derivative can be defined as follows (<code>N</code> is the dimension of the manifold).</p>
+<pre class="listing"><code class="language-egison">def Lie {Field a} (X: DiffForm a) (Y: DiffForm a) : DiffForm a :=
+  match dfOrder Y as integer with
+    | #0 -&gt; `$\iota$` X (d Y)
+    | #N -&gt; d (`$\iota$` X Y)
+    | _  -&gt; `$\iota$` X (d Y) + d (`$\iota$` X Y)</code></pre>
+  </main>
+  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+</body>
+</html>

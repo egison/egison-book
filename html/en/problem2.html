@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="egison-book/scripts/build_html.py">
+  <title>Exercises for Egison as a Computer Algebra System — Egison Book</title>
+  <link rel="stylesheet" href="../style.css">
+  <script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      bt: ['\\mathtt{#1}', 1],
+      set: ['\\{#1\\}', 1],
+      abs: ['\\lvert #1\\rvert', 1],
+      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
+      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
+    }
+  },
+  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="prev" href="problem.html">← Previous</a><a class="language" href="../ja/problem2.html">日本語</a></nav></header>
+  <main class="book-page">
+    <h1><span class="heading-number">B</span>Exercises for Egison as a Computer Algebra System</h1>
+<p>By writing some of the programs in the problems in this appendix, you will become proficient in using Egison as a computer algebra system. Many of these problems require mathematical knowledge more than programming difficulty, but please give them a try.</p>
+<h2>Solutions of Cubic and Quartic Equations</h2>
+<p>Extending the content of Section&nbsp;<a class="reference" href="cas.html#ref-cas-quadratic">9.4</a>, write programs to find the solutions of cubic and quartic equations. The Cardano method and the Ferrari method are known algorithms for finding the solutions of cubic and quartic equations, respectively.</p>
+<h2><span class="math-inline">\(n\)</span>th Roots of Unity</h2>
+<p>It is known that the <span class="math-inline">\(n\)</span>th roots of unity can be found algebraically. Try writing programs to compute the <span class="math-inline">\(n\)</span>th roots of unity for several values of <span class="math-inline">\(n\)</span>. Sample code for the 5th, 7th, 9th, and 17th roots of unity is available in the Egison repository.</p>
+<h2>Computing Riemann Curvature</h2>
+<p>Referring to the program in Section&nbsp;<a class="reference" href="diffgeo.html#ref-diffgeo-riemann">14.2</a>, write programs to compute the Riemann curvature of a cylinder and the Riemann curvature of <span class="math-inline">\(S^3\)</span>.</p>
+<h2>Hodge Laplacian in Spherical Coordinates</h2>
+<p>Referring to the program for computing the Hodge Laplacian in polar coordinates from Section&nbsp;<a class="reference" href="diffgeo.html#ref-diffgeo-riemann">14.2</a>, write a program to compute the Hodge Laplacian in spherical coordinates.</p>
+  </main>
+  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+</body>
+</html>
