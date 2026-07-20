@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
+  <meta name="description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="パターンマッチ指向プログラミングの効果 — Egison Book">
+  <meta property="og:description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/essence.html">
+  <link rel="alternate" hreflang="ja" href="../ja/essence.html">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>パターンマッチ指向プログラミングの効果 — Egison Book</title>
   <link rel="stylesheet" href="../style.css">
-  <script>
+<script>
 window.MathJax = {
   tex: {
     inlineMath: [['\\(', '\\)']],
@@ -25,8 +36,9 @@ window.MathJax = {
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
-  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="pmo.html">← 前へ</a><a rel="next" href="mechanism.html">次へ →</a><a class="language" href="../en/essence.html">English</a></nav></header>
-  <main class="book-page">
+  <a class="skip-link" href="#main-content">本文へ移動</a>
+  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">目次</a><a rel="prev" href="pmo.html">← 前へ</a><a rel="next" href="mechanism.html">次へ →</a><a class="language" hreflang="en" href="../en/essence.html">English</a></nav></header>
+  <main id="main-content" class="book-page">
     <h1><span class="heading-number">4</span>パターンマッチ指向プログラミングの効果</h1>
 <p><span id="ref-essence" class="anchor"></span></p>
 <p>本章の目的は，パターンマッチ指向プログラミングがどのような場面でどのように役に立つか明確にすることである． 前章までの例は，すべて単一の<code>matchAll</code>や<code>match</code>で記述した例ばかりを紹介してきたが，本章ではより大きなプログラムの記述の中でEgisonのパターンマッチがどのような役割を果たすのかみていく．</p>
@@ -66,6 +78,6 @@ window.MathJax = {
 <p><span id="ref-essence-pmo" class="anchor"></span></p>
 <p><a class="reference" href="essence.html#ref-essence-sat">4.1</a>節で実装したSATソルバーは，パターンマッチ指向プログラミングによって取りのぞけないループを含んでいた． そのループとは，<code>dp</code>関数の再帰である． この再帰は，SAT問題を解くための探索空間を狭めるために本質的なループである． この探索空間の縮小は，単純なバックトラッキング・アルゴリズムでは不可能なものである． たいして，その他のバックトラッキングにより実装できるループはすべてパターンの中に押し込められている． 伝統的な関数型プログラミングでは，これら2種類のループのどちらも再帰を使って記述する必要があった． パターンマッチ指向プログラミングは，バックトラッキングにより実装できるループをパターンに閉じ込めることにより，時間的計算量を減らすための本質的なループのみの記述にプログラマが注力できるようにする． これにより，プログラムの記述しやすさ・読解しやすさが向上する．</p>
   </main>
-  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></footer>
 </body>
 </html>

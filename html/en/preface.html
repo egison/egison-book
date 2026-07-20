@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
+  <meta name="description" content="An open online book about the Egison programming language, covering pattern-match-oriented programming, computer algebra, tensor computation, and differential geometry.">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="Preface — Egison Book">
+  <meta property="og:description" content="An open online book about the Egison programming language, covering pattern-match-oriented programming, computer algebra, tensor computation, and differential geometry.">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/preface.html">
+  <link rel="alternate" hreflang="ja" href="../ja/preface.html">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>Preface — Egison Book</title>
   <link rel="stylesheet" href="../style.css">
-  <script>
+<script>
 window.MathJax = {
   tex: {
     inlineMath: [['\\(', '\\)']],
@@ -25,8 +36,9 @@ window.MathJax = {
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
-  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="next" href="intro.html">Next →</a><a class="language" href="../ja/preface.html">日本語</a></nav></header>
-  <main class="book-page">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header"><nav aria-label="Primary navigation"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">Contents</a><a rel="next" href="intro.html">Next →</a><a class="language" hreflang="ja" href="../ja/preface.html">日本語</a></nav></header>
+  <main id="main-content" class="book-page">
     <h1>Preface</h1>
 <p>Egison is a programming language created with the motivation of “wanting to create a language that can express human cognition without translating it for computers.” A new programming language that enables concise description of a wider range of algorithms is important because it not only simplifies the programming of known computer science problems but also has the potential to make previously daunting problems—those avoided because programming them was too difficult—more approachable, thereby expanding the scope of computer science.</p>
 <p>Among the ideas implemented in Egison, the first feature to be implemented was pattern matching, which is the subject of Part I of this book. The distinguishing features of Egison&#x27;s pattern matching are that it is user-extensible and that it efficiently handles non-linear patterns (patterns that reference values bound to pattern variables within the same pattern) through backtracking. Part I of this book was written with the goal of introducing, as compactly as possible, the programming paradigm called pattern-match-oriented programming, which is advocated through Egison. It introduces Egison&#x27;s syntax related to pattern matching and programming techniques that use this syntax.</p>
@@ -37,6 +49,6 @@ window.MathJax = {
 <p>Satoshi Egi</p>
 </div>
   </main>
-  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/en">TeX source</a></footer>
 </body>
 </html>

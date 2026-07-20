@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
+  <meta name="description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="Egison開発の目標と方針 — Egison Book">
+  <meta property="og:description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/direction.html">
+  <link rel="alternate" hreflang="ja" href="../ja/direction.html">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>Egison開発の目標と方針 — Egison Book</title>
   <link rel="stylesheet" href="../style.css">
-  <script>
+<script>
 window.MathJax = {
   tex: {
     inlineMath: [['\\(', '\\)']],
@@ -25,8 +36,9 @@ window.MathJax = {
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
-  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="diffgeo.html">← 前へ</a><a rel="next" href="problem.html">次へ →</a><a class="language" href="../en/direction.html">English</a></nav></header>
-  <main class="book-page">
+  <a class="skip-link" href="#main-content">本文へ移動</a>
+  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">目次</a><a rel="prev" href="diffgeo.html">← 前へ</a><a rel="next" href="problem.html">次へ →</a><a class="language" hreflang="en" href="../en/direction.html">English</a></nav></header>
+  <main id="main-content" class="book-page">
     <h1><span class="heading-number">15</span>Egison開発の目標と方針</h1>
 <p><span id="ref-direction" class="anchor"></span></p>
 <p>本章では，今後のEgison開発についてどのようなことを考えているのか，「処理系の開発」・「アプリケーションの提示」・「Egisonの先にある研究」と三つのテーマにわけて紹介する．</p>
@@ -160,6 +172,6 @@ take 5 twinPrimes -- =&gt; [(3, 5), (5, 7), (11, 13), (17, 19), (29, 31)]</code>
 <p>などいろいろな視点から解析し理解できる． これらのプログラムの性質は，プログラムの型として表現でき，型が合っているか検査したり，型を推論できる場合があることが知られている．</p>
 <p>そこで，プログラムの理解のしやすさを計測するために型検査に必要なステップ数を使えるのではと考えている． 新しいプログラミング・スタイルの優位性を示すには，そのプログラミング・スタイルによってある特定のプログラムの性質が示しやすくなることを示す． 実際，計算量のような複雑なプログラムの性質については，Egisonのパターンマッチを用いたプログラムは，通常の関数型のプログラムよりも，少ない手間で検査・推論できそうな直感がある．</p>
   </main>
-  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></footer>
 </body>
 </html>

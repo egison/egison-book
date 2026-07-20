@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import html
+import json
 import re
 import shutil
 import unicodedata
@@ -32,6 +33,20 @@ LANGUAGE = {
         "bibliography": "Bibliography",
         "index": "Index",
         "chapter": "Chapter",
+        "skip": "Skip to content",
+        "description": "An open online book about the Egison programming language, covering pattern-match-oriented programming, computer algebra, tensor computation, and differential geometry.",
+        "edition": "Open online edition",
+        "start_reading": "Start reading",
+        "browse_contents": "Browse contents",
+        "about": "About this book",
+        "about_body": "Egison is a programming language designed to make pattern matching and mathematical notation first-class tools. This book introduces the language from its foundations and develops practical techniques for symbolic and tensor computation.",
+        "learn": "What you will learn",
+        "complete_book": "Complete book",
+        "topics": (
+            ("Pattern matching", "Describe patterns directly, even for sets, multisets, graphs, and other non-free data types."),
+            ("Computer algebra", "Work with symbolic expressions, simplification rules, and extensible mathematical functions."),
+            ("Tensor notation", "Express tensor calculations and differential geometry with index notation."),
+        ),
     },
     "ja": {
         "book_title": "プログラミング言語Egison入門",
@@ -48,6 +63,20 @@ LANGUAGE = {
         "bibliography": "参考文献",
         "index": "索引",
         "chapter": "第",
+        "skip": "本文へ移動",
+        "description": "パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。",
+        "edition": "オンライン公開版",
+        "start_reading": "読み始める",
+        "browse_contents": "目次を見る",
+        "about": "本書について",
+        "about_body": "Egisonは、パターンマッチと数学的な記法を第一級の道具として扱うために設計されたプログラミング言語です。本書では言語の基礎から始め、記号計算やテンソル計算の実践的な手法までを解説します。",
+        "learn": "本書で学べること",
+        "complete_book": "全目次",
+        "topics": (
+            ("パターンマッチ", "集合・多重集合・グラフなどの非自由データ型に対するパターンを直接記述します。"),
+            ("数式処理", "数式データ、簡約規則、拡張可能な数学関数の仕組みを学びます。"),
+            ("テンソル記法", "添字記法によるテンソル計算と微分幾何のプログラムを解説します。"),
+        ),
     },
 }
 
@@ -709,31 +738,74 @@ class BookBuilder:
         )
         return synthetic + rendered
 
-    def shell(self, title: str, body: str, page: str, previous: Page | None = None, following: Page | None = None) -> str:
+    def shell(
+        self,
+        title: str,
+        body: str,
+        page: str,
+        previous: Page | None = None,
+        following: Page | None = None,
+        *,
+        include_math: bool = True,
+        home: bool = False,
+    ) -> str:
         other = "ja" if self.lang == "en" else "en"
         other_target = f"../{other}/{page}"
-        nav_links = [f'<a href="index.html">{self.words["home"]}</a>']
+        contents_target = "#contents" if home else "index.html#contents"
+        nav_links = [
+            '<a class="site-brand" href="index.html">Egison Book</a>',
+            f'<a href="{contents_target}">{self.words["home"]}</a>',
+        ]
         if previous:
             nav_links.append(f'<a rel="prev" href="{previous.filename}">← {self.words["previous"]}</a>')
         if following:
             nav_links.append(f'<a rel="next" href="{following.filename}">{self.words["next"]} →</a>')
-        nav_links.append(f'<a class="language" href="{other_target}">{self.words["other"]}</a>')
+        nav_links.append(f'<a class="language" hreflang="{other}" href="{other_target}">{self.words["other"]}</a>')
+        description = html.escape(self.words["description"], quote=True)
+        page_title = f"{title} — {self.words['short_title']}"
+        schema = ""
+        if home:
+            schema_data = {
+                "@context": "https://schema.org",
+                "@type": "Book",
+                "name": self.words["book_title"],
+                "description": self.words["description"],
+                "author": {"@type": "Organization", "name": self.words["author"]},
+                "inLanguage": self.lang,
+            }
+            schema = f'<script type="application/ld+json">{json.dumps(schema_data, ensure_ascii=False)}</script>'
+        mathjax = MATHJAX_CONFIG if include_math else ""
+        head_extras = "\n".join(extra for extra in (schema, mathjax) if extra)
+        main_class = "book-page home-page" if home else "book-page"
+        source_url = f"https://github.com/egison/egison-book/tree/master/tex/{self.lang}"
         return f"""<!doctype html>
 <html lang="{self.lang}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
-  <title>{html.escape(title)} — {html.escape(self.words['short_title'])}</title>
+  <meta name="description" content="{description}">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="{html.escape(page_title, quote=True)}">
+  <meta property="og:description" content="{description}">
+  <meta property="og:locale" content="{'en_US' if self.lang == 'en' else 'ja_JP'}">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/{page}">
+  <link rel="alternate" hreflang="ja" href="../ja/{page}">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
+  <title>{html.escape(page_title)}</title>
   <link rel="stylesheet" href="../style.css">
-  {MATHJAX_CONFIG}
+{head_extras}
 </head>
 <body>
-  <header class="site-header"><nav>{''.join(nav_links)}</nav></header>
-  <main class="book-page">
+  <a class="skip-link" href="#main-content">{self.words['skip']}</a>
+  <header class="site-header"><nav aria-label="{'Primary navigation' if self.lang == 'en' else 'メインナビゲーション'}">{''.join(nav_links)}</nav></header>
+  <main id="main-content" class="{main_class}">
     {body}
   </main>
-  <footer><a href="../../tex/{self.lang}/main.tex">{self.words['source']}</a></footer>
+  <footer><a href="{source_url}">{self.words['source']}</a></footer>
 </body>
 </html>
 """
@@ -777,13 +849,37 @@ class BookBuilder:
                 number = f'<span class="toc-number">{html.escape(page.number)}</span>' if page.number else '<span class="toc-number"></span>'
                 links.append(f'<li><a href="{page.filename}">{number}<span>{html.escape(page.title)}</span></a></li>')
             sections.append(f'<section class="toc-part"><h2>{html.escape(group)}</h2><ol>{"".join(links)}</ol></section>')
-        extras = f'<section class="toc-part"><ol><li><a href="bibliography.html"><span class="toc-number"></span><span>{self.words["bibliography"]}</span></a></li><li><a href="index-terms.html"><span class="toc-number"></span><span>{self.words["index"]}</span></a></li></ol></section>'
-        return f"""<section class="title-page">
-  <p class="eyebrow">Egison Book</p>
-  <h1>{html.escape(self.words['book_title'])}</h1>
+        extras = f'<section class="toc-part toc-extras"><ol><li><a href="bibliography.html"><span class="toc-number"></span><span>{self.words["bibliography"]}</span></a></li><li><a href="index-terms.html"><span class="toc-number"></span><span>{self.words["index"]}</span></a></li></ol></section>'
+        topics = "".join(
+            f'<li><span class="topic-number">{number:02d}</span><div><h3>{html.escape(title)}</h3><p>{html.escape(description)}</p></div></li>'
+            for number, (title, description) in enumerate(self.words["topics"], 1)
+        )
+        return f"""<section class="home-hero" aria-labelledby="book-title">
+  <p class="eyebrow">{html.escape(self.words['edition'])}</p>
+  <h1 id="book-title">{html.escape(self.words['book_title'])}</h1>
+  <p class="hero-summary">{html.escape(self.words['description'])}</p>
   <p class="author">{html.escape(self.words['author'])}</p>
+  <div class="hero-actions">
+    <a class="button button-primary" href="preface.html">{html.escape(self.words['start_reading'])}</a>
+    <a class="button button-secondary" href="#contents">{html.escape(self.words['browse_contents'])}</a>
+  </div>
 </section>
-<section class="contents"><h2>{self.words['home']}</h2>{''.join(sections)}{extras}</section>"""
+<section class="home-about" aria-labelledby="about-heading">
+  <div class="about-copy">
+    <p class="eyebrow">Egison Book</p>
+    <h2 id="about-heading">{html.escape(self.words['about'])}</h2>
+    <p>{html.escape(self.words['about_body'])}</p>
+  </div>
+  <div class="topic-panel">
+    <p class="eyebrow">{html.escape(self.words['learn'])}</p>
+    <ol class="topic-list">{topics}</ol>
+  </div>
+</section>
+<section class="contents" id="contents" aria-labelledby="contents-heading">
+  <p class="eyebrow">{html.escape(self.words['complete_book'])}</p>
+  <h2 id="contents-heading">{self.words['home']}</h2>
+  <div class="toc-grid">{''.join(sections)}{extras}</div>
+</section>"""
 
     def build(self) -> None:
         self.discover_pages()
@@ -805,16 +901,29 @@ class BookBuilder:
             output = self.shell(page.title, body, page.filename, previous, following)
             (self.out_dir / page.filename).write_text(output, encoding="utf-8")
 
-        (self.out_dir / "index.html").write_text(self.shell(self.words["book_title"], self.contents_html(), "index.html"), encoding="utf-8")
-        (self.out_dir / "bibliography.html").write_text(self.shell(self.words["bibliography"], self.bibliography_html(), "bibliography.html"), encoding="utf-8")
-        (self.out_dir / "index-terms.html").write_text(self.shell(self.words["index"], self.index_html(), "index-terms.html"), encoding="utf-8")
+        (self.out_dir / "index.html").write_text(
+            self.shell(self.words["book_title"], self.contents_html(), "index.html", include_math=False, home=True),
+            encoding="utf-8",
+        )
+        (self.out_dir / "bibliography.html").write_text(
+            self.shell(self.words["bibliography"], self.bibliography_html(), "bibliography.html", include_math=False),
+            encoding="utf-8",
+        )
+        (self.out_dir / "index-terms.html").write_text(
+            self.shell(self.words["index"], self.index_html(), "index-terms.html", include_math=False),
+            encoding="utf-8",
+        )
 
 
 def write_root_index() -> None:
     body = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Egison Book</title><link rel="stylesheet" href="style.css"></head>
-<body><main class="language-picker"><p class="eyebrow">Egison Book</p><h1>Choose a language</h1>
+<meta name="description" content="Read the Egison Book online in English or Japanese.">
+<meta name="theme-color" content="#126b4b">
+<link rel="alternate" hreflang="en" href="en/"><link rel="alternate" hreflang="ja" href="ja/">
+<title>Egison Book — English / 日本語</title><link rel="stylesheet" href="style.css"></head>
+<body><main class="language-picker"><p class="eyebrow">Open online edition</p><h1>Egison Book</h1>
+<p class="language-lead">Choose a language <span lang="ja">／ 言語を選択してください</span></p>
 <div><a href="en/">English</a><a href="ja/" lang="ja">日本語</a></div></main></body></html>
 """
     (HTML_ROOT / "index.html").write_text(body, encoding="utf-8")

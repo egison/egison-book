@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
+  <meta name="description" content="An open online book about the Egison programming language, covering pattern-match-oriented programming, computer algebra, tensor computation, and differential geometry.">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="Function Symbols — Egison Book">
+  <meta property="og:description" content="An open online book about the Egison programming language, covering pattern-match-oriented programming, computer algebra, tensor computation, and differential geometry.">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/funcsym.html">
+  <link rel="alternate" hreflang="ja" href="../ja/funcsym.html">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>Function Symbols — Egison Book</title>
   <link rel="stylesheet" href="../style.css">
-  <script>
+<script>
 window.MathJax = {
   tex: {
     inlineMath: [['\\(', '\\)']],
@@ -25,8 +36,9 @@ window.MathJax = {
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
-  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="prev" href="tensor.html">← Previous</a><a rel="next" href="diffgeo.html">Next →</a><a class="language" href="../ja/funcsym.html">日本語</a></nav></header>
-  <main class="book-page">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header"><nav aria-label="Primary navigation"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">Contents</a><a rel="prev" href="tensor.html">← Previous</a><a rel="next" href="diffgeo.html">Next →</a><a class="language" hreflang="ja" href="../ja/funcsym.html">日本語</a></nav></header>
+  <main id="main-content" class="book-page">
     <h1><span class="heading-number">13</span>Function Symbols</h1>
 <p><span id="ref-funcsym" class="anchor"></span></p>
 <p>A function <span class="math-inline">\(f(x,y)\)</span> whose name is <span class="math-inline">\(f\)</span> and whose arguments are <span class="math-inline">\(x,y\)</span>, but whose body is undefined, is often written on paper by abbreviating <span class="math-inline">\(f\)</span> and omitting the arguments. <em>Function symbols</em> (<em>function symbol</em>) are the feature for introducing this notation of abbreviating arguments of symbolic functions into programming. Although the motivation for function symbols is simple, since they are a language feature unique to Egison, we dedicate an entire chapter to introducing them, including their implementation.</p>
@@ -109,6 +121,6 @@ match f as mathValue with
 <h2><span class="heading-number">13.6</span>Implementation of Function Symbols</h2>
 <p>An important aspect of the function symbol implementation is that function symbols retain their own names. For this purpose, the Egison interpreter keeps track of the name of the variable currently being defined. Additionally, to support function symbols appearing as tensor components as described in Section&nbsp;<a class="reference" href="funcsym.html#ref-funcsym-tensor">13.4</a>, it is necessary to track the position of the tensor component currently being defined. For this purpose, the Egison interpreter also keeps track of the position of the tensor component being defined. In the Egison interpreter implementation, these are managed as additional components of the environment threaded through the evaluator.</p>
   </main>
-  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/en">TeX source</a></footer>
 </body>
 </html>

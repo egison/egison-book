@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
+  <meta name="description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="プログラミングEgisonとは — Egison Book">
+  <meta property="og:description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/intro.html">
+  <link rel="alternate" hreflang="ja" href="../ja/intro.html">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>プログラミングEgisonとは — Egison Book</title>
   <link rel="stylesheet" href="../style.css">
-  <script>
+<script>
 window.MathJax = {
   tex: {
     inlineMath: [['\\(', '\\)']],
@@ -25,8 +36,9 @@ window.MathJax = {
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
-  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="preface.html">← 前へ</a><a rel="next" href="quick.html">次へ →</a><a class="language" href="../en/intro.html">English</a></nav></header>
-  <main class="book-page">
+  <a class="skip-link" href="#main-content">本文へ移動</a>
+  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">目次</a><a rel="prev" href="preface.html">← 前へ</a><a rel="next" href="quick.html">次へ →</a><a class="language" hreflang="en" href="../en/intro.html">English</a></nav></header>
+  <main id="main-content" class="book-page">
     <h1><span class="heading-number">1</span>プログラミングEgisonとは</h1>
 <p><span id="ref-intro" class="anchor"></span></p>
 <p>本章では，Egisonがどのような言語であるのか紹介する． Egisonとそれが提唱しているパターンマッチ指向プログラミングについて，その大体のイメージをつかんでもらいたい．</p>
@@ -97,6 +109,6 @@ unique [1,2,3,2,4]
 <p>第<a class="reference" href="cas.html#ref-part-cas">II</a>部の最初に数式処理システムの使い方について解説したあと，Egisonのもつ数式処理システムとしての機能を解説する．</p>
 <p>第<a class="reference" href="cas.html#ref-part-cas">II</a>部の構成は以下の通りである． 第<a class="reference" href="cas.html#ref-cas">9</a>章では，数式処理システムの特徴であるシンボリックな計算の方法と，具体的なプログラムの例を紹介する． 第<a class="reference" href="mexpr.html#ref-mexpr">10</a>章では，Egison内部で数式データがどう表現されているのか解説する． 第<a class="reference" href="casdetail.html#ref-casdetail">11</a>章では，簡約システムの詳細として，簡約規則の宣言，数学関数の宣言，型注釈による正規形の指定，型の昇格タワーとその拡張，商の型を解説する． 第<a class="reference" href="tensor.html#ref-tensor">12</a>章では，テンソルの添字記法を使ったプログラムの記述の方法を解説する． 第<a class="reference" href="funcsym.html#ref-funcsym">13</a>章では，関数シンボルについて解説する． 第<a class="reference" href="diffgeo.html#ref-diffgeo">14</a>章では，ここまで解説した機能の実践的な応用として，微分幾何の計算をするプログラムを紹介する．</p>
   </main>
-  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></footer>
 </body>
 </html>

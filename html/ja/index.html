@@ -4,36 +4,52 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
+  <meta name="description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="プログラミング言語Egison入門 — Egison Book">
+  <meta property="og:description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/index.html">
+  <link rel="alternate" hreflang="ja" href="../ja/index.html">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>プログラミング言語Egison入門 — Egison Book</title>
   <link rel="stylesheet" href="../style.css">
-  <script>
-window.MathJax = {
-  tex: {
-    inlineMath: [['\\(', '\\)']],
-    displayMath: [['\\[', '\\]']],
-    macros: {
-      bt: ['\\mathtt{#1}', 1],
-      set: ['\\{#1\\}', 1],
-      abs: ['\\lvert #1\\rvert', 1],
-      cons: ':', none: '\\mathtt{none}', some: '\\mathtt{some}',
-      opt: '\\mathtt{opt}', FV: '\\mathrm{FV}', FTV: '\\mathrm{FTV}'
-    }
-  },
-  options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
-};
-</script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Book", "name": "プログラミング言語Egison入門", "description": "パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。", "author": {"@type": "Organization", "name": "Egison開発チーム"}, "inLanguage": "ja"}</script>
 </head>
 <body>
-  <header class="site-header"><nav><a href="index.html">目次</a><a class="language" href="../en/index.html">English</a></nav></header>
-  <main class="book-page">
-    <section class="title-page">
-  <p class="eyebrow">Egison Book</p>
-  <h1>プログラミング言語Egison入門</h1>
+  <a class="skip-link" href="#main-content">本文へ移動</a>
+  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="index.html">Egison Book</a><a href="#contents">目次</a><a class="language" hreflang="en" href="../en/index.html">English</a></nav></header>
+  <main id="main-content" class="book-page home-page">
+    <section class="home-hero" aria-labelledby="book-title">
+  <p class="eyebrow">オンライン公開版</p>
+  <h1 id="book-title">プログラミング言語Egison入門</h1>
+  <p class="hero-summary">パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。</p>
   <p class="author">Egison開発チーム</p>
+  <div class="hero-actions">
+    <a class="button button-primary" href="preface.html">読み始める</a>
+    <a class="button button-secondary" href="#contents">目次を見る</a>
+  </div>
 </section>
-<section class="contents"><h2>目次</h2><section class="toc-part"><h2>前付け</h2><ol><li><a href="preface.html"><span class="toc-number"></span><span>はじめに</span></a></li></ol></section><section class="toc-part"><h2>序論</h2><ol><li><a href="intro.html"><span class="toc-number">1</span><span>プログラミングEgisonとは</span></a></li></ol></section><section class="toc-part"><h2>パターンマッチ指向プログラミング</h2><ol><li><a href="quick.html"><span class="toc-number">2</span><span>Egison早巡り</span></a></li><li><a href="pmo.html"><span class="toc-number">3</span><span>パターンマッチ指向プログラミング入門</span></a></li><li><a href="essence.html"><span class="toc-number">4</span><span>パターンマッチ指向プログラミングの効果</span></a></li><li><a href="mechanism.html"><span class="toc-number">5</span><span>Egisonパターンマッチの仕組み</span></a></li><li><a href="matcher.html"><span class="toc-number">6</span><span>マッチャーを定義しよう</span></a></li><li><a href="etc.html"><span class="toc-number">7</span><span>関数型プログラミング言語としてのいくつかの機能</span></a></li><li><a href="sweet.html"><span class="toc-number">8</span><span>Sweet Egison - EgisonパターンマッチのHaskellライブラリ</span></a></li></ol></section><section class="toc-part"><h2>数式処理システムとしてのEgison</h2><ol><li><a href="cas.html"><span class="toc-number">9</span><span>数式処理システム入門</span></a></li><li><a href="mexpr.html"><span class="toc-number">10</span><span>数式データの扱い</span></a></li><li><a href="casdetail.html"><span class="toc-number">11</span><span>簡約システム詳細</span></a></li><li><a href="tensor.html"><span class="toc-number">12</span><span>テンソル計算</span></a></li><li><a href="funcsym.html"><span class="toc-number">13</span><span>関数シンボル</span></a></li><li><a href="diffgeo.html"><span class="toc-number">14</span><span>Egisonで計算する微分幾何</span></a></li></ol></section><section class="toc-part"><h2>Egisonの今後</h2><ol><li><a href="direction.html"><span class="toc-number">15</span><span>Egison開発の目標と方針</span></a></li></ol></section><section class="toc-part"><h2>付録</h2><ol><li><a href="problem.html"><span class="toc-number">A</span><span>パターンマッチ指向プログラミング問題集</span></a></li><li><a href="problem2.html"><span class="toc-number">B</span><span>数式処理システムとしてのEgisonの演習問題</span></a></li></ol></section><section class="toc-part"><ol><li><a href="bibliography.html"><span class="toc-number"></span><span>参考文献</span></a></li><li><a href="index-terms.html"><span class="toc-number"></span><span>索引</span></a></li></ol></section></section>
+<section class="home-about" aria-labelledby="about-heading">
+  <div class="about-copy">
+    <p class="eyebrow">Egison Book</p>
+    <h2 id="about-heading">本書について</h2>
+    <p>Egisonは、パターンマッチと数学的な記法を第一級の道具として扱うために設計されたプログラミング言語です。本書では言語の基礎から始め、記号計算やテンソル計算の実践的な手法までを解説します。</p>
+  </div>
+  <div class="topic-panel">
+    <p class="eyebrow">本書で学べること</p>
+    <ol class="topic-list"><li><span class="topic-number">01</span><div><h3>パターンマッチ</h3><p>集合・多重集合・グラフなどの非自由データ型に対するパターンを直接記述します。</p></div></li><li><span class="topic-number">02</span><div><h3>数式処理</h3><p>数式データ、簡約規則、拡張可能な数学関数の仕組みを学びます。</p></div></li><li><span class="topic-number">03</span><div><h3>テンソル記法</h3><p>添字記法によるテンソル計算と微分幾何のプログラムを解説します。</p></div></li></ol>
+  </div>
+</section>
+<section class="contents" id="contents" aria-labelledby="contents-heading">
+  <p class="eyebrow">全目次</p>
+  <h2 id="contents-heading">目次</h2>
+  <div class="toc-grid"><section class="toc-part"><h2>前付け</h2><ol><li><a href="preface.html"><span class="toc-number"></span><span>はじめに</span></a></li></ol></section><section class="toc-part"><h2>序論</h2><ol><li><a href="intro.html"><span class="toc-number">1</span><span>プログラミングEgisonとは</span></a></li></ol></section><section class="toc-part"><h2>パターンマッチ指向プログラミング</h2><ol><li><a href="quick.html"><span class="toc-number">2</span><span>Egison早巡り</span></a></li><li><a href="pmo.html"><span class="toc-number">3</span><span>パターンマッチ指向プログラミング入門</span></a></li><li><a href="essence.html"><span class="toc-number">4</span><span>パターンマッチ指向プログラミングの効果</span></a></li><li><a href="mechanism.html"><span class="toc-number">5</span><span>Egisonパターンマッチの仕組み</span></a></li><li><a href="matcher.html"><span class="toc-number">6</span><span>マッチャーを定義しよう</span></a></li><li><a href="etc.html"><span class="toc-number">7</span><span>関数型プログラミング言語としてのいくつかの機能</span></a></li><li><a href="sweet.html"><span class="toc-number">8</span><span>Sweet Egison - EgisonパターンマッチのHaskellライブラリ</span></a></li></ol></section><section class="toc-part"><h2>数式処理システムとしてのEgison</h2><ol><li><a href="cas.html"><span class="toc-number">9</span><span>数式処理システム入門</span></a></li><li><a href="mexpr.html"><span class="toc-number">10</span><span>数式データの扱い</span></a></li><li><a href="casdetail.html"><span class="toc-number">11</span><span>簡約システム詳細</span></a></li><li><a href="tensor.html"><span class="toc-number">12</span><span>テンソル計算</span></a></li><li><a href="funcsym.html"><span class="toc-number">13</span><span>関数シンボル</span></a></li><li><a href="diffgeo.html"><span class="toc-number">14</span><span>Egisonで計算する微分幾何</span></a></li></ol></section><section class="toc-part"><h2>Egisonの今後</h2><ol><li><a href="direction.html"><span class="toc-number">15</span><span>Egison開発の目標と方針</span></a></li></ol></section><section class="toc-part"><h2>付録</h2><ol><li><a href="problem.html"><span class="toc-number">A</span><span>パターンマッチ指向プログラミング問題集</span></a></li><li><a href="problem2.html"><span class="toc-number">B</span><span>数式処理システムとしてのEgisonの演習問題</span></a></li></ol></section><section class="toc-part toc-extras"><ol><li><a href="bibliography.html"><span class="toc-number"></span><span>参考文献</span></a></li><li><a href="index-terms.html"><span class="toc-number"></span><span>索引</span></a></li></ol></section></div>
+</section>
   </main>
-  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></footer>
 </body>
 </html>

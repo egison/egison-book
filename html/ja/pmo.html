@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
+  <meta name="description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="パターンマッチ指向プログラミング入門 — Egison Book">
+  <meta property="og:description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/pmo.html">
+  <link rel="alternate" hreflang="ja" href="../ja/pmo.html">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>パターンマッチ指向プログラミング入門 — Egison Book</title>
   <link rel="stylesheet" href="../style.css">
-  <script>
+<script>
 window.MathJax = {
   tex: {
     inlineMath: [['\\(', '\\)']],
@@ -25,8 +36,9 @@ window.MathJax = {
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
-  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="quick.html">← 前へ</a><a rel="next" href="essence.html">次へ →</a><a class="language" href="../en/pmo.html">English</a></nav></header>
-  <main class="book-page">
+  <a class="skip-link" href="#main-content">本文へ移動</a>
+  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">目次</a><a rel="prev" href="quick.html">← 前へ</a><a rel="next" href="essence.html">次へ →</a><a class="language" hreflang="en" href="../en/pmo.html">English</a></nav></header>
+  <main id="main-content" class="book-page">
     <h1><span class="heading-number">3</span>パターンマッチ指向プログラミング入門</h1>
 <p><span id="ref-pmo" class="anchor"></span></p>
 <p>本章は，第<a class="reference" href="quick.html#ref-quick">2</a>章でみてきたパターンマッチのための構文やさまざまな組み込みパターンを使って，どのようなプログラミングができるのかを解説する． そのために，Egisonパターンマッチを活用したプログラミングにおいて頻出するパターンを紹介していく． 本章でEgisonのパターンマッチを使ったプログラミングの具体的なイメージをつかんでいってもらいたい．</p>
@@ -302,6 +314,6 @@ head (sortBy (\(_, x), (_, y) -&gt; compare x y) trips)
 -- (46, [&quot;London&quot;, &quot;New York&quot;, &quot;Vancouver&quot;, &quot;Tokyo&quot;, &quot;Berlin&quot;])</code></pre>
 <p>ツリー（<a class="reference" href="pmo.html#ref-pmo-tree">3.4.2</a>節）と同様に，グラフに対するパターンマッチのためのDSLがいくつかグラフ・データベースに対するクエリー言語として開発されている． いくつかのユーザー定義パターン・コンストラクタと，ループ・パターンをはじめとする少数の組み込みパターンを組み合わせて多様なパターンを表現できることが，EgisonのこれらのDSLにたいする利点である．</p>
   </main>
-  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></footer>
 </body>
 </html>

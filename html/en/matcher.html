@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
+  <meta name="description" content="An open online book about the Egison programming language, covering pattern-match-oriented programming, computer algebra, tensor computation, and differential geometry.">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="Defining Matchers — Egison Book">
+  <meta property="og:description" content="An open online book about the Egison programming language, covering pattern-match-oriented programming, computer algebra, tensor computation, and differential geometry.">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/matcher.html">
+  <link rel="alternate" hreflang="ja" href="../ja/matcher.html">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>Defining Matchers — Egison Book</title>
   <link rel="stylesheet" href="../style.css">
-  <script>
+<script>
 window.MathJax = {
   tex: {
     inlineMath: [['\\(', '\\)']],
@@ -25,8 +36,9 @@ window.MathJax = {
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
-  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="prev" href="mechanism.html">← Previous</a><a rel="next" href="etc.html">Next →</a><a class="language" href="../ja/matcher.html">日本語</a></nav></header>
-  <main class="book-page">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header"><nav aria-label="Primary navigation"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">Contents</a><a rel="prev" href="mechanism.html">← Previous</a><a rel="next" href="etc.html">Next →</a><a class="language" hreflang="ja" href="../ja/matcher.html">日本語</a></nav></header>
+  <main id="main-content" class="book-page">
     <h1><span class="heading-number">6</span>Defining Matchers</h1>
 <p><span id="ref-matcher" class="anchor"></span></p>
 <p>This chapter explains how users can define their own matchers.</p>
@@ -273,6 +285,6 @@ set       : MatcherSlot a a -&gt; Matcher [a]</code></pre>
 --   Pattern Integer, but $y :: _ is Pattern [Integer]</code></pre>
 <p>For the admissibility check (Section&nbsp;<a class="reference" href="matcher.html#ref-matcher-match-typing">6.10</a>), an application of a pattern function behaves as the <em>skeleton of its body pattern</em>. The body of <code>twin</code> is nested cons patterns, so a match expression using <code>twin</code> needs a matcher that can decompose cons (<code>list</code> or <code>multiset</code>). Conversely, a pattern function whose body is just a parameter imposes no structure of its own; only the demands of the argument patterns propagate. In this way, “which matchers this pattern needs” is tracked statically even through pattern functions.</p>
   </main>
-  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/en">TeX source</a></footer>
 </body>
 </html>

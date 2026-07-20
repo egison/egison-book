@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
+  <meta name="description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="関数型プログラミング言語としてのいくつかの機能 — Egison Book">
+  <meta property="og:description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/etc.html">
+  <link rel="alternate" hreflang="ja" href="../ja/etc.html">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>関数型プログラミング言語としてのいくつかの機能 — Egison Book</title>
   <link rel="stylesheet" href="../style.css">
-  <script>
+<script>
 window.MathJax = {
   tex: {
     inlineMath: [['\\(', '\\)']],
@@ -25,8 +36,9 @@ window.MathJax = {
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
-  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="matcher.html">← 前へ</a><a rel="next" href="sweet.html">次へ →</a><a class="language" href="../en/etc.html">English</a></nav></header>
-  <main class="book-page">
+  <a class="skip-link" href="#main-content">本文へ移動</a>
+  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">目次</a><a rel="prev" href="matcher.html">← 前へ</a><a rel="next" href="sweet.html">次へ →</a><a class="language" hreflang="en" href="../en/etc.html">English</a></nav></header>
+  <main id="main-content" class="book-page">
     <h1><span class="heading-number">7</span>関数型プログラミング言語としてのいくつかの機能</h1>
 <p><span id="ref-etc" class="anchor"></span></p>
 <p>本章は，関数型のプログラムの記述を便利にするためのEgisonの機能をいくつか紹介する．</p>
@@ -296,6 +308,6 @@ dice + dice</code></pre>
       let z := fn init x
         in seq z (foldl fn z xs)</code></pre>
   </main>
-  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></footer>
 </body>
 </html>

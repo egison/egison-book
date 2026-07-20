@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
+  <meta name="description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="はじめに — Egison Book">
+  <meta property="og:description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/preface.html">
+  <link rel="alternate" hreflang="ja" href="../ja/preface.html">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>はじめに — Egison Book</title>
   <link rel="stylesheet" href="../style.css">
-  <script>
+<script>
 window.MathJax = {
   tex: {
     inlineMath: [['\\(', '\\)']],
@@ -25,8 +36,9 @@ window.MathJax = {
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
-  <header class="site-header"><nav><a href="index.html">目次</a><a rel="next" href="intro.html">次へ →</a><a class="language" href="../en/preface.html">English</a></nav></header>
-  <main class="book-page">
+  <a class="skip-link" href="#main-content">本文へ移動</a>
+  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">目次</a><a rel="next" href="intro.html">次へ →</a><a class="language" hreflang="en" href="../en/preface.html">English</a></nav></header>
+  <main id="main-content" class="book-page">
     <h1>はじめに</h1>
 <p>Egisonは，「人間の頭の中の認識を，コンピュータ向けに翻訳することなしに，表現できる言語を作りたい」という動機で作られたプログラミング言語である． より幅広いアルゴリズムの簡潔な記述を可能にする新しいプログラミング言語は，既知のコンピュータ科学の問題のプログラミングを簡単にするだけでなく，従来プログラミングが難しいために敬遠されていた問題を扱いやすくし，コンピュータ科学の扱う範囲を広げる可能性を持つため重要である．</p>
 <p>Egisonに実装されているこれらのアイデアのうち，最初に実装された機能は本書の第一部の主題であるパターンマッチである． Egisonのパターンマッチの特徴は，ユーザーにより拡張可能でかつ，非線形パターン（パターン変数に束縛した値を同じパターン内で参照するパターン）をバックトラッキングにより効率的に処理することである． 本書の第一部は，Egisonを通して提唱されているパターンマッチ指向プログラミングというプログラミング・パラダイムをできるだけコンパクトに紹介することを目的として執筆された． パターンマッチまわりのEgisonの構文と，それらの構文を使ったプログラミングテクニックを紹介する．</p>
@@ -37,6 +49,6 @@ window.MathJax = {
 <p>江木 聡志</p>
 </div>
   </main>
-  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></footer>
 </body>
 </html>

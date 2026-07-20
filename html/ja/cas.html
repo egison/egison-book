@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
+  <meta name="description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="数式処理システム入門 — Egison Book">
+  <meta property="og:description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/cas.html">
+  <link rel="alternate" hreflang="ja" href="../ja/cas.html">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>数式処理システム入門 — Egison Book</title>
   <link rel="stylesheet" href="../style.css">
-  <script>
+<script>
 window.MathJax = {
   tex: {
     inlineMath: [['\\(', '\\)']],
@@ -25,8 +36,9 @@ window.MathJax = {
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
-  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="sweet.html">← 前へ</a><a rel="next" href="mexpr.html">次へ →</a><a class="language" href="../en/cas.html">English</a></nav></header>
-  <main class="book-page">
+  <a class="skip-link" href="#main-content">本文へ移動</a>
+  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">目次</a><a rel="prev" href="sweet.html">← 前へ</a><a rel="next" href="mexpr.html">次へ →</a><a class="language" hreflang="en" href="../en/cas.html">English</a></nav></header>
+  <main id="main-content" class="book-page">
     <span id="ref-part-cas" class="anchor"></span><h1><span class="heading-number">9</span>数式処理システム入門</h1>
 <p><span id="ref-cas" class="anchor"></span></p>
 <p>数式処理システムとは，シンボリックな計算をサポートするプログラミング言語のことをいう． 数式処理システムは，未束縛の変数をシンボルとして扱う． 数式処理システムを使うと，たとえば，<span class="math-inline">\(x + x \rightarrow 2x\)</span>や<span class="math-inline">\((x + y)^2 \rightarrow x^2 + 2 x y + y^2\)</span>のような計算ができる． Egisonもこのようなシンボリックな計算をサポートしている． 本章は数式処理システムを使うとどのような計算ができるのかみていく．</p>
@@ -199,6 +211,6 @@ Welcome to Egison Interpreter!
 <p><span id="ref-fig-cas-jupyter" class="anchor"></span></p>
 </figure>
   </main>
-  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></footer>
 </body>
 </html>

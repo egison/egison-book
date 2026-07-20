@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
+  <meta name="description" content="An open online book about the Egison programming language, covering pattern-match-oriented programming, computer algebra, tensor computation, and differential geometry.">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="What is Programming Egison — Egison Book">
+  <meta property="og:description" content="An open online book about the Egison programming language, covering pattern-match-oriented programming, computer algebra, tensor computation, and differential geometry.">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/intro.html">
+  <link rel="alternate" hreflang="ja" href="../ja/intro.html">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>What is Programming Egison — Egison Book</title>
   <link rel="stylesheet" href="../style.css">
-  <script>
+<script>
 window.MathJax = {
   tex: {
     inlineMath: [['\\(', '\\)']],
@@ -25,8 +36,9 @@ window.MathJax = {
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
-  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="prev" href="preface.html">← Previous</a><a rel="next" href="quick.html">Next →</a><a class="language" href="../ja/intro.html">日本語</a></nav></header>
-  <main class="book-page">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header"><nav aria-label="Primary navigation"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">Contents</a><a rel="prev" href="preface.html">← Previous</a><a rel="next" href="quick.html">Next →</a><a class="language" hreflang="ja" href="../ja/intro.html">日本語</a></nav></header>
+  <main id="main-content" class="book-page">
     <h1><span class="heading-number">1</span>What is Programming Egison</h1>
 <p><span id="ref-intro" class="anchor"></span></p>
 <p>This chapter introduces what kind of language Egison is. We hope you will gain a general understanding of Egison and the pattern-match-oriented programming paradigm it advocates.</p>
@@ -97,6 +109,6 @@ unique [1,2,3,2,4]
 <p>Part&nbsp;<a class="reference" href="cas.html#ref-part-cas">II</a> first explains how to use the computer algebra system and then describes Egison&#x27;s features as a computer algebra system.</p>
 <p>The organization of Part&nbsp;<a class="reference" href="cas.html#ref-part-cas">II</a> is as follows. Chapter&nbsp;<a class="reference" href="cas.html#ref-cas">9</a> introduces the methods of symbolic computation that characterize computer algebra systems, along with concrete program examples. Chapter&nbsp;<a class="reference" href="mexpr.html#ref-mexpr">10</a> explains how mathematical expression data is represented internally in Egison. Chapter&nbsp;<a class="reference" href="casdetail.html#ref-casdetail">11</a> details the simplification system: declaring simplification rules, declaring mathematical functions, selecting canonical forms with type annotations, the promotion tower of types and its extension, and quotient types. Chapter&nbsp;<a class="reference" href="tensor.html#ref-tensor">12</a> explains how to write programs using tensor index notation. Chapter&nbsp;<a class="reference" href="funcsym.html#ref-funcsym">13</a> explains function symbols. Chapter&nbsp;<a class="reference" href="diffgeo.html#ref-diffgeo">14</a> presents programs for differential geometry computations as practical applications of the features described up to that point.</p>
   </main>
-  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/en">TeX source</a></footer>
 </body>
 </html>

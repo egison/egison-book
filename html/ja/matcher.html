@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
+  <meta name="description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="マッチャーを定義しよう — Egison Book">
+  <meta property="og:description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/matcher.html">
+  <link rel="alternate" hreflang="ja" href="../ja/matcher.html">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>マッチャーを定義しよう — Egison Book</title>
   <link rel="stylesheet" href="../style.css">
-  <script>
+<script>
 window.MathJax = {
   tex: {
     inlineMath: [['\\(', '\\)']],
@@ -25,8 +36,9 @@ window.MathJax = {
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
-  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="mechanism.html">← 前へ</a><a rel="next" href="etc.html">次へ →</a><a class="language" href="../en/matcher.html">English</a></nav></header>
-  <main class="book-page">
+  <a class="skip-link" href="#main-content">本文へ移動</a>
+  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">目次</a><a rel="prev" href="mechanism.html">← 前へ</a><a rel="next" href="etc.html">次へ →</a><a class="language" hreflang="en" href="../en/matcher.html">English</a></nav></header>
+  <main id="main-content" class="book-page">
     <h1><span class="heading-number">6</span>マッチャーを定義しよう</h1>
 <p><span id="ref-matcher" class="anchor"></span></p>
 <p>本章は，ユーザーが自身でマッチャーを定義する方法を解説する．</p>
@@ -277,6 +289,6 @@ set       : MatcherSlot a a -&gt; Matcher [a]</code></pre>
 --   Pattern Integer, but $y :: _ is Pattern [Integer]</code></pre>
 <p>パターン関数の適用は，適合性検査（<a class="reference" href="matcher.html#ref-matcher-match-typing">6.10</a>節）では<em>本体のパターンの骨格</em>として扱われる． <code>twin</code>の本体はコンス・パターンの入れ子なので，<code>twin</code>を使うマッチ式にはコンスを分解できるマッチャー （<code>list</code>や<code>multiset</code>）が必要である． 逆に，本体が仮引数そのものであるようなパターン関数は構造を課さないため，引数パターンの要求だけが伝播する． このように，パターン関数を経由しても「そのパターンにどんなマッチャーが必要か」が静的に追跡される．</p>
   </main>
-  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></footer>
 </body>
 </html>

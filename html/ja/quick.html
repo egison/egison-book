@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
+  <meta name="description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="Egison早巡り — Egison Book">
+  <meta property="og:description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/quick.html">
+  <link rel="alternate" hreflang="ja" href="../ja/quick.html">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>Egison早巡り — Egison Book</title>
   <link rel="stylesheet" href="../style.css">
-  <script>
+<script>
 window.MathJax = {
   tex: {
     inlineMath: [['\\(', '\\)']],
@@ -25,8 +36,9 @@ window.MathJax = {
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
-  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="intro.html">← 前へ</a><a rel="next" href="pmo.html">次へ →</a><a class="language" href="../en/quick.html">English</a></nav></header>
-  <main class="book-page">
+  <a class="skip-link" href="#main-content">本文へ移動</a>
+  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">目次</a><a rel="prev" href="intro.html">← 前へ</a><a rel="next" href="pmo.html">次へ →</a><a class="language" hreflang="en" href="../en/quick.html">English</a></nav></header>
+  <main id="main-content" class="book-page">
     <span id="ref-part-pmo" class="anchor"></span><h1><span class="heading-number">2</span>Egison早巡り</h1>
 <p><span id="ref-quick" class="anchor"></span></p>
 <p>本章は，パターンマッチ指向プログラミングのためのEgisonの機能を一通り紹介する． 本章を理解すれば，Egisonのパターンマッチの仕様はほぼ一通り理解したことになるはずである．</p>
@@ -202,6 +214,6 @@ _ ++ $x_1 :: _ ++ $x_2 :: _ ++ $x_3 :: _</code></pre>
   | leaf a
   | node a (multiset (tree a))</code></pre>
   </main>
-  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></footer>
 </body>
 </html>

@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
+  <meta name="description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="Egisonで計算する微分幾何 — Egison Book">
+  <meta property="og:description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/diffgeo.html">
+  <link rel="alternate" hreflang="ja" href="../ja/diffgeo.html">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>Egisonで計算する微分幾何 — Egison Book</title>
   <link rel="stylesheet" href="../style.css">
-  <script>
+<script>
 window.MathJax = {
   tex: {
     inlineMath: [['\\(', '\\)']],
@@ -25,8 +36,9 @@ window.MathJax = {
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
-  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="funcsym.html">← 前へ</a><a rel="next" href="direction.html">次へ →</a><a class="language" href="../en/diffgeo.html">English</a></nav></header>
-  <main class="book-page">
+  <a class="skip-link" href="#main-content">本文へ移動</a>
+  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">目次</a><a rel="prev" href="funcsym.html">← 前へ</a><a rel="next" href="direction.html">次へ →</a><a class="language" hreflang="en" href="../en/diffgeo.html">English</a></nav></header>
+  <main id="main-content" class="book-page">
     <h1><span class="heading-number">14</span>Egisonで計算する微分幾何</h1>
 <p><span id="ref-diffgeo" class="anchor"></span></p>
 <p>本章は，数式処理システムとしてのEgisonの実践的な応用例として微分幾何への応用を紹介する． Egisonを使うと，さまざまな多様体の曲率が定義の数式に近いプログラムを記述するだけで計算できたり，外微分やホッジ作用素のような微分形式のための作用素もプログラムで簡潔に定義できる． 本章の解説は読者に微分幾何の知識を仮定している． 微分幾何に興味を持つ読者には，小林昭七による『曲線と曲面の微分幾何』（裳華房）がおすすめである．</p>
@@ -127,6 +139,6 @@ eulerForm
     | #N -&gt; d (`$\iota$` X Y)
     | _  -&gt; `$\iota$` X (d Y) + d (`$\iota$` X Y)</code></pre>
   </main>
-  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></footer>
 </body>
 </html>

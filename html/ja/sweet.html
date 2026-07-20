@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
+  <meta name="description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="Sweet Egison - EgisonパターンマッチのHaskellライブラリ — Egison Book">
+  <meta property="og:description" content="パターンマッチ指向プログラミング、数式処理、テンソル計算、微分幾何を解説する、プログラミング言語Egisonのオンライン入門書です。">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/sweet.html">
+  <link rel="alternate" hreflang="ja" href="../ja/sweet.html">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>Sweet Egison - EgisonパターンマッチのHaskellライブラリ — Egison Book</title>
   <link rel="stylesheet" href="../style.css">
-  <script>
+<script>
 window.MathJax = {
   tex: {
     inlineMath: [['\\(', '\\)']],
@@ -25,8 +36,9 @@ window.MathJax = {
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
-  <header class="site-header"><nav><a href="index.html">目次</a><a rel="prev" href="etc.html">← 前へ</a><a rel="next" href="cas.html">次へ →</a><a class="language" href="../en/sweet.html">English</a></nav></header>
-  <main class="book-page">
+  <a class="skip-link" href="#main-content">本文へ移動</a>
+  <header class="site-header"><nav aria-label="メインナビゲーション"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">目次</a><a rel="prev" href="etc.html">← 前へ</a><a rel="next" href="cas.html">次へ →</a><a class="language" hreflang="en" href="../en/sweet.html">English</a></nav></header>
+  <main id="main-content" class="book-page">
     <h1><span class="heading-number">8</span>Sweet Egison - EgisonパターンマッチのHaskellライブラリ</h1>
 <p><span id="ref-sweet" class="anchor"></span></p>
 <p>Egisonパターンマッチの実装には，本書でここまで紹介してきたEgisonの言語実装のほかに，既存言語上のDomain Specific Language（DSL）として実装したライブラリ実装もある． 既存言語のライブラリ実装には，deep embedding（インタプリタを埋め込むによりDSLを実現する手法）による実装であるminiEgison系と，shallow embedding（コンパイラを埋め込むことによりDSLを実現する手法）による実装であるSweet Egison系の二種類がある． 本章は，これらの実装のなかでもっとも高速なSweet EgisonのHaskell実装の使い方を紹介する． Egisonと異なりHaskellは静的型システムをもつ． そのため，Sweet Egisonを使ったパターンマッチはコンパイル時に型検査がなされる．</p>
@@ -220,6 +232,6 @@ instance Matcher m t =&gt; CollectionPattern (Multiset m) [t] where
    (strategy (Set Something, [1..])))</code></pre>
 <p>深さ優先探索や幅優先探索のためのモナドはHaskellで定義されている． ユーザーが新しく別の探索戦略のためのモナドを追加することも可能である． この機能はEgison本体にはないSweet Egisonならではの機能である．</p>
   </main>
-  <footer><a href="../../tex/ja/main.tex">TeX原稿</a></footer>
+  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/ja">TeX原稿</a></footer>
 </body>
 </html>

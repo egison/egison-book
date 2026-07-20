@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
+  <meta name="description" content="An open online book about the Egison programming language, covering pattern-match-oriented programming, computer algebra, tensor computation, and differential geometry.">
+  <meta name="theme-color" content="#126b4b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egison Book">
+  <meta property="og:title" content="The Benefits of Pattern-Match-Oriented Programming — Egison Book">
+  <meta property="og:description" content="An open online book about the Egison programming language, covering pattern-match-oriented programming, computer algebra, tensor computation, and differential geometry.">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" hreflang="en" href="../en/essence.html">
+  <link rel="alternate" hreflang="ja" href="../ja/essence.html">
+  <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>The Benefits of Pattern-Match-Oriented Programming — Egison Book</title>
   <link rel="stylesheet" href="../style.css">
-  <script>
+<script>
 window.MathJax = {
   tex: {
     inlineMath: [['\\(', '\\)']],
@@ -25,8 +36,9 @@ window.MathJax = {
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
-  <header class="site-header"><nav><a href="index.html">Contents</a><a rel="prev" href="pmo.html">← Previous</a><a rel="next" href="mechanism.html">Next →</a><a class="language" href="../ja/essence.html">日本語</a></nav></header>
-  <main class="book-page">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header"><nav aria-label="Primary navigation"><a class="site-brand" href="index.html">Egison Book</a><a href="index.html#contents">Contents</a><a rel="prev" href="pmo.html">← Previous</a><a rel="next" href="mechanism.html">Next →</a><a class="language" hreflang="ja" href="../ja/essence.html">日本語</a></nav></header>
+  <main id="main-content" class="book-page">
     <h1><span class="heading-number">4</span>The Benefits of Pattern-Match-Oriented Programming</h1>
 <p><span id="ref-essence" class="anchor"></span></p>
 <p>The purpose of this chapter is to clarify in what situations and how pattern-match-oriented programming is useful. All the examples in the previous chapters involved only single <code>matchAll</code> or <code>match</code> expressions, but in this chapter we examine what role Egison&#x27;s pattern matching plays in the writing of larger programs.</p>
@@ -66,6 +78,6 @@ window.MathJax = {
 <p><span id="ref-essence-pmo" class="anchor"></span></p>
 <p>The SAT solver implemented in Section&nbsp;<a class="reference" href="essence.html#ref-essence-sat">4.1</a> contained a loop that could not be eliminated by pattern-match-oriented programming. That loop is the recursion of the <code>dp</code> function. This recursion is an essential loop for narrowing the search space in solving SAT problems. This search space reduction cannot be achieved by a simple backtracking algorithm. In contrast, all other loops that can be implemented through backtracking have been pushed into the patterns. In traditional functional programming, both kinds of loops had to be written using recursion. Pattern-match-oriented programming confines loops implementable by backtracking into patterns, allowing programmers to focus solely on writing the essential loops that reduce time complexity. This improves both the ease of writing and the readability of programs.</p>
   </main>
-  <footer><a href="../../tex/en/main.tex">TeX source</a></footer>
+  <footer><a href="https://github.com/egison/egison-book/tree/master/tex/en">TeX source</a></footer>
 </body>
 </html>
