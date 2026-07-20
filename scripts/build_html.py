@@ -785,7 +785,7 @@ class BookBuilder:
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="egison-book/scripts/build_html.py">
   <meta name="description" content="{description}">
-  <meta name="theme-color" content="#126b4b">
+  <meta name="theme-color" content="#0f2350">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Egison Book">
   <meta property="og:title" content="{html.escape(page_title, quote=True)}">
@@ -796,6 +796,9 @@ class BookBuilder:
   <link rel="alternate" hreflang="ja" href="../ja/{page}">
   <link rel="alternate" hreflang="x-default" href="../index.html">
   <title>{html.escape(page_title)}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&amp;family=Oxygen+Mono&amp;display=swap">
   <link rel="stylesheet" href="../style.css">
 {head_extras}
 </head>
@@ -919,9 +922,12 @@ def write_root_index() -> None:
     body = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Read the Egison Book online in English or Japanese.">
-<meta name="theme-color" content="#126b4b">
+<meta name="theme-color" content="#0f2350">
 <link rel="alternate" hreflang="en" href="en/"><link rel="alternate" hreflang="ja" href="ja/">
-<title>Egison Book — English / 日本語</title><link rel="stylesheet" href="style.css"></head>
+<title>Egison Book — English / 日本語</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&amp;family=Oxygen+Mono&amp;display=swap">
+<link rel="stylesheet" href="style.css"></head>
 <body><main class="language-picker"><p class="eyebrow">Open online edition</p><h1>Egison Book</h1>
 <p class="language-lead">Choose a language <span lang="ja">／ 言語を選択してください</span></p>
 <div><a href="en/">English</a><a href="ja/" lang="ja">日本語</a></div></main></body></html>
