@@ -2,7 +2,7 @@
 
 This chapter explains in detail how simplification in Egison's computer algebra system cooperates with the type system.
 Chapter~\ref{cas} introduced simplification as a built-in facility, but the simplification system is in fact assembled from several orthogonal, user-extensible mechanisms.
-This chapter walks through (1) declaring simplification rules, (2) generating rule sets mechanically by declaring ideals, (3) declaring mathematical functions, (4) selecting canonical forms with type annotations, (5) the promotion tower of types and its extension, and (6) quotient types, which live outside the tower.
+This chapter walks through (1) declaring simplification rules, (2) generating rule sets mechanically by declaring ideals, (3) declaring mathematical functions, (4) selecting canonical forms with type annotations, (5) the promotion tower of types and its extension, (6) the automatic derivation of result types, and (7) quotient types, which live outside the tower.
 
 \section{Declaring Simplification Rules}\label{cas-rule}
 
@@ -312,6 +312,122 @@ Placing $\mathbb{Z}[i]$ inside the nested form would split the common upper boun
 The suggested completing edge is always a mathematically valid embedding (the flat form regroups into the nested one), and declaring it first makes the original edge acceptable.
 In this way joins remain unique over the extended tower, and implicit promotion stays deterministic.
 Note that the check runs over the types that have appeared in declarations so far (the redundant edge on the first line above is written to register \lstinline{Poly Integer [x]} for the check).
+
+\section{Automatic Derivation of Result Types}\label{cas-join}
+
+In the examples of the previous section, the result types of \lstinline{p + q} and \lstinline{a + b} were determined automatically, without annotations: the sum of two $\mathbb{Z}[i]$ values stays in $\mathbb{Z}[i]$, and the sum of a $\mathbb{Z}[i]$ value and a $\mathbb{Z}[\sqrt{2}]$ value is promoted to $\mathbb{Z}[i, \sqrt{2}]$.
+This section explains how this automatic derivation of result types is realized inside the system.
+The machinery consists of three layers.
+(1) Operations between values of the same type close under ordinary Hindley--Milner type inference (unification) alone.
+(2) Only when the types differ, a join is computed at the application site and a reshape is inserted for the promotion.
+(3) The uniqueness of that join is guaranteed by the declaration-time check of the previous section.
+
+As a starting point, recall the static type of symbols.
+As we saw in Chapter~\ref{cas}, \lstinline{declare symbol} can specify a type, as in \lstinline{declare symbol x : MathValue}, and the default when the type is omitted is \lstinline{Integer}.
+An unannotated mathematical expression therefore enters the static world at the bottom of the tower.
+Indeed, the static type of \lstinline{1 + i} is \lstinline{Integer}, and trying to mix it with a non-CAS type surfaces exactly that fact as a type error.
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol i
+
+def bad : Bool := 1 + i
+-- Type error:
+-- In expression: + 1 i
+-- Cannot unify types:
+--   Expected: Integer (TInt)
+--   Actual:   Bool (TBool)
+\end{lstlisting}
+Since \lstinline{Integer} embeds into every type of the tower, entering at the bottom means that every CAS type is one annotation away.
+This is why the type annotations of Section~\ref{cas-tower} were a reorganization (reshape) of the value rather than a classification: between CAS types, an annotation is always accepted as a choice of canonical form.
+Static precision is supplied by these annotations and by the observed types read off values.
+
+The first layer is operations between equal types.
+\lstinline{+} and \lstinline{*} are type-class methods; the type of \lstinline{+} is \lstinline{(+) (x: a) (y: a) : a} in \lstinline{class AddSemigroup a}---the two arguments and the result share one type.
+If both operands are the same \lstinline{Poly Integer [i]}, unification fixes \lstinline{a} to \lstinline{Poly Integer [i]}, and the result type is $\mathbb{Z}[i]$ as is.
+No join is involved at all.
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol i
+declare rule auto term i^2 = -1
+
+def g : Poly Integer [i] := 1 + i
+def h : Poly Integer [i] := 2 + 3 * i
+
+def w := g + h
+inspect w -- "4 * i + 3 : Poly Integer [i]"
+\end{lstlisting}
+How, then, is the remaining constraint \lstinline{AddSemigroup (Poly Integer [i])} discharged?
+Looking at the library, there is exactly one arithmetic instance for CAS types: \lstinline{instance AddSemigroup MathValue} (types outside the CAS, such as \lstinline{Float}, have their own instances).
+Instance resolution selects the most specific instance whose type contains the target, over the subtype order of the previous section (the tower plus the declared edges), so \lstinline{Poly Integer [i] <: MathValue} selects this instance.
+The static type stays precise at $\mathbb{Z}[i]$, while the implementation collapses to the single \lstinline{MathValue} arithmetic.
+Precise typing and a single implementation coexist through the subtype order.
+(Between order-equivalent types that embed into each other, such as \lstinline{Poly MathValue [..]} and \lstinline{Frac MathValue}, specificity alone cannot decide, so a tie-break selects the candidate whose representation head matches the target's.)
+
+The second layer handles the case of differing types.
+Between \lstinline{Poly Integer [i]} and \lstinline{Poly Integer [sqrt2]}, the unification of \lstinline{a -> a -> a} fails.
+The system then computes the join (the unique least upper bound) of the two CAS types that failed to unify, inserts a reshape into every argument strictly below the join, and retries the inference of that application exactly once.
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol sqrt2
+
+def s : Poly Integer [sqrt2] := 1 + sqrt2
+
+def m := g + s
+inspect m -- "sqrt2 + i + 2 : Poly Integer [i, sqrt2]"
+\end{lstlisting}
+The important point is that the unifier itself knows nothing about joins.
+The join is a coercion inserted at the application site as a fallback for pairs of CAS types that failed to unify; unification stays symmetric and principal, and the reporting of type errors unrelated to the CAS is unaffected.
+If the retry fails as well, the original error from before the join attempt is reported as is.
+
+What exactly, by the way, does this join promise?
+The union-set type is correct not only for sums but also for products.
+Between free symbols with no declared relations, the product only creates \lstinline{s2 s3}, a monomial of degree two, which stays inside the union set (as polynomial rings, $\mathbb{Z}[s_2] \cdot \mathbb{Z}[s_3] \subseteq \mathbb{Z}[s_2, s_3]$).
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol s2, s3
+
+def a : Poly Integer [s2] := 1 + s2
+def b : Poly Integer [s3] := 1 + s3
+
+def c := a * b
+inspect c -- "s2 s3 + s3 + s2 + 1 : Poly Integer [s2, s3]"
+\end{lstlisting}
+Things change once a relation whose right-hand side carries a new atom---the counterpart of $\sqrt{6}$---is declared, as with the ideal of Section~\ref{casdetail-ideal}.
+The generated rule $s_2 s_3 \to s_6$ fires during the normalization of the product, and the value escapes the closed atom set of the static type.
+\begin{lstlisting}[language=egison,numbers=none]
+declare symbol s2, s3, s6
+declare ideal [s2^2 - 2, s3^2 - 3, s6 - s2 * s3]
+
+def a : Poly Integer [s2] := 1 + s2
+def b : Poly Integer [s3] := 1 + s3
+
+def c := a * b
+inspect c -- "s6 + s3 + s2 + 1 : Poly Integer [s2, s3, s6]"
+\end{lstlisting}
+The static type given by the join remains \lstinline{Poly Integer [s2, s3]}, while the observed type contains \lstinline{s6}.
+This mismatch is not a type error (annotating \lstinline{Poly Integer [s2, s3]} explicitly makes no difference).
+A closed atom set is a contract about the structural operations before any rules apply---the free theory---and global rules, a value-level mechanism, are invisible to the type checker.
+The observed type reports the truth, and since rule firing is decided on values (the symbol index of Section~\ref{cas-rule}), no simplification is ever missed.
+The gap is confined to the coarseness of the static display: the division of labor---static types predict in the free theory, observed types report after execution---is at work here as well.
+
+What about genuine square roots?
+The \lstinline{sqrt2} used so far was a mere symbol name; let us now use applications of the mathematical function \lstinline{sqrt} of Section~\ref{casdetail-mathfunc}, that is, the real $\sqrt{2}$.
+Atom sets may also contain function-application atoms such as \lstinline{sqrt 2}.
+\begin{lstlisting}[language=egison,numbers=none]
+def a : Poly Integer [sqrt 2] := sqrt 2
+def b : Poly Integer [sqrt 3] := sqrt 3
+
+def c := a * b
+inspect c -- "'sqrt 6 : Poly Integer ['sqrt 6]"
+\end{lstlisting}
+The static type becomes the union-set type \lstinline{Poly Integer [sqrt 3, sqrt 2]} by the join, while the value becomes \lstinline{'sqrt 6} by the built-in fusion $\sqrt{2} \cdot \sqrt{3} = \sqrt{6}$, and the observed type reports it---exactly the same picture as with the ideal.
+Note that function-application atoms in types are matched by function name (the head); the arguments are not distinguished.
+Moreover, without the annotations the static type of \lstinline{sqrt 2} is \lstinline{MathValue} (the default of \lstinline{declare mathfunc}), so no closed-set promise arises in the first place.
+
+The third layer is the declaration-time check of the previous section itself.
+The second layer can compute ``the unique join'' because the join-semilattice property---every pair of types has exactly one least upper bound---is checked and maintained at every \lstinline{declare cas-subtype}.
+However the user extends the tower, the determinism of the second layer survives, thanks to this division of labor.
+Note also that the quotient types of the next section are nominal types that take no part in the order, so they are never joined.
+Mixing a quotient value with a raw value is a type error precisely because this fallback works only for types inside the order.
+
+In summary: equal types close under unification (precision), differing types are promoted by the join inserted at the application site (automatic mixing), and the declaration-time check guards the uniqueness of that join (determinism).
+The declarations we have seen so far coexist without interference on top of this three-layer division of labor.
 
 \section{Quotient Types}\label{cas-quotient}
 

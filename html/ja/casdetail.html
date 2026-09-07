@@ -44,7 +44,7 @@ window.MathJax = {
   <main id="main-content" class="book-page">
     <h1><span class="heading-number">11</span>簡約システム詳細</h1>
 <p><span id="ref-casdetail" class="anchor"></span></p>
-<p>本章は，Egisonの数式処理システムの簡約が型システムとどのように連携しているかを詳しく解説する． 第<a class="reference" href="cas.html#ref-cas">9</a>章では数式の簡約を組み込みの機能として紹介したが，簡約システムは実際には，ユーザーが拡張できるいくつかの直交した仕組みから組み立てられている． 本章では，（1）簡約規則の宣言，（2）イデアルの宣言による規則集合の機械生成，（3）数学関数の宣言，（4）型注釈による正規形の指定，（5）型の昇格タワーとその拡張，（6）タワーの外に置かれる商の型，の6つを順にみていく．</p>
+<p>本章は，Egisonの数式処理システムの簡約が型システムとどのように連携しているかを詳しく解説する． 第<a class="reference" href="cas.html#ref-cas">9</a>章では数式の簡約を組み込みの機能として紹介したが，簡約システムは実際には，ユーザーが拡張できるいくつかの直交した仕組みから組み立てられている． 本章では，（1）簡約規則の宣言，（2）イデアルの宣言による規則集合の機械生成，（3）数学関数の宣言，（4）型注釈による正規形の指定，（5）型の昇格タワーとその拡張，（6）演算の結果型の自動導出，（7）タワーの外に置かれる商の型，の7つを順にみていく．</p>
 <h2><span class="heading-number">11.1</span>簡約規則の宣言</h2>
 <p><span id="ref-cas-rule" class="anchor"></span></p>
 <p>第<a class="reference" href="cas.html#ref-cas">9</a>章<a class="reference" href="cas.html#ref-cas-simplify">9.3</a>節でみたように，<span class="math-inline">\(i^2 = -1\)</span>のような組み込みの簡約規則は，処理系のHaskellコードに埋め込まれているのではなく，標準ライブラリのなかで<code>declare rule</code>文により宣言されている． ユーザーもまったく同じ<code>declare rule</code>文で，新しい簡約規則を宣言できる． つまり，組み込みの簡約規則とユーザーの簡約規則は同じ仕組みの上に載っている．</p>
@@ -214,7 +214,65 @@ declare cas-subtype Poly Integer [i] &lt;: Poly (Poly Integer [i]) [x]
 --     declare cas-subtype Poly Integer [i, x]
 --       &lt;: Poly (Poly Integer [i]) [x]</code></pre>
 <p><span class="math-inline">\(\mathbb{Z}[i]\)</span>を入れ子形の中に置こうとすると，<span class="math-inline">\(\mathbb{Z}[i]\)</span>と<span class="math-inline">\(\mathbb{Z}[x]\)</span>の共通の上界が 平坦形と入れ子形の2つに分裂してしまうため，宣言は拒否される． 提案される完備化辺は常に数学的に正しい埋め込みであり（平坦形は入れ子形に組み替えられる）， それを先に宣言すれば元の辺も受理される． このように，拡張後のタワーの上でもjoinは常に一意のままであり，暗黙の昇格は決定的であり続ける． なお，この検査はそれまでの宣言に現れた型の上で行われる （上記の1行目の冗長な辺は，<code>Poly Integer [x]</code>を検査対象に登録するために書いている）．</p>
-<h2><span class="heading-number">11.6</span>商の型</h2>
+<h2><span class="heading-number">11.6</span>結果型の自動導出</h2>
+<p><span id="ref-cas-join" class="anchor"></span></p>
+<p>前節の例では，<code>p + q</code>や<code>a + b</code>の結果型が，注釈なしで自動的に決まっていた． <span class="math-inline">\(\mathbb{Z}[i]\)</span>の値同士の和は<span class="math-inline">\(\mathbb{Z}[i]\)</span>に閉じ，<span class="math-inline">\(\mathbb{Z}[i]\)</span>と<span class="math-inline">\(\mathbb{Z}[\sqrt{2}]\)</span>の和は<span class="math-inline">\(\mathbb{Z}[i, \sqrt{2}]\)</span>へ昇格する． 本節では，この結果型の自動導出が処理系のなかでどのように実現されているかを解説する． 仕組みは3つの層に分かれている． （1）同じ型同士の演算は，通常のHindley--Milner型推論（単一化）だけで閉じる． （2）型が異なるときにだけ，適用位置でjoinが計算され，昇格のためのreshapeが挿入される． （3）そのjoinの一意性は，前節でみた宣言時の検査が保証している．</p>
+<p>出発点として，シンボルの静的型を確認しておく． 第<a class="reference" href="cas.html#ref-cas">9</a>章でみたように，<code>declare symbol</code>は<code>declare symbol x : MathValue</code>のように型を指定でき，省略したときの既定は<code>Integer</code>である． つまり注釈のない数式は，タワーの底から静的な世界に入る． 実際，<code>1 + i</code>の静的型は<code>Integer</code>であり，CASでない型と混ぜようとすると，そのことがそのまま型エラーに現れる．</p>
+<pre class="listing"><code class="language-egison">declare symbol i
+
+def bad : Bool := 1 + i
+-- Type error:
+-- In expression: + 1 i
+-- Cannot unify types:
+--   Expected: Integer (TInt)
+--   Actual:   Bool (TBool)</code></pre>
+<p><code>Integer</code>はタワーのどの型にも埋め込めるので，底から入っておけば，どのCAS型へも注釈ひとつで上がれる． <a class="reference" href="casdetail.html#ref-cas-tower">11.4</a>節の型注釈が値の「分類」ではなく「組み替え（reshape）」だったのはこのためで，CAS型同士のあいだでは注釈は正規形の選択として常に受理される． 静的な型の精密さは，この注釈と，値から読み取る観察型の2つが与える．</p>
+<p>第1の層は，同じ型同士の演算である． <code>+</code>や<code>*</code>は型クラスのメソッドであり，<code>+</code>の型は<code>class AddSemigroup a</code>の<code>(+) (x: a) (y: a) : a</code>，つまり「2つの引数と結果が同じ型」である． 両辺が同じ<code>Poly Integer [i]</code>なら，単一化で<code>a</code>が<code>Poly Integer [i]</code>に決まり，結果型もそのまま<span class="math-inline">\(\mathbb{Z}[i]\)</span>になる． joinはまったく関与しない．</p>
+<pre class="listing"><code class="language-egison">declare symbol i
+declare rule auto term i^2 = -1
+
+def g : Poly Integer [i] := 1 + i
+def h : Poly Integer [i] := 2 + 3 * i
+
+def w := g + h
+inspect w -- &quot;4 * i + 3 : Poly Integer [i]&quot;</code></pre>
+<p>このとき残る制約<code>AddSemigroup (Poly Integer [i])</code>はどう解消されるのだろうか． ライブラリをみると，CAS型に対する算術インスタンスは<code>instance AddSemigroup MathValue</code>の1本しかない（<code>Float</code>などCASの外の型は別として）． インスタンス解決は，前節の部分型順序（タワー＋宣言辺）の上で「対象の型を包含するもっとも特定的なインスタンス」を選ぶので，<code>Poly Integer [i] &lt;: MathValue</code>によりこのインスタンスが選ばれる． 静的型は<span class="math-inline">\(\mathbb{Z}[i]\)</span>のまま精密に保たれ，実装は<code>MathValue</code>の算術1本に落ちる． 精密な型付けと単一の実装が，部分型順序を介して両立している． なお，互いに埋め込み合う同格の型（<code>Poly MathValue [..]</code>と<code>Frac MathValue</code>など）では特定性だけでは決められないため，対象の表現の頭構成子が一致する側を選ぶ，というタイブレークが入る．</p>
+<p>第2の層は，型が異なる場合である． <code>Poly Integer [i]</code>と<code>Poly Integer [sqrt2]</code>のあいだでは<code>a -&gt; a -&gt; a</code>の単一化が失敗する． このとき処理系は，失敗した2つのCAS型のjoin（一意な最小上界）を計算し，joinより真に下にある引数へreshapeを挿入したうえで，その適用の推論を一度だけやり直す．</p>
+<pre class="listing"><code class="language-egison">declare symbol sqrt2
+
+def s : Poly Integer [sqrt2] := 1 + sqrt2
+
+def m := g + s
+inspect m -- &quot;sqrt2 + i + 2 : Poly Integer [i, sqrt2]&quot;</code></pre>
+<p>重要なのは，単一化器そのものはjoinを知らないことである． joinは「単一化が失敗したCAS型の組」へのフォールバックとして適用位置に挿入される変換であり，単一化の対称性と主型性は保たれ，CASと無関係な型エラーの報告も影響を受けない． 再試行も失敗した場合には，joinを試みる前の元のエラーがそのまま報告される．</p>
+<p>ところで，このjoinが約束しているのは何だろうか． 合併集合の型は，和だけでなく積に対しても正しい． 関係をもたない自由なシンボル同士なら，積が作る<code>s2 s3</code>は次数2の単項式にすぎず，合併集合のなかに収まる（多項式環として<span class="math-inline">\(\mathbb{Z}[s_2] \cdot \mathbb{Z}[s_3] \subseteq \mathbb{Z}[s_2, s_3]\)</span>）．</p>
+<pre class="listing"><code class="language-egison">declare symbol s2, s3
+
+def a : Poly Integer [s2] := 1 + s2
+def b : Poly Integer [s3] := 1 + s3
+
+def c := a * b
+inspect c -- &quot;s2 s3 + s3 + s2 + 1 : Poly Integer [s2, s3]&quot;</code></pre>
+<p>事情が変わるのは，<a class="reference" href="casdetail.html#ref-casdetail-ideal">11.2</a>節のイデアルのように，<span class="math-inline">\(\sqrt{6}\)</span>にあたる新しい原子を右辺にもつ関係を宣言したときである． 生成された規則<span class="math-inline">\(s_2 s_3 \to s_6\)</span>が積の正規化中に発火し，値は静的型の閉じた原子集合の外へ出る．</p>
+<pre class="listing"><code class="language-egison">declare symbol s2, s3, s6
+declare ideal [s2^2 - 2, s3^2 - 3, s6 - s2 * s3]
+
+def a : Poly Integer [s2] := 1 + s2
+def b : Poly Integer [s3] := 1 + s3
+
+def c := a * b
+inspect c -- &quot;s6 + s3 + s2 + 1 : Poly Integer [s2, s3, s6]&quot;</code></pre>
+<p>joinが与える静的型は<code>Poly Integer [s2, s3]</code>のままだが，観察型は<code>s6</code>を含む． この不一致は型エラーにならない（<code>Poly Integer [s2, s3]</code>を明示的に注釈しても同じである）． 閉じた原子集合は，規則を適用する前の構造演算——自由理論——についての契約であり，値レベルの機構である大域規則は型検査器からは見えないからである． 真実は観察型が報告し，規則の発火判定は値ベース（<a class="reference" href="casdetail.html#ref-cas-rule">11.1</a>節のシンボル索引）なので簡約が漏れることもない． ずれは静的な型表示の粗さに留まり，「静的型は自由理論での予測，観察型が実行後の真実」という分業がここでも働いている．</p>
+<p>本物の平方根ではどうなるだろうか． ここまでの<code>sqrt2</code>は単なる名前のシンボルだったが，こんどは<a class="reference" href="casdetail.html#ref-casdetail-mathfunc">11.3</a>節の数学関数<code>sqrt</code>の適用，つまり本物の<span class="math-inline">\(\sqrt{2}\)</span>を使ってみる． 原子集合には<code>sqrt 2</code>のような関数適用の原子も書くことができる．</p>
+<pre class="listing"><code class="language-egison">def a : Poly Integer [sqrt 2] := sqrt 2
+def b : Poly Integer [sqrt 3] := sqrt 3
+
+def c := a * b
+inspect c -- &quot;&#x27;sqrt 6 : Poly Integer [&#x27;sqrt 6]&quot;</code></pre>
+<p>静的型はjoinにより合併集合の型<code>Poly Integer [sqrt 3, sqrt 2]</code>になるが，値は組み込みの融合<span class="math-inline">\(\sqrt{2} \cdot \sqrt{3} = \sqrt{6}\)</span>によって<code>&#x27;sqrt 6</code>になり，観察型がそれを報告する． イデアルのときとまったく同じ構図である． なお，型のなかの関数適用原子は関数名（頭）で照合され，引数までは区別されない． また，注釈を書かなければ<code>sqrt 2</code>の静的型は<code>MathValue</code>（<code>declare mathfunc</code>の既定）なので，閉じた集合の約束はそもそも発生しない．</p>
+<p>第3の層は，前節の宣言時検査そのものである． 第2の層が「一意なjoin」を計算できるのは，どの2つの型にも最小上界がただ1つあるというjoin半束性を，<code>declare cas-subtype</code>のたびに検査して守っているからである． ユーザーがタワーをどう拡張しても第2の層の決定性が壊れないのは，この分業による． また，次節の商の型は名前的（nominal）な型であって順序に参加しないため，joinの対象にもならない． 商の値と生の値の混在が型エラーになるのは，このフォールバックが順序の中の型にしか働かないからである．</p>
+<p>まとめると，同じ型は単一化が閉じ（精密さ），異なる型は適用位置のjoinが昇格させ（混在の自動化），宣言時検査がそのjoinの一意性を守る（決定性）． ここまでにみてきた宣言たちは，この3層の分業の上で互いに干渉せずに済んでいる．</p>
+<h2><span class="heading-number">11.7</span>商の型</h2>
 <p><span id="ref-cas-quotient" class="anchor"></span></p>
 <p><span class="math-inline">\(\mathbb{Z}/7\mathbb{Z}\)</span>（7で割った余りの世界）のような商は，これまでの型とは性質が異なる． <span class="math-inline">\(12\)</span>と<span class="math-inline">\(5\)</span>は<span class="math-inline">\(\mathbb{Z}\)</span>では異なる値だが，<span class="math-inline">\(\mathbb{Z}/7\mathbb{Z}\)</span>では等しい． つまり<strong>等しさそのものが型に依存する</strong>ため，値を保存する埋め込みの順序（前節）には入れられない． Egisonでは，商の型は<code>declare cas-quotient</code>文で順序の外に宣言する．</p>
 <pre class="listing"><code class="language-egison">declare cas-quotient Mod7 := Integer by (\n -&gt; modulo n 7)
